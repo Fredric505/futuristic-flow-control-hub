@@ -150,11 +150,11 @@ const UserDashboard = () => {
             
             <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
               <CardHeader>
-                <CardTitle className="text-blue-300">Panel de Usuario</CardTitle>
+                <CardTitle className="text-blue-300">Panel de Usuario Astro505</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-blue-200/70">
-                  Bienvenido a tu panel personal. Aquí puedes gestionar tus procesos y revisar tu historial.
+                  Bienvenido a tu panel personal Astro505. Aquí puedes gestionar tus procesos y revisar tu historial.
                 </p>
                 <div className="mt-4 p-4 bg-blue-950/30 rounded-lg border border-blue-500/20">
                   <h4 className="text-blue-300 font-semibold mb-2">Configuración Actual</h4>
@@ -194,7 +194,7 @@ const UserDashboard = () => {
         <div className="w-80 min-h-screen bg-black/30 backdrop-blur-xl border-r border-blue-500/20 p-6">
           <div className="mb-8">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-              PANEL USUARIO
+              ASTRO505 USER
             </h1>
             <p className="text-blue-200/70 text-sm mt-1">Sistema Ejecutivo</p>
           </div>

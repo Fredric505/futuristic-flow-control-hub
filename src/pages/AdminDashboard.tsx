@@ -137,11 +137,11 @@ const AdminDashboard = () => {
             
             <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
               <CardHeader>
-                <CardTitle className="text-blue-300">Panel de Control Ejecutivo</CardTitle>
+                <CardTitle className="text-blue-300">Panel de Control Astro505</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-blue-200/70">
-                  Bienvenido al sistema de gestión ejecutivo. Desde aquí puedes administrar todos los aspectos de la plataforma.
+                  Bienvenido al sistema de gestión Astro505. Desde aquí puedes administrar todos los aspectos de la plataforma.
                 </p>
               </CardContent>
             </Card>
@@ -204,7 +204,7 @@ const AdminDashboard = () => {
         <div className="w-80 min-h-screen bg-black/30 backdrop-blur-xl border-r border-blue-500/20 p-6">
           <div className="mb-8">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-              PANEL ADMIN
+              ASTRO505 ADMIN
             </h1>
             <p className="text-blue-200/70 text-sm mt-1">Sistema Ejecutivo</p>
           </div>

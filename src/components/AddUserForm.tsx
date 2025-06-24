@@ -21,25 +21,24 @@ const AddUserForm = () => {
     setIsLoading(true);
     
     try {
-      // Create user with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: formData.email,
-        password: formData.password,
-        email_confirm: true
+      // Get admin session to use admin methods
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session || session.user.email !== 'fredric@gmail.com') {
+        throw new Error('No tienes permisos de administrador');
+      }
+
+      // Use edge function to create user (admin only)
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: formData.email,
+          password: formData.password,
+          credits: parseInt(formData.credits),
+          expirationDate: formData.expirationDate
+        }
       });
 
-      if (authError) throw authError;
-
-      // Update profile with credits and expiration
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          credits: parseInt(formData.credits),
-          expiration_date: formData.expirationDate
-        })
-        .eq('id', authData.user.id);
-
-      if (profileError) throw profileError;
+      if (error) throw error;
 
       toast({
         title: "Usuario agregado",

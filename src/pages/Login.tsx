@@ -102,7 +102,7 @@ const Login = () => {
       <Card className="w-full max-w-md bg-black/20 backdrop-blur-xl border border-blue-500/20 shadow-2xl">
         <CardHeader className="text-center pb-8">
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-            SISTEMA EJECUTIVO
+            ASTRO505
           </CardTitle>
           <p className="text-blue-200/70 mt-2">Panel de Control Futurista</p>
         </CardHeader>
