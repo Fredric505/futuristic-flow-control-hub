@@ -9,6 +9,7 @@ import AddUserForm from '@/components/AddUserForm';
 import ManageUsers from '@/components/ManageUsers';
 import ReloadCredits from '@/components/ReloadCredits';
 import InstanceSettings from '@/components/InstanceSettings';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -21,22 +22,45 @@ const AdminDashboard = () => {
   });
 
   useEffect(() => {
+    checkAuth();
     loadStats();
   }, [activeSection]);
 
-  const loadStats = () => {
-    const users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-    const processes = JSON.parse(localStorage.getItem('adminProcesses') || '[]');
-    const messages = JSON.parse(localStorage.getItem('sentMessages') || '[]');
-    
-    const totalCredits = users.reduce((sum: number, user: any) => sum + user.credits, 0);
-    
-    setStats({
-      totalUsers: users.length,
-      activeProcesses: processes.length,
-      messagesSent: messages.length,
-      systemCredits: totalCredits
-    });
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session || session.user.email !== 'fredric@gmail.com') {
+      navigate('/login');
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      // Load total users
+      const { data: users } = await supabase
+        .from('profiles')
+        .select('credits');
+
+      // Load processes
+      const { data: processes } = await supabase
+        .from('processes')
+        .select('id');
+
+      // Load messages
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('id');
+
+      const totalCredits = users?.reduce((sum: number, user: any) => sum + (user.credits || 0), 0) || 0;
+
+      setStats({
+        totalUsers: users?.length || 0,
+        activeProcesses: processes?.length || 0,
+        messagesSent: messages?.length || 0,
+        systemCredits: totalCredits
+      });
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    }
   };
 
   const menuItems = [
@@ -51,9 +75,8 @@ const AdminDashboard = () => {
     { id: 'settings', icon: Settings, label: 'Configuraciones', description: 'Configurar instancia y token' },
   ];
 
-  const handleLogout = () => {
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userEmail');
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     navigate('/login');
   };
 

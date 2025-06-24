@@ -9,7 +9,146 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      messages: {
+        Row: {
+          id: string
+          message_content: string
+          process_id: string | null
+          recipient_phone: string
+          sent_at: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          message_content: string
+          process_id?: string | null
+          recipient_phone: string
+          sent_at?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          message_content?: string
+          process_id?: string | null
+          recipient_phone?: string
+          sent_at?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      processes: {
+        Row: {
+          client_name: string
+          color: string
+          contact_type: string
+          country_code: string
+          created_at: string | null
+          id: string
+          imei: string
+          iphone_model: string
+          phone_number: string
+          serial_number: string
+          status: string | null
+          storage: string
+          updated_at: string | null
+          url: string | null
+          user_id: string | null
+        }
+        Insert: {
+          client_name: string
+          color: string
+          contact_type: string
+          country_code: string
+          created_at?: string | null
+          id?: string
+          imei: string
+          iphone_model: string
+          phone_number: string
+          serial_number: string
+          status?: string | null
+          storage: string
+          updated_at?: string | null
+          url?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          client_name?: string
+          color?: string
+          contact_type?: string
+          country_code?: string
+          created_at?: string | null
+          id?: string
+          imei?: string
+          iphone_model?: string
+          phone_number?: string
+          serial_number?: string
+          status?: string | null
+          storage?: string
+          updated_at?: string | null
+          url?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          credits: number | null
+          email: string
+          expiration_date: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          credits?: number | null
+          email: string
+          expiration_date?: string | null
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          credits?: number | null
+          email?: string
+          expiration_date?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      system_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: string
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

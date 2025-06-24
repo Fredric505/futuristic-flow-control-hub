@@ -1,10 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -12,50 +13,84 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Sistema de autenticación real
+  useEffect(() => {
+    // Check if user is already logged in
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // Redirect based on user role
+        if (session.user.email === 'fredric@gmail.com') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/user/dashboard');
+        }
+      }
+    };
+    
+    checkAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        if (session.user.email === 'fredric@gmail.com') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/user/dashboard');
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simular autenticación
-    setTimeout(() => {
-      // Admin credentials
-      if (email === 'fredric@gmail.com' && password === '5208Aa') {
-        localStorage.setItem('userRole', 'admin');
-        localStorage.setItem('userEmail', email);
-        
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        // Check if account is not expired (for regular users)
+        if (email !== 'fredric@gmail.com') {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('expiration_date')
+            .eq('id', data.user.id)
+            .single();
+
+          if (profile && profile.expiration_date && new Date() > new Date(profile.expiration_date)) {
+            await supabase.auth.signOut();
+            toast({
+              title: "Cuenta expirada",
+              description: "Tu cuenta ha expirado. Contacta al administrador.",
+              variant: "destructive",
+            });
+            setIsLoading(false);
+            return;
+          }
+        }
+
         toast({
           title: "Acceso concedido",
-          description: "Bienvenido al Panel Administrativo",
+          description: `Bienvenido ${email === 'fredric@gmail.com' ? 'al Panel Administrativo' : 'al Panel de Usuario'}`,
         });
-        
-        navigate('/admin/dashboard');
-      } else {
-        // Check if user exists in localStorage (for registered users)
-        const users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-        const user = users.find((u: any) => u.email === email && u.password === password);
-        
-        if (user && new Date() < new Date(user.expirationDate)) {
-          localStorage.setItem('userRole', 'user');
-          localStorage.setItem('userEmail', email);
-          localStorage.setItem('currentUser', JSON.stringify(user));
-          
-          toast({
-            title: "Acceso concedido",
-            description: "Bienvenido al Panel de Usuario",
-          });
-          
-          navigate('/user/dashboard');
-        } else {
-          toast({
-            title: "Error de autenticación",
-            description: "Credenciales incorrectas o cuenta expirada",
-            variant: "destructive",
-          });
-        }
       }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      toast({
+        title: "Error de autenticación",
+        description: error.message || "Credenciales incorrectas",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (

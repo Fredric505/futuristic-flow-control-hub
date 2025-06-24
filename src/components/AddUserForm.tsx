@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const AddUserForm = () => {
   const [formData, setFormData] = useState({
@@ -13,48 +14,56 @@ const AddUserForm = () => {
     credits: '',
     expirationDate: ''
   });
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
-    // Get existing users
-    const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-    
-    // Check if user already exists
-    if (existingUsers.find((user: any) => user.email === formData.email)) {
+    try {
+      // Create user with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: formData.email,
+        password: formData.password,
+        email_confirm: true
+      });
+
+      if (authError) throw authError;
+
+      // Update profile with credits and expiration
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          credits: parseInt(formData.credits),
+          expiration_date: formData.expirationDate
+        })
+        .eq('id', authData.user.id);
+
+      if (profileError) throw profileError;
+
+      toast({
+        title: "Usuario agregado",
+        description: `Usuario ${formData.email} agregado exitosamente`,
+      });
+      
+      // Reset form
+      setFormData({
+        email: '',
+        password: '',
+        credits: '',
+        expirationDate: ''
+      });
+
+    } catch (error: any) {
+      console.error('Error creating user:', error);
       toast({
         title: "Error",
-        description: "Ya existe un usuario con este correo electrónico",
+        description: error.message || "Error al crear el usuario",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Add new user
-    const newUser = {
-      id: Date.now().toString(),
-      email: formData.email,
-      password: formData.password,
-      credits: parseInt(formData.credits),
-      expirationDate: formData.expirationDate,
-      createdAt: new Date().toISOString()
-    };
-    
-    existingUsers.push(newUser);
-    localStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
-    
-    toast({
-      title: "Usuario agregado",
-      description: `Usuario ${formData.email} agregado exitosamente`,
-    });
-    
-    // Reset form
-    setFormData({
-      email: '',
-      password: '',
-      credits: '',
-      expirationDate: ''
-    });
   };
 
   return (
@@ -114,9 +123,10 @@ const AddUserForm = () => {
           
           <Button 
             type="submit"
+            disabled={isLoading}
             className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
           >
-            Agregar Usuario
+            {isLoading ? "Creando usuario..." : "Agregar Usuario"}
           </Button>
         </form>
       </CardContent>

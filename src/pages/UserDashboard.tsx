@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Home, Plus, FileText, History } from 'lucide-react';
 import ProcessForm from '@/components/ProcessForm';
+import { supabase } from '@/integrations/supabase/client';
 
 const UserDashboard = () => {
   const navigate = useNavigate();
@@ -20,27 +21,76 @@ const UserDashboard = () => {
   });
 
   useEffect(() => {
+    checkAuth();
     loadUserData();
     loadInstanceConfig();
   }, [activeSection]);
 
-  const loadUserData = () => {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    const userProcesses = JSON.parse(localStorage.getItem('userProcesses') || '[]');
-    const userMessages = JSON.parse(localStorage.getItem('userMessages') || '[]');
-    
-    setUserData({
-      processes: userProcesses.length,
-      messagesSent: userMessages.length,
-      credits: currentUser.credits || 0
-    });
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      navigate('/login');
+    }
   };
 
-  const loadInstanceConfig = () => {
-    const instance = localStorage.getItem('systemInstance') || 'instance126876';
-    const token = localStorage.getItem('systemToken') || '4ecj8581tubua7ry';
-    
-    setInstanceConfig({ instance, token });
+  const loadUserData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Load user profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('id', user.id)
+        .single();
+
+      // Load user processes
+      const { data: processes } = await supabase
+        .from('processes')
+        .select('id')
+        .eq('user_id', user.id);
+
+      // Load user messages
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('id')
+        .eq('user_id', user.id);
+
+      setUserData({
+        processes: processes?.length || 0,
+        messagesSent: messages?.length || 0,
+        credits: profile?.credits || 0
+      });
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  };
+
+  const loadInstanceConfig = async () => {
+    try {
+      const { data } = await supabase
+        .from('system_settings')
+        .select('*')
+        .in('setting_key', ['whatsapp_instance', 'whatsapp_token']);
+
+      const settings = data?.reduce((acc: any, setting: any) => {
+        acc[setting.setting_key] = setting.setting_value;
+        return acc;
+      }, {});
+
+      setInstanceConfig({
+        instance: settings?.whatsapp_instance || 'instance126876',
+        token: settings?.whatsapp_token || '4ecj8581tubua7ry'
+      });
+    } catch (error) {
+      console.error('Error loading instance config:', error);
+      // Fallback to default values
+      setInstanceConfig({
+        instance: 'instance126876',
+        token: '4ecj8581tubua7ry'
+      });
+    }
   };
 
   const menuItems = [
@@ -50,10 +100,8 @@ const UserDashboard = () => {
     { id: 'history', icon: History, label: 'Historial', description: 'Historial de mensajes enviados' },
   ];
 
-  const handleLogout = () => {
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('currentUser');
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     navigate('/login');
   };
 

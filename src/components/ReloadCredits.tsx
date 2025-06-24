@@ -6,22 +6,40 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const ReloadCredits = () => {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState('');
   const [creditsAmount, setCreditsAmount] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadUsers();
   }, []);
 
-  const loadUsers = () => {
-    const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-    setUsers(registeredUsers);
+  const loadUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('email');
+
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (error) {
+      console.error('Error loading users:', error);
+      toast({
+        title: "Error",
+        description: "Error al cargar usuarios",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleReloadCredits = (e: React.FormEvent) => {
+  const handleReloadCredits = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedUser || !creditsAmount) {
@@ -33,25 +51,48 @@ const ReloadCredits = () => {
       return;
     }
 
-    const updatedUsers = users.map((user: any) => {
-      if (user.id === selectedUser) {
-        return { ...user, credits: user.credits + parseInt(creditsAmount) };
-      }
-      return user;
-    });
+    try {
+      const user = users.find((u: any) => u.id === selectedUser);
+      const newCredits = (user as any).credits + parseInt(creditsAmount);
 
-    localStorage.setItem('registeredUsers', JSON.stringify(updatedUsers));
-    setUsers(updatedUsers);
-    
-    const user = users.find((u: any) => u.id === selectedUser);
-    toast({
-      title: "Créditos recargados",
-      description: `Se agregaron ${creditsAmount} créditos a ${(user as any)?.email}`,
-    });
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          credits: newCredits,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedUser);
 
-    setSelectedUser('');
-    setCreditsAmount('');
+      if (error) throw error;
+
+      toast({
+        title: "Créditos recargados",
+        description: `Se agregaron ${creditsAmount} créditos a ${(user as any)?.email}`,
+      });
+
+      setSelectedUser('');
+      setCreditsAmount('');
+      loadUsers(); // Refresh the list
+
+    } catch (error: any) {
+      console.error('Error reloading credits:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al recargar créditos",
+        variant: "destructive",
+      });
+    }
   };
+
+  if (loading) {
+    return (
+      <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+        <CardContent className="p-6">
+          <p className="text-blue-200/70 text-center">Cargando usuarios...</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">

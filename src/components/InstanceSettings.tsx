@@ -5,48 +5,119 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const InstanceSettings = () => {
   const [instance, setInstance] = useState('');
   const [token, setToken] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load default instance and token
-    const savedInstance = localStorage.getItem('systemInstance') || 'instance126876';
-    const savedToken = localStorage.getItem('systemToken') || '4ecj8581tubua7ry';
-    
-    setInstance(savedInstance);
-    setToken(savedToken);
-    
-    // Set defaults if not exists
-    if (!localStorage.getItem('systemInstance')) {
-      localStorage.setItem('systemInstance', 'instance126876');
-      localStorage.setItem('systemToken', '4ecj8581tubua7ry');
-    }
+    loadSettings();
   }, []);
 
-  const handleSave = () => {
-    localStorage.setItem('systemInstance', instance);
-    localStorage.setItem('systemToken', token);
-    
-    toast({
-      title: "Configuración guardada",
-      description: "Instancia y token actualizados exitosamente",
-    });
+  const loadSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('*')
+        .in('setting_key', ['whatsapp_instance', 'whatsapp_token']);
+
+      if (error) throw error;
+
+      const settings = data?.reduce((acc: any, setting: any) => {
+        acc[setting.setting_key] = setting.setting_value;
+        return acc;
+      }, {});
+
+      setInstance(settings?.whatsapp_instance || '');
+      setToken(settings?.whatsapp_token || '');
+    } catch (error) {
+      console.error('Error loading settings:', error);
+      toast({
+        title: "Error",
+        description: "Error al cargar configuraciones",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = () => {
-    setInstance('');
-    setToken('');
-    localStorage.removeItem('systemInstance');
-    localStorage.removeItem('systemToken');
-    
-    toast({
-      title: "Configuración eliminada",
-      description: "Instancia y token eliminados",
-      variant: "destructive",
-    });
+  const handleSave = async () => {
+    try {
+      // Update instance setting
+      const { error: instanceError } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: 'whatsapp_instance',
+          setting_value: instance,
+          updated_at: new Date().toISOString()
+        });
+
+      if (instanceError) throw instanceError;
+
+      // Update token setting
+      const { error: tokenError } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: 'whatsapp_token',
+          setting_value: token,
+          updated_at: new Date().toISOString()
+        });
+
+      if (tokenError) throw tokenError;
+
+      toast({
+        title: "Configuración guardada",
+        description: "Instancia y token actualizados exitosamente",
+      });
+    } catch (error: any) {
+      console.error('Error saving settings:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al guardar configuración",
+        variant: "destructive",
+      });
+    }
   };
+
+  const handleDelete = async () => {
+    try {
+      const { error } = await supabase
+        .from('system_settings')
+        .delete()
+        .in('setting_key', ['whatsapp_instance', 'whatsapp_token']);
+
+      if (error) throw error;
+
+      setInstance('');
+      setToken('');
+      
+      toast({
+        title: "Configuración eliminada",
+        description: "Instancia y token eliminados",
+        variant: "destructive",
+      });
+    } catch (error: any) {
+      console.error('Error deleting settings:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al eliminar configuración",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+        <CardContent className="p-6">
+          <p className="text-blue-200/70 text-center">Cargando configuraciones...</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
