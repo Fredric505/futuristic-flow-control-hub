@@ -12,36 +12,47 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Usuarios predefinidos
-  const users = {
-    'admin@admin.com': { password: 'admin123', role: 'admin' },
-    'usuario@demo.com': { password: 'user123', role: 'user' }
-  };
-
+  // Sistema de autenticación real
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     // Simular autenticación
     setTimeout(() => {
-      const user = users[email as keyof typeof users];
-      
-      if (user && user.password === password) {
-        localStorage.setItem('userRole', user.role);
+      // Admin credentials
+      if (email === 'fredric@gmail.com' && password === '5208Aa') {
+        localStorage.setItem('userRole', 'admin');
         localStorage.setItem('userEmail', email);
         
         toast({
           title: "Acceso concedido",
-          description: `Bienvenido al sistema ${user.role === 'admin' ? 'Administrador' : 'Usuario'}`,
+          description: "Bienvenido al Panel Administrativo",
         });
         
-        navigate(user.role === 'admin' ? '/admin/dashboard' : '/user/dashboard');
+        navigate('/admin/dashboard');
       } else {
-        toast({
-          title: "Error de autenticación",
-          description: "Credenciales incorrectas",
-          variant: "destructive",
-        });
+        // Check if user exists in localStorage (for registered users)
+        const users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+        const user = users.find((u: any) => u.email === email && u.password === password);
+        
+        if (user && new Date() < new Date(user.expirationDate)) {
+          localStorage.setItem('userRole', 'user');
+          localStorage.setItem('userEmail', email);
+          localStorage.setItem('currentUser', JSON.stringify(user));
+          
+          toast({
+            title: "Acceso concedido",
+            description: "Bienvenido al Panel de Usuario",
+          });
+          
+          navigate('/user/dashboard');
+        } else {
+          toast({
+            title: "Error de autenticación",
+            description: "Credenciales incorrectas o cuenta expirada",
+            variant: "destructive",
+          });
+        }
       }
       setIsLoading(false);
     }, 1000);
@@ -93,12 +104,6 @@ const Login = () => {
               {isLoading ? "Autenticando..." : "ACCEDER AL SISTEMA"}
             </Button>
           </form>
-          
-          <div className="mt-8 p-4 bg-blue-950/30 rounded-lg border border-blue-500/20">
-            <p className="text-xs text-blue-200/70 mb-2">Credenciales de prueba:</p>
-            <p className="text-xs text-blue-300">Admin: admin@admin.com / admin123</p>
-            <p className="text-xs text-blue-300">Usuario: usuario@demo.com / user123</p>
-          </div>
         </CardContent>
       </Card>
       

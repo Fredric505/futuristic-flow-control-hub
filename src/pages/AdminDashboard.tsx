@@ -1,13 +1,43 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench } from 'lucide-react';
+import ProcessForm from '@/components/ProcessForm';
+import AddUserForm from '@/components/AddUserForm';
+import ManageUsers from '@/components/ManageUsers';
+import ReloadCredits from '@/components/ReloadCredits';
+import InstanceSettings from '@/components/InstanceSettings';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeProcesses: 0,
+    messagesSent: 0,
+    systemCredits: 0
+  });
+
+  useEffect(() => {
+    loadStats();
+  }, [activeSection]);
+
+  const loadStats = () => {
+    const users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+    const processes = JSON.parse(localStorage.getItem('adminProcesses') || '[]');
+    const messages = JSON.parse(localStorage.getItem('sentMessages') || '[]');
+    
+    const totalCredits = users.reduce((sum: number, user: any) => sum + user.credits, 0);
+    
+    setStats({
+      totalUsers: users.length,
+      activeProcesses: processes.length,
+      messagesSent: messages.length,
+      systemCredits: totalCredits
+    });
+  };
 
   const menuItems = [
     { id: 'dashboard', icon: Home, label: 'Dashboard', description: 'Pantalla de inicio' },
@@ -38,7 +68,7 @@ const AdminDashboard = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-blue-100">Total Usuarios</p>
-                      <p className="text-3xl font-bold">12</p>
+                      <p className="text-3xl font-bold">{stats.totalUsers}</p>
                     </div>
                     <Users className="h-8 w-8 text-blue-200" />
                   </div>
@@ -50,7 +80,7 @@ const AdminDashboard = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-green-100">Procesos Activos</p>
-                      <p className="text-3xl font-bold">28</p>
+                      <p className="text-3xl font-bold">{stats.activeProcesses}</p>
                     </div>
                     <FileText className="h-8 w-8 text-green-200" />
                   </div>
@@ -62,7 +92,7 @@ const AdminDashboard = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-purple-100">Mensajes Enviados</p>
-                      <p className="text-3xl font-bold">456</p>
+                      <p className="text-3xl font-bold">{stats.messagesSent}</p>
                     </div>
                     <History className="h-8 w-8 text-purple-200" />
                   </div>
@@ -74,7 +104,7 @@ const AdminDashboard = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-orange-100">Créditos Sistema</p>
-                      <p className="text-3xl font-bold">1,250</p>
+                      <p className="text-3xl font-bold">{stats.systemCredits}</p>
                     </div>
                     <CreditCard className="h-8 w-8 text-orange-200" />
                   </div>
@@ -95,6 +125,9 @@ const AdminDashboard = () => {
           </div>
         );
       
+      case 'add-process':
+        return <ProcessForm userType="admin" />;
+      
       case 'admin-access':
         return (
           <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
@@ -110,6 +143,18 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
         );
+      
+      case 'add-user':
+        return <AddUserForm />;
+      
+      case 'manage-users':
+        return <ManageUsers />;
+      
+      case 'reload-credits':
+        return <ReloadCredits />;
+      
+      case 'settings':
+        return <InstanceSettings />;
       
       default:
         return (

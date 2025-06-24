@@ -1,13 +1,47 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Home, Plus, FileText, History } from 'lucide-react';
+import ProcessForm from '@/components/ProcessForm';
 
 const UserDashboard = () => {
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [userData, setUserData] = useState({
+    processes: 0,
+    messagesSent: 0,
+    credits: 0
+  });
+  const [instanceConfig, setInstanceConfig] = useState({
+    instance: '',
+    token: ''
+  });
+
+  useEffect(() => {
+    loadUserData();
+    loadInstanceConfig();
+  }, [activeSection]);
+
+  const loadUserData = () => {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    const userProcesses = JSON.parse(localStorage.getItem('userProcesses') || '[]');
+    const userMessages = JSON.parse(localStorage.getItem('userMessages') || '[]');
+    
+    setUserData({
+      processes: userProcesses.length,
+      messagesSent: userMessages.length,
+      credits: currentUser.credits || 0
+    });
+  };
+
+  const loadInstanceConfig = () => {
+    const instance = localStorage.getItem('systemInstance') || 'instance126876';
+    const token = localStorage.getItem('systemToken') || '4ecj8581tubua7ry';
+    
+    setInstanceConfig({ instance, token });
+  };
 
   const menuItems = [
     { id: 'dashboard', icon: Home, label: 'Dashboard', description: 'Pantalla de inicio' },
@@ -19,6 +53,7 @@ const UserDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('userRole');
     localStorage.removeItem('userEmail');
+    localStorage.removeItem('currentUser');
     navigate('/login');
   };
 
@@ -33,7 +68,7 @@ const UserDashboard = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-blue-100">Mis Procesos</p>
-                      <p className="text-3xl font-bold">5</p>
+                      <p className="text-3xl font-bold">{userData.processes}</p>
                     </div>
                     <FileText className="h-8 w-8 text-blue-200" />
                   </div>
@@ -45,7 +80,7 @@ const UserDashboard = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-green-100">Mensajes Enviados</p>
-                      <p className="text-3xl font-bold">23</p>
+                      <p className="text-3xl font-bold">{userData.messagesSent}</p>
                     </div>
                     <History className="h-8 w-8 text-green-200" />
                   </div>
@@ -57,7 +92,7 @@ const UserDashboard = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-purple-100">Créditos Disponibles</p>
-                      <p className="text-3xl font-bold">150</p>
+                      <p className="text-3xl font-bold">{userData.credits}</p>
                     </div>
                     <Plus className="h-8 w-8 text-purple-200" />
                   </div>
@@ -75,13 +110,16 @@ const UserDashboard = () => {
                 </p>
                 <div className="mt-4 p-4 bg-blue-950/30 rounded-lg border border-blue-500/20">
                   <h4 className="text-blue-300 font-semibold mb-2">Configuración Actual</h4>
-                  <p className="text-blue-200/70 text-sm">Instancia: instance126876</p>
-                  <p className="text-blue-200/70 text-sm">Token: 4ecj8581tubua7ry</p>
+                  <p className="text-blue-200/70 text-sm">Instancia: {instanceConfig.instance}</p>
+                  <p className="text-blue-200/70 text-sm">Token: {instanceConfig.token}</p>
                 </div>
               </CardContent>
             </Card>
           </div>
         );
+      
+      case 'add-process':
+        return <ProcessForm userType="user" />;
       
       default:
         return (
