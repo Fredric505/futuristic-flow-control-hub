@@ -33,32 +33,37 @@ const ManageUsers = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      console.log('Loading all users from admin panel...');
+      console.log('Loading users with new RLS policies...');
       
-      // Verificar que somos admin
+      // Verificar que el usuario actual esté autenticado
       const { data: { session } } = await supabase.auth.getSession();
-      console.log('Current admin session:', session?.user?.email);
+      console.log('Current session:', session?.user?.email);
       
-      if (!session || session.user.email !== 'fredric@gmail.com') {
-        console.log('Not admin user');
+      if (!session) {
+        console.log('No active session');
         setUsers([]);
         return;
       }
 
-      // Cargar TODOS los perfiles sin filtros
+      // Cargar todos los perfiles (las nuevas políticas RLS permiten al admin ver todos)
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
       
-      console.log('All profiles query result:', { profiles, profileError });
+      console.log('Profiles query result:', { profiles, profileError });
       
       if (profileError) {
-        console.error('Error fetching all profiles:', profileError);
-        throw profileError;
+        console.error('Error fetching profiles:', profileError);
+        toast({
+          title: "Error",
+          description: `Error al cargar usuarios: ${profileError.message}`,
+          variant: "destructive",
+        });
+        return;
       }
 
-      console.log('All profiles loaded for admin:', profiles?.length || 0);
+      console.log('Users loaded successfully:', profiles?.length || 0);
       setUsers(profiles || []);
       
     } catch (error: any) {
@@ -183,9 +188,9 @@ const ManageUsers = () => {
         <div className="space-y-4">
           {users.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-blue-200/70 mb-4">No hay usuarios registrados</p>
+              <p className="text-blue-200/70 mb-4">No hay usuarios registrados o no tienes permisos para verlos</p>
               <p className="text-blue-200/50 text-sm">
-                Los usuarios registrados aparecerán aquí. Verifica la conexión con la base de datos.
+                Si hay usuarios registrados, puede ser un problema de permisos. Contacta al administrador del sistema.
               </p>
             </div>
           ) : (

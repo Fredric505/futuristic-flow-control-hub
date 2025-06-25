@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,12 +37,14 @@ const ReloadCredits = () => {
       setLoading(true);
       console.log('Reloading credits for:', userEmail);
 
-      // Buscar el usuario por email
+      // Buscar el usuario por email usando las nuevas políticas RLS
       const { data: user, error: userError } = await supabase
         .from('profiles')
         .select('*')
         .eq('email', userEmail.toLowerCase().trim())
         .single();
+
+      console.log('User lookup result:', { user, userError });
 
       if (userError || !user) {
         console.error('User not found:', userError);
@@ -56,6 +58,8 @@ const ReloadCredits = () => {
 
       // Sumar los créditos existentes con los nuevos
       const newCredits = (user.credits || 0) + parseInt(creditsAmount);
+
+      console.log('Updating credits:', { userId: user.id, currentCredits: user.credits, addingCredits: parseInt(creditsAmount), newTotal: newCredits });
 
       const { error } = await supabase
         .from('profiles')
@@ -109,6 +113,9 @@ const ReloadCredits = () => {
               placeholder="ejemplo@correo.com"
               required
             />
+            <p className="text-blue-200/50 text-sm">
+              Ingresa manualmente el correo del usuario al que deseas recargar créditos
+            </p>
           </div>
           
           <div className="space-y-2">
