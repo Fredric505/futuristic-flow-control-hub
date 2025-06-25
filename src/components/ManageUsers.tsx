@@ -33,12 +33,22 @@ const ManageUsers = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      console.log('Loading users...');
+      console.log('Loading users from admin panel...');
       
-      // Verificar sesión del usuario
+      // Verificar sesión del usuario admin
       const { data: { session } } = await supabase.auth.getSession();
-      console.log('Current session:', session?.user?.email);
+      console.log('Current admin session:', session?.user?.email);
       
+      if (!session || session.user.email !== 'fredric@gmail.com') {
+        console.log('Not authorized to view users');
+        toast({
+          title: "Error",
+          description: "No tienes permisos para ver usuarios",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Obtener todos los perfiles de la tabla profiles
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
@@ -52,10 +62,10 @@ const ManageUsers = () => {
         throw profileError;
       }
 
-      console.log('Profiles loaded:', profiles);
+      console.log('Profiles loaded for admin:', profiles?.length || 0);
       setUsers(profiles || []);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading users:', error);
       toast({
         title: "Error",
@@ -67,8 +77,17 @@ const ManageUsers = () => {
     }
   };
 
-  const deleteUser = async (userId: string) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este usuario?')) {
+  const deleteUser = async (userId: string, userEmail: string) => {
+    if (userEmail === 'fredric@gmail.com') {
+      toast({
+        title: "Error",
+        description: "No puedes eliminar la cuenta de administrador",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!confirm(`¿Estás seguro de que quieres eliminar el usuario ${userEmail}?`)) {
       return;
     }
 
@@ -102,7 +121,7 @@ const ManageUsers = () => {
     }
   };
 
-  const extendExpiration = async (userId: string, currentDate: string) => {
+  const extendExpiration = async (userId: string, currentDate: string, userEmail: string) => {
     try {
       console.log('Extending expiration for user:', userId);
       
@@ -124,7 +143,7 @@ const ManageUsers = () => {
 
       toast({
         title: "Fecha extendida",
-        description: "Fecha de expiración extendida por 1 mes",
+        description: `Fecha de expiración extendida por 1 mes para ${userEmail}`,
       });
       
       // Recargar usuarios después de actualizar
@@ -199,7 +218,7 @@ const ManageUsers = () => {
                   <div className="flex space-x-2">
                     <Button
                       size="sm"
-                      onClick={() => extendExpiration(user.id, user.expiration_date)}
+                      onClick={() => extendExpiration(user.id, user.expiration_date, user.email)}
                       className="bg-green-600/20 hover:bg-green-600/30 text-green-300"
                       title="Extender 1 mes"
                     >
@@ -208,7 +227,7 @@ const ManageUsers = () => {
                     {user.email !== 'fredric@gmail.com' && (
                       <Button
                         size="sm"
-                        onClick={() => deleteUser(user.id)}
+                        onClick={() => deleteUser(user.id, user.email)}
                         className="bg-red-600/20 hover:bg-red-600/30 text-red-300"
                         title="Eliminar usuario"
                       >

