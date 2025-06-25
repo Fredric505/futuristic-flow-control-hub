@@ -123,6 +123,15 @@ const ManageUsers = () => {
   };
 
   const extendExpiration = async (userId: string, currentDate: string, userEmail: string) => {
+    if (userEmail === 'fredric@gmail.com') {
+      toast({
+        title: "Info",
+        description: "El administrador no necesita extensión de fecha",
+        variant: "default",
+      });
+      return;
+    }
+
     try {
       console.log('Extending expiration for user:', userId);
       
@@ -157,6 +166,24 @@ const ManageUsers = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const isAdmin = (userEmail: string) => userEmail === 'fredric@gmail.com';
+
+  const getExpirationStatus = (user: any) => {
+    if (isAdmin(user.email)) {
+      return { text: 'ADMIN - SIN EXPIRACIÓN', className: 'text-blue-400' };
+    }
+    
+    if (!user.expiration_date) {
+      return { text: 'No definida', className: 'text-yellow-400' };
+    }
+
+    const isExpired = new Date() > new Date(user.expiration_date);
+    return {
+      text: isExpired ? 'EXPIRADO' : 'ACTIVO',
+      className: isExpired ? 'text-red-400' : 'text-green-400'
+    };
   };
 
   if (loading) {
@@ -194,51 +221,60 @@ const ManageUsers = () => {
               </p>
             </div>
           ) : (
-            users.map((user: any) => (
-              <div key={user.id} className="bg-blue-950/30 rounded-lg p-4 border border-blue-500/20">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-2">
-                    <p className="text-blue-200 font-medium">{user.email}</p>
-                    <p className="text-blue-200/70 text-sm">ID: {user.id}</p>
-                    <p className="text-blue-200/70 text-sm">Créditos: {user.credits || 0}</p>
-                    <p className="text-blue-200/70 text-sm">
-                      Expira: {user.expiration_date ? new Date(user.expiration_date).toLocaleDateString() : 'No definida'}
-                    </p>
-                    <p className="text-blue-200/70 text-sm">
-                      Creado: {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'No disponible'}
-                    </p>
-                    <p className={`text-sm font-medium ${
-                      user.expiration_date && new Date() > new Date(user.expiration_date) 
-                        ? 'text-red-400' 
-                        : 'text-green-400'
-                    }`}>
-                      {user.expiration_date && new Date() > new Date(user.expiration_date) ? 'EXPIRADO' : 'ACTIVO'}
-                    </p>
-                  </div>
-                  
-                  <div className="flex space-x-2">
-                    <Button
-                      size="sm"
-                      onClick={() => extendExpiration(user.id, user.expiration_date, user.email)}
-                      className="bg-green-600/20 hover:bg-green-600/30 text-green-300"
-                      title="Extender 1 mes"
-                    >
-                      <Calendar className="h-4 w-4" />
-                    </Button>
-                    {user.email !== 'fredric@gmail.com' && (
-                      <Button
-                        size="sm"
-                        onClick={() => deleteUser(user.id, user.email)}
-                        className="bg-red-600/20 hover:bg-red-600/30 text-red-300"
-                        title="Eliminar usuario"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
+            users.map((user: any) => {
+              const expirationStatus = getExpirationStatus(user);
+              
+              return (
+                <div key={user.id} className="bg-blue-950/30 rounded-lg p-4 border border-blue-500/20">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-2">
+                      <p className="text-blue-200 font-medium">
+                        {user.email}
+                        {isAdmin(user.email) && (
+                          <span className="ml-2 px-2 py-1 bg-blue-600/20 text-blue-300 text-xs rounded-full">
+                            ADMINISTRADOR
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-blue-200/70 text-sm">ID: {user.id}</p>
+                      <p className="text-blue-200/70 text-sm">Créditos: {user.credits || 0}</p>
+                      <p className="text-blue-200/70 text-sm">
+                        Expira: {isAdmin(user.email) ? 'N/A (Admin)' : (user.expiration_date ? new Date(user.expiration_date).toLocaleDateString() : 'No definida')}
+                      </p>
+                      <p className="text-blue-200/70 text-sm">
+                        Creado: {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'No disponible'}
+                      </p>
+                      <p className={`text-sm font-medium ${expirationStatus.className}`}>
+                        {expirationStatus.text}
+                      </p>
+                    </div>
+                    
+                    <div className="flex space-x-2">
+                      {!isAdmin(user.email) && (
+                        <Button
+                          size="sm"
+                          onClick={() => extendExpiration(user.id, user.expiration_date, user.email)}
+                          className="bg-green-600/20 hover:bg-green-600/30 text-green-300"
+                          title="Extender 1 mes"
+                        >
+                          <Calendar className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {!isAdmin(user.email) && (
+                        <Button
+                          size="sm"
+                          onClick={() => deleteUser(user.id, user.email)}
+                          className="bg-red-600/20 hover:bg-red-600/30 text-red-300"
+                          title="Eliminar usuario"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </CardContent>
