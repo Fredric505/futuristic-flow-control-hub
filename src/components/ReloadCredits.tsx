@@ -16,6 +16,22 @@ const ReloadCredits = () => {
 
   useEffect(() => {
     loadUsers();
+    
+    // Configurar subscripción en tiempo real para cambios en profiles
+    const channel = supabase
+      .channel('profiles-credits-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'profiles' },
+        (payload) => {
+          console.log('Profile change detected in credits:', payload);
+          loadUsers(); // Recargar usuarios cuando hay cambios
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadUsers = async () => {
@@ -72,7 +88,7 @@ const ReloadCredits = () => {
 
       setSelectedUser('');
       setCreditsAmount('');
-      loadUsers(); // Refresh the list
+      // No necesitamos llamar loadUsers() porque la subscripción en tiempo real lo hará
 
     } catch (error: any) {
       console.error('Error reloading credits:', error);

@@ -12,6 +12,22 @@ const ManageUsers = () => {
 
   useEffect(() => {
     loadUsers();
+    
+    // Configurar subscripción en tiempo real para cambios en profiles
+    const channel = supabase
+      .channel('profiles-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'profiles' },
+        (payload) => {
+          console.log('Profile change detected:', payload);
+          loadUsers(); // Recargar usuarios cuando hay cambios
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadUsers = async () => {
@@ -62,7 +78,7 @@ const ManageUsers = () => {
         description: "Usuario eliminado exitosamente",
       });
       
-      loadUsers(); // Refresh the list
+      // No necesitamos llamar loadUsers() porque la subscripción en tiempo real lo hará
     } catch (error: any) {
       console.error('Error deleting user:', error);
       toast({
@@ -93,7 +109,7 @@ const ManageUsers = () => {
         description: "Fecha de expiración extendida por 1 mes",
       });
       
-      loadUsers(); // Refresh the list
+      // No necesitamos llamar loadUsers() porque la subscripción en tiempo real lo hará
     } catch (error: any) {
       console.error('Error extending expiration:', error);
       toast({
@@ -118,7 +134,7 @@ const ManageUsers = () => {
     <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle className="text-blue-300">Gestionar Usuarios</CardTitle>
+          <CardTitle className="text-blue-300">Gestionar Usuarios ({users.length} usuarios)</CardTitle>
           <Button
             onClick={loadUsers}
             className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300"
@@ -147,12 +163,12 @@ const ManageUsers = () => {
                     <p className="text-blue-200/70 text-sm">
                       Creado: {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'No disponible'}
                     </p>
-                    <p className={`text-sm ${
+                    <p className={`text-sm font-medium ${
                       user.expiration_date && new Date() > new Date(user.expiration_date) 
                         ? 'text-red-400' 
                         : 'text-green-400'
                     }`}>
-                      {user.expiration_date && new Date() > new Date(user.expiration_date) ? 'Expirado' : 'Activo'}
+                      {user.expiration_date && new Date() > new Date(user.expiration_date) ? 'EXPIRADO' : 'ACTIVO'}
                     </p>
                   </div>
                   
