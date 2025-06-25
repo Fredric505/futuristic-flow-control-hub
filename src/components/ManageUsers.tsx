@@ -16,42 +16,22 @@ const ManageUsers = () => {
 
   const loadUsers = async () => {
     try {
-      // Primero obtenemos todos los usuarios de auth.users usando el admin
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      setLoading(true);
       
-      if (authError) {
-        console.error('Error fetching auth users:', authError);
-        // Si no podemos acceder a admin, intentamos obtener solo los perfiles
-        const { data: profiles, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        if (profileError) throw profileError;
-        setUsers(profiles || []);
-      } else {
-        // Obtenemos los perfiles para obtener información adicional
-        const { data: profiles, error: profileError } = await supabase
-          .from('profiles')
-          .select('*');
-        
-        if (profileError) throw profileError;
-        
-        // Combinamos la información de auth.users con profiles
-        const combinedUsers = authUsers.users.map(authUser => {
-          const profile = profiles?.find(p => p.id === authUser.id);
-          return {
-            id: authUser.id,
-            email: authUser.email,
-            created_at: authUser.created_at,
-            credits: profile?.credits || 0,
-            expiration_date: profile?.expiration_date,
-            updated_at: profile?.updated_at
-          };
-        });
-        
-        setUsers(combinedUsers);
+      // Obtener todos los perfiles de la tabla profiles
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (profileError) {
+        console.error('Error fetching profiles:', profileError);
+        throw profileError;
       }
+
+      console.log('Profiles loaded:', profiles);
+      setUsers(profiles || []);
+      
     } catch (error) {
       console.error('Error loading users:', error);
       toast({
@@ -95,7 +75,7 @@ const ManageUsers = () => {
 
   const extendExpiration = async (userId: string, currentDate: string) => {
     try {
-      const newDate = new Date(currentDate);
+      const newDate = new Date(currentDate || new Date());
       newDate.setMonth(newDate.getMonth() + 1);
       
       const { error } = await supabase
@@ -179,7 +159,7 @@ const ManageUsers = () => {
                   <div className="flex space-x-2">
                     <Button
                       size="sm"
-                      onClick={() => extendExpiration(user.id, user.expiration_date || new Date().toISOString().split('T')[0])}
+                      onClick={() => extendExpiration(user.id, user.expiration_date)}
                       className="bg-green-600/20 hover:bg-green-600/30 text-green-300"
                       title="Extender 1 mes"
                     >
