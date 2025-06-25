@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
-import { Trash2, Calendar } from 'lucide-react';
+import { Trash2, Calendar, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const ManageUsers = () => {
@@ -16,13 +16,42 @@ const ManageUsers = () => {
 
   const loadUsers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setUsers(data || []);
+      // Primero obtenemos todos los usuarios de auth.users usando el admin
+      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      
+      if (authError) {
+        console.error('Error fetching auth users:', authError);
+        // Si no podemos acceder a admin, intentamos obtener solo los perfiles
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (profileError) throw profileError;
+        setUsers(profiles || []);
+      } else {
+        // Obtenemos los perfiles para obtener información adicional
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('*');
+        
+        if (profileError) throw profileError;
+        
+        // Combinamos la información de auth.users con profiles
+        const combinedUsers = authUsers.users.map(authUser => {
+          const profile = profiles?.find(p => p.id === authUser.id);
+          return {
+            id: authUser.id,
+            email: authUser.email,
+            created_at: authUser.created_at,
+            credits: profile?.credits || 0,
+            expiration_date: profile?.expiration_date,
+            updated_at: profile?.updated_at
+          };
+        });
+        
+        setUsers(combinedUsers);
+      }
     } catch (error) {
       console.error('Error loading users:', error);
       toast({
@@ -36,8 +65,16 @@ const ManageUsers = () => {
   };
 
   const deleteUser = async (userId: string) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar este usuario?')) {
+      return;
+    }
+
     try {
-      const { error } = await supabase.auth.admin.deleteUser(userId);
+      // Usar la función edge para eliminar el usuario
+      const { error } = await supabase.functions.invoke('delete-user', {
+        body: { userId }
+      });
+
       if (error) throw error;
 
       toast({
@@ -100,7 +137,17 @@ const ManageUsers = () => {
   return (
     <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
       <CardHeader>
-        <CardTitle className="text-blue-300">Gestionar Usuarios</CardTitle>
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-blue-300">Gestionar Usuarios</CardTitle>
+          <Button
+            onClick={loadUsers}
+            className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300"
+            size="sm"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Actualizar
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -112,9 +159,13 @@ const ManageUsers = () => {
                 <div className="flex justify-between items-start">
                   <div className="space-y-2">
                     <p className="text-blue-200 font-medium">{user.email}</p>
-                    <p className="text-blue-200/70 text-sm">Créditos: {user.credits}</p>
+                    <p className="text-blue-200/70 text-sm">ID: {user.id}</p>
+                    <p className="text-blue-200/70 text-sm">Créditos: {user.credits || 0}</p>
                     <p className="text-blue-200/70 text-sm">
                       Expira: {user.expiration_date ? new Date(user.expiration_date).toLocaleDateString() : 'No definida'}
+                    </p>
+                    <p className="text-blue-200/70 text-sm">
+                      Creado: {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'No disponible'}
                     </p>
                     <p className={`text-sm ${
                       user.expiration_date && new Date() > new Date(user.expiration_date) 
@@ -128,18 +179,22 @@ const ManageUsers = () => {
                   <div className="flex space-x-2">
                     <Button
                       size="sm"
-                      onClick={() => extendExpiration(user.id, user.expiration_date)}
+                      onClick={() => extendExpiration(user.id, user.expiration_date || new Date().toISOString().split('T')[0])}
                       className="bg-green-600/20 hover:bg-green-600/30 text-green-300"
+                      title="Extender 1 mes"
                     >
                       <Calendar className="h-4 w-4" />
                     </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => deleteUser(user.id)}
-                      className="bg-red-600/20 hover:bg-red-600/30 text-red-300"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {user.email !== 'fredric@gmail.com' && (
+                      <Button
+                        size="sm"
+                        onClick={() => deleteUser(user.id)}
+                        className="bg-red-600/20 hover:bg-red-600/30 text-red-300"
+                        title="Eliminar usuario"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>

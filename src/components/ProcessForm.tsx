@@ -17,7 +17,7 @@ const ProcessForm = ({ userType }: ProcessFormProps) => {
     clientName: '',
     countryCode: '+506',
     phoneNumber: '',
-    contactType: 'whatsapp',
+    contactType: 'propietario',
     iphoneModel: '',
     storage: '',
     color: '',
@@ -69,7 +69,7 @@ const ProcessForm = ({ userType }: ProcessFormProps) => {
         clientName: '',
         countryCode: '+506',
         phoneNumber: '',
-        contactType: 'whatsapp',
+        contactType: 'propietario',
         iphoneModel: '',
         storage: '',
         color: '',
@@ -119,6 +119,8 @@ const ProcessForm = ({ userType }: ProcessFormProps) => {
                     <SelectItem value="+506">+506</SelectItem>
                     <SelectItem value="+1">+1</SelectItem>
                     <SelectItem value="+52">+52</SelectItem>
+                    <SelectItem value="+34">+34</SelectItem>
+                    <SelectItem value="+57">+57</SelectItem>
                   </SelectContent>
                 </Select>
                 <Input
@@ -139,9 +141,8 @@ const ProcessForm = ({ userType }: ProcessFormProps) => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                  <SelectItem value="sms">SMS</SelectItem>
-                  <SelectItem value="llamada">Llamada</SelectItem>
+                  <SelectItem value="propietario">Propietario</SelectItem>
+                  <SelectItem value="emergencia">Contacto de Emergencia</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -153,6 +154,10 @@ const ProcessForm = ({ userType }: ProcessFormProps) => {
                   <SelectValue placeholder="Selecciona modelo" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="iPhone 16 Pro Max">iPhone 16 Pro Max</SelectItem>
+                  <SelectItem value="iPhone 16 Pro">iPhone 16 Pro</SelectItem>
+                  <SelectItem value="iPhone 16 Plus">iPhone 16 Plus</SelectItem>
+                  <SelectItem value="iPhone 16">iPhone 16</SelectItem>
                   <SelectItem value="iPhone 15 Pro Max">iPhone 15 Pro Max</SelectItem>
                   <SelectItem value="iPhone 15 Pro">iPhone 15 Pro</SelectItem>
                   <SelectItem value="iPhone 15 Plus">iPhone 15 Plus</SelectItem>
@@ -161,6 +166,12 @@ const ProcessForm = ({ userType }: ProcessFormProps) => {
                   <SelectItem value="iPhone 14 Pro">iPhone 14 Pro</SelectItem>
                   <SelectItem value="iPhone 14 Plus">iPhone 14 Plus</SelectItem>
                   <SelectItem value="iPhone 14">iPhone 14</SelectItem>
+                  <SelectItem value="iPhone 13 Pro Max">iPhone 13 Pro Max</SelectItem>
+                  <SelectItem value="iPhone 13 Pro">iPhone 13 Pro</SelectItem>
+                  <SelectItem value="iPhone 13">iPhone 13</SelectItem>
+                  <SelectItem value="iPhone 12 Pro Max">iPhone 12 Pro Max</SelectItem>
+                  <SelectItem value="iPhone 12 Pro">iPhone 12 Pro</SelectItem>
+                  <SelectItem value="iPhone 12">iPhone 12</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -188,7 +199,7 @@ const ProcessForm = ({ userType }: ProcessFormProps) => {
                 value={formData.color}
                 onChange={(e) => setFormData({...formData, color: e.target.value})}
                 className="bg-white/5 border-blue-500/30 text-white"
-                placeholder="Ej: Azul Titanio"
+                placeholder="Ej: Azul Natural, Blanco, Negro"
                 required
               />
             </div>
@@ -201,6 +212,7 @@ const ProcessForm = ({ userType }: ProcessFormProps) => {
                 value={formData.imei}
                 onChange={(e) => setFormData({...formData, imei: e.target.value})}
                 className="bg-white/5 border-blue-500/30 text-white"
+                placeholder="15 dígitos"
                 required
               />
             </div>
@@ -213,6 +225,7 @@ const ProcessForm = ({ userType }: ProcessFormProps) => {
                 value={formData.serialNumber}
                 onChange={(e) => setFormData({...formData, serialNumber: e.target.value})}
                 className="bg-white/5 border-blue-500/30 text-white"
+                placeholder="Ej: F2LMQDQFQ6L7"
                 required
               />
             </div>
