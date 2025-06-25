@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,9 +32,11 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
   const [processes, setProcesses] = useState<Process[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendingMessage, setSendingMessage] = useState<string | null>(null);
+  const [userCredits, setUserCredits] = useState(0);
 
   useEffect(() => {
     loadProcesses();
+    loadUserCredits();
     
     // Configurar subscripción en tiempo real para cambios en processes
     const channel = supabase
@@ -53,6 +54,23 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       supabase.removeChannel(channel);
     };
   }, [userType]);
+
+  const loadUserCredits = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('id', session.user.id)
+        .single();
+
+      setUserCredits(profile?.credits || 0);
+    } catch (error) {
+      console.error('Error loading user credits:', error);
+    }
+  };
 
   const loadProcesses = async () => {
     try {
@@ -135,6 +153,16 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
   const sendWhatsAppMessage = async (process: Process) => {
     try {
+      // Verificar créditos antes de enviar
+      if (userCredits <= 0) {
+        toast({
+          title: "Sin créditos suficientes",
+          description: "No tienes créditos suficientes para enviar mensajes. Contacta al administrador.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setSendingMessage(process.id);
       console.log('Sending WhatsApp message for process:', process.id);
 
@@ -200,13 +228,35 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       console.log('WhatsApp API response:', result);
 
       if (result.sent) {
-        // Guardar mensaje en la base de datos
+        // Obtener el usuario actual
         const { data: { user } } = await supabase.auth.getUser();
         
+        if (!user) {
+          throw new Error('Usuario no autenticado');
+        }
+
+        // Descontar 1 crédito del usuario
+        const { error: creditError } = await supabase
+          .from('profiles')
+          .update({ 
+            credits: userCredits - 1,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id);
+
+        if (creditError) {
+          console.error('Error updating credits:', creditError);
+          throw new Error('Error al descontar créditos');
+        }
+
+        // Actualizar el estado local de créditos
+        setUserCredits(prev => prev - 1);
+
+        // Guardar mensaje en la base de datos
         const { error: messageError } = await supabase
           .from('messages')
           .insert({
-            user_id: user?.id,
+            user_id: user.id,
             process_id: process.id,
             message_content: message,
             recipient_phone: `${process.country_code}${process.phone_number}`,
@@ -232,7 +282,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
         toast({
           title: "Mensaje enviado",
-          description: `Mensaje enviado exitosamente a ${process.client_name}`,
+          description: `Mensaje enviado exitosamente a ${process.client_name}. Créditos restantes: ${userCredits - 1}`,
         });
 
         // Recargar procesos
@@ -268,14 +318,19 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         <h2 className="text-2xl font-bold text-blue-300">
           Mis Procesos ({processes.length})
         </h2>
-        <Button
-          onClick={loadProcesses}
-          className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300"
-          size="sm"
-        >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Actualizar
-        </Button>
+        <div className="flex items-center space-x-4">
+          <div className="bg-gradient-to-r from-purple-600 to-purple-800 text-white px-4 py-2 rounded-lg">
+            <span className="text-sm">Créditos: {userCredits}</span>
+          </div>
+          <Button
+            onClick={loadProcesses}
+            className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300"
+            size="sm"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Actualizar
+          </Button>
+        </div>
       </div>
 
       {processes.length === 0 ? (
@@ -312,9 +367,13 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
                       <Button
                         size="sm"
                         onClick={() => sendWhatsAppMessage(process)}
-                        disabled={sendingMessage === process.id}
-                        className="bg-green-600/20 hover:bg-green-600/30 text-green-300"
-                        title="Enviar mensaje"
+                        disabled={sendingMessage === process.id || userCredits <= 0}
+                        className={`${
+                          userCredits <= 0 
+                            ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
+                            : 'bg-green-600/20 hover:bg-green-600/30 text-green-300'
+                        }`}
+                        title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar mensaje"}
                       >
                         <Send className="h-4 w-4" />
                       </Button>
