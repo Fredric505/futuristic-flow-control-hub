@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,15 +45,18 @@ const AdminDashboard = () => {
         .from('profiles')
         .select('credits');
 
-      // Load processes
+      // Load processes for current user only (admin only sees their own processes)
+      const { data: { user } } = await supabase.auth.getUser();
       const { data: processes } = await supabase
         .from('processes')
-        .select('id');
+        .select('id')
+        .eq('user_id', user?.id || '');
 
-      // Load messages
+      // Load messages for current user only
       const { data: messages } = await supabase
         .from('messages')
-        .select('id');
+        .select('id')
+        .eq('user_id', user?.id || '');
 
       console.log('Stats loaded:', { users, processes, messages });
 
@@ -72,8 +76,8 @@ const AdminDashboard = () => {
   const menuItems = [
     { id: 'dashboard', icon: Home, label: 'Dashboard', description: 'Pantalla de inicio' },
     { id: 'add-process', icon: Plus, label: 'Agregar Proceso', description: 'Agregar formulario para luego guardar' },
-    { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Procesos guardados y listos para enviar' },
-    { id: 'history', icon: History, label: 'Historial', description: 'Historial de mensajes enviados' },
+    { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Mis procesos guardados y listos para enviar' },
+    { id: 'history', icon: History, label: 'Historial', description: 'Mi historial de mensajes enviados' },
     { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Solo es texto' },
     { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },
     { id: 'manage-users', icon: Users, label: 'Gestionar Usuarios', description: 'Editar, borrar y renovar usuarios' },
@@ -108,7 +112,7 @@ const AdminDashboard = () => {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-green-100">Procesos Activos</p>
+                      <p className="text-green-100">Mis Procesos</p>
                       <p className="text-3xl font-bold">{stats.activeProcesses}</p>
                     </div>
                     <FileText className="h-8 w-8 text-green-200" />
@@ -120,7 +124,7 @@ const AdminDashboard = () => {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-purple-100">Mensajes Enviados</p>
+                      <p className="text-purple-100">Mis Mensajes</p>
                       <p className="text-3xl font-bold">{stats.messagesSent}</p>
                     </div>
                     <History className="h-8 w-8 text-purple-200" />
@@ -132,7 +136,7 @@ const AdminDashboard = () => {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-orange-100">Créditos Sistema</p>
+                      <p className="text-orange-100">Total Créditos</p>
                       <p className="text-3xl font-bold">{stats.systemCredits}</p>
                     </div>
                     <CreditCard className="h-8 w-8 text-orange-200" />

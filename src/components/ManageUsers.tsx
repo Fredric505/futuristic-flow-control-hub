@@ -39,17 +39,13 @@ const ManageUsers = () => {
       const { data: { session } } = await supabase.auth.getSession();
       console.log('Current admin session:', session?.user?.email);
       
-      if (!session || session.user.email !== 'fredric@gmail.com') {
-        console.log('Not authorized to view users');
-        toast({
-          title: "Error",
-          description: "No tienes permisos para ver usuarios",
-          variant: "destructive",
-        });
+      if (!session) {
+        console.log('No session found');
+        setUsers([]);
         return;
       }
 
-      // Obtener todos los perfiles de la tabla profiles
+      // CAMBIO: Simplificar la consulta para obtener todos los perfiles
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -189,7 +185,7 @@ const ManageUsers = () => {
             <div className="text-center py-8">
               <p className="text-blue-200/70 mb-4">No hay usuarios registrados</p>
               <p className="text-blue-200/50 text-sm">
-                Verifica que tengas permisos de administrador o que haya usuarios registrados en el sistema.
+                Los usuarios registrados aparecerán aquí. Verifica la conexión con la base de datos.
               </p>
             </div>
           ) : (
