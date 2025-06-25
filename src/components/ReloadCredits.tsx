@@ -4,72 +4,58 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 const ReloadCredits = () => {
-  const [users, setUsers] = useState([]);
-  const [selectedUser, setSelectedUser] = useState('');
+  const [userEmail, setUserEmail] = useState('');
   const [creditsAmount, setCreditsAmount] = useState('');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadUsers();
-    
-    // Configurar subscripción en tiempo real para cambios en profiles
-    const channel = supabase
-      .channel('profiles-credits-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'profiles' },
-        (payload) => {
-          console.log('Profile change detected in credits:', payload);
-          loadUsers(); // Recargar usuarios cuando hay cambios
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const loadUsers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('email');
-
-      if (error) throw error;
-      setUsers(data || []);
-    } catch (error) {
-      console.error('Error loading users:', error);
-      toast({
-        title: "Error",
-        description: "Error al cargar usuarios",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [loading, setLoading] = useState(false);
 
   const handleReloadCredits = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedUser || !creditsAmount) {
+    if (!userEmail || !creditsAmount) {
       toast({
         title: "Error",
-        description: "Selecciona un usuario y cantidad de créditos",
+        description: "Ingresa el correo del usuario y cantidad de créditos",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (parseInt(creditsAmount) <= 0) {
+      toast({
+        title: "Error",
+        description: "La cantidad de créditos debe ser mayor a 0",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const user = users.find((u: any) => u.id === selectedUser);
-      const newCredits = (user as any).credits + parseInt(creditsAmount);
+      setLoading(true);
+      console.log('Reloading credits for:', userEmail);
+
+      // Buscar el usuario por email
+      const { data: user, error: userError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', userEmail.toLowerCase().trim())
+        .single();
+
+      if (userError || !user) {
+        console.error('User not found:', userError);
+        toast({
+          title: "Error",
+          description: "Usuario no encontrado. Verifica el correo electrónico.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Sumar los créditos existentes con los nuevos
+      const newCredits = (user.credits || 0) + parseInt(creditsAmount);
 
       const { error } = await supabase
         .from('profiles')
@@ -77,18 +63,21 @@ const ReloadCredits = () => {
           credits: newCredits,
           updated_at: new Date().toISOString()
         })
-        .eq('id', selectedUser);
+        .eq('id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating credits:', error);
+        throw error;
+      }
 
       toast({
         title: "Créditos recargados",
-        description: `Se agregaron ${creditsAmount} créditos a ${(user as any)?.email}`,
+        description: `Se agregaron ${creditsAmount} créditos a ${userEmail}. Total: ${newCredits} créditos`,
       });
 
-      setSelectedUser('');
+      // Limpiar formulario
+      setUserEmail('');
       setCreditsAmount('');
-      // No necesitamos llamar loadUsers() porque la subscripción en tiempo real lo hará
 
     } catch (error: any) {
       console.error('Error reloading credits:', error);
@@ -97,18 +86,10 @@ const ReloadCredits = () => {
         description: error.message || "Error al recargar créditos",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
-
-  if (loading) {
-    return (
-      <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-        <CardContent className="p-6">
-          <p className="text-blue-200/70 text-center">Cargando usuarios...</p>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
@@ -118,19 +99,16 @@ const ReloadCredits = () => {
       <CardContent>
         <form onSubmit={handleReloadCredits} className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-blue-200">Seleccionar Usuario</Label>
-            <Select value={selectedUser} onValueChange={setSelectedUser}>
-              <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
-                <SelectValue placeholder="Selecciona un usuario" />
-              </SelectTrigger>
-              <SelectContent>
-                {users.map((user: any) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.email} (Créditos actuales: {user.credits})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="userEmail" className="text-blue-200">Correo del Usuario</Label>
+            <Input
+              id="userEmail"
+              type="email"
+              value={userEmail}
+              onChange={(e) => setUserEmail(e.target.value)}
+              className="bg-white/5 border-blue-500/30 text-white"
+              placeholder="ejemplo@correo.com"
+              required
+            />
           </div>
           
           <div className="space-y-2">
@@ -138,6 +116,7 @@ const ReloadCredits = () => {
             <Input
               id="credits"
               type="number"
+              min="1"
               value={creditsAmount}
               onChange={(e) => setCreditsAmount(e.target.value)}
               className="bg-white/5 border-blue-500/30 text-white"
@@ -148,9 +127,10 @@ const ReloadCredits = () => {
           
           <Button 
             type="submit"
+            disabled={loading}
             className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
           >
-            Recargar Créditos
+            {loading ? 'Recargando...' : 'Recargar Créditos'}
           </Button>
         </form>
       </CardContent>

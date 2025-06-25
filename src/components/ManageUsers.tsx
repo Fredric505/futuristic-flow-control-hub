@@ -33,32 +33,32 @@ const ManageUsers = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      console.log('Loading users from admin panel...');
+      console.log('Loading all users from admin panel...');
       
-      // Verificar sesión del usuario admin
+      // Verificar que somos admin
       const { data: { session } } = await supabase.auth.getSession();
       console.log('Current admin session:', session?.user?.email);
       
-      if (!session) {
-        console.log('No session found');
+      if (!session || session.user.email !== 'fredric@gmail.com') {
+        console.log('Not admin user');
         setUsers([]);
         return;
       }
 
-      // CAMBIO: Simplificar la consulta para obtener todos los perfiles
+      // Cargar TODOS los perfiles sin filtros
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
       
-      console.log('Profiles query result:', { profiles, profileError });
+      console.log('All profiles query result:', { profiles, profileError });
       
       if (profileError) {
-        console.error('Error fetching profiles:', profileError);
+        console.error('Error fetching all profiles:', profileError);
         throw profileError;
       }
 
-      console.log('Profiles loaded for admin:', profiles?.length || 0);
+      console.log('All profiles loaded for admin:', profiles?.length || 0);
       setUsers(profiles || []);
       
     } catch (error: any) {
