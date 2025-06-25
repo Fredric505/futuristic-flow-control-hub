@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,7 @@ import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
 import MessageHistory from '@/components/MessageHistory';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 const UserDashboard = () => {
   const navigate = useNavigate();
@@ -20,6 +22,7 @@ const UserDashboard = () => {
     instance: '',
     token: ''
   });
+  const [userExpired, setUserExpired] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -32,6 +35,40 @@ const UserDashboard = () => {
     console.log('User auth check:', session?.user?.email);
     if (!session) {
       navigate('/login');
+      return;
+    }
+
+    // Verificar si el usuario está expirado (solo si no es admin)
+    if (session.user.email !== 'fredric@gmail.com') {
+      await checkUserExpiration(session.user.id);
+    }
+  };
+
+  const checkUserExpiration = async (userId: string) => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('expiration_date')
+        .eq('id', userId)
+        .single();
+
+      if (profile && profile.expiration_date) {
+        const expirationDate = new Date(profile.expiration_date);
+        const currentDate = new Date();
+        currentDate.setHours(0, 0, 0, 0);
+        expirationDate.setHours(0, 0, 0, 0);
+
+        if (currentDate > expirationDate) {
+          setUserExpired(true);
+          toast({
+            title: "Cuenta Expirada",
+            description: "Tu cuenta ha expirado. Contacta al administrador para renovar tu acceso.",
+            variant: "destructive",
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error checking user expiration:', error);
     }
   };
 
@@ -112,6 +149,29 @@ const UserDashboard = () => {
   };
 
   const renderContent = () => {
+    if (userExpired) {
+      return (
+        <Card className="bg-black/20 backdrop-blur-xl border border-red-500/20">
+          <CardHeader>
+            <CardTitle className="text-red-300">Cuenta Expirada</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center space-y-4">
+              <p className="text-red-200/70">
+                Tu cuenta ha expirado y no puedes acceder a las funcionalidades del sistema.
+              </p>
+              <p className="text-blue-200/70">
+                Contacta al administrador para renovar tu acceso: +50588897925
+              </p>
+              <p className="text-blue-200/50 text-sm">
+                Todos tus datos están seguros y serán restaurados cuando se renueve tu cuenta.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
     switch (activeSection) {
       case 'dashboard':
         return (
@@ -208,7 +268,6 @@ const UserDashboard = () => {
             <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
               ASTRO505 USER
             </h1>
-            <p className="text-blue-200/70 text-sm mt-1">Sistema Ejecutivo</p>
           </div>
           
           <nav className="space-y-2">
@@ -217,11 +276,14 @@ const UserDashboard = () => {
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveSection(item.id)}
+                  onClick={() => !userExpired && setActiveSection(item.id)}
+                  disabled={userExpired}
                   className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
-                    activeSection === item.id
-                      ? 'bg-blue-600/20 border border-blue-500/30 text-blue-300'
-                      : 'text-blue-200/70 hover:bg-blue-600/10 hover:text-blue-300'
+                    userExpired 
+                      ? 'text-gray-500 cursor-not-allowed opacity-50'
+                      : activeSection === item.id
+                        ? 'bg-blue-600/20 border border-blue-500/30 text-blue-300'
+                        : 'text-blue-200/70 hover:bg-blue-600/10 hover:text-blue-300'
                   }`}
                 >
                   <Icon className="h-5 w-5" />
@@ -249,10 +311,10 @@ const UserDashboard = () => {
           <div className="max-w-7xl mx-auto">
             <div className="mb-8">
               <h2 className="text-3xl font-bold text-white mb-2">
-                {menuItems.find(item => item.id === activeSection)?.label}
+                {userExpired ? 'Cuenta Expirada' : menuItems.find(item => item.id === activeSection)?.label}
               </h2>
               <p className="text-blue-200/70">
-                {menuItems.find(item => item.id === activeSection)?.description}
+                {userExpired ? 'Acceso restringido por expiración' : menuItems.find(item => item.id === activeSection)?.description}
               </p>
             </div>
             
