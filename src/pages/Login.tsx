@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -104,7 +103,6 @@ const Login = () => {
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
             ASTRO505
           </CardTitle>
-          <p className="text-blue-200/70 mt-2">Panel de Control Futurista</p>
         </CardHeader>
         
         <CardContent className="space-y-6">

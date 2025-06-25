@@ -227,7 +227,8 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       const result = await response.json();
       console.log('WhatsApp API response:', result);
 
-      if (result.sent) {
+      // VERIFICAR QUE EL MENSAJE SE ENVIÓ CORRECTAMENTE ANTES DE COBRAR
+      if (result.sent === true || (result.sent === "true")) {
         // Obtener el usuario actual
         const { data: { user } } = await supabase.auth.getUser();
         
@@ -235,7 +236,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
           throw new Error('Usuario no autenticado');
         }
 
-        // Descontar 1 crédito del usuario
+        // SOLO DESCONTAR CRÉDITO SI EL MENSAJE SE ENVIÓ EXITOSAMENTE
         const { error: creditError } = await supabase
           .from('profiles')
           .update({ 
@@ -288,13 +289,15 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         // Recargar procesos
         await loadProcesses();
       } else {
-        throw new Error(result.message || 'Error al enviar mensaje');
+        // SI EL MENSAJE NO SE ENVIÓ, NO COBRAR Y MOSTRAR ERROR
+        const errorMessage = result.message || result.error || 'La instancia de WhatsApp no está funcionando correctamente';
+        throw new Error(`Error en la instancia: ${errorMessage}`);
       }
     } catch (error: any) {
       console.error('Error sending WhatsApp message:', error);
       toast({
-        title: "Error",
-        description: error.message || "Error al enviar mensaje",
+        title: "Error de envío",
+        description: `${error.message}. No se han descontado créditos.`,
         variant: "destructive",
       });
     } finally {
