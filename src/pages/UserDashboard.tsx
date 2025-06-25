@@ -1,10 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Home, Plus, FileText, History } from 'lucide-react';
 import ProcessForm from '@/components/ProcessForm';
+import ProcessList from '@/components/ProcessList';
+import MessageHistory from '@/components/MessageHistory';
 import { supabase } from '@/integrations/supabase/client';
 
 const UserDashboard = () => {
@@ -28,6 +29,7 @@ const UserDashboard = () => {
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
+    console.log('User auth check:', session?.user?.email);
     if (!session) {
       navigate('/login');
     }
@@ -35,6 +37,8 @@ const UserDashboard = () => {
 
   const loadUserData = async () => {
     try {
+      console.log('Loading user data...');
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -56,6 +60,8 @@ const UserDashboard = () => {
         .from('messages')
         .select('id')
         .eq('user_id', user.id);
+
+      console.log('User data loaded:', { profile, processes, messages });
 
       setUserData({
         processes: processes?.length || 0,
@@ -168,6 +174,12 @@ const UserDashboard = () => {
       
       case 'add-process':
         return <ProcessForm userType="user" />;
+      
+      case 'view-processes':
+        return <ProcessList userType="user" />;
+      
+      case 'history':
+        return <MessageHistory />;
       
       default:
         return (

@@ -33,12 +33,19 @@ const ManageUsers = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
+      console.log('Loading users...');
+      
+      // Verificar sesión del usuario
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Current session:', session?.user?.email);
       
       // Obtener todos los perfiles de la tabla profiles
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
+      
+      console.log('Profiles query result:', { profiles, profileError });
       
       if (profileError) {
         console.error('Error fetching profiles:', profileError);
@@ -52,7 +59,7 @@ const ManageUsers = () => {
       console.error('Error loading users:', error);
       toast({
         title: "Error",
-        description: "Error al cargar usuarios",
+        description: `Error al cargar usuarios: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -66,19 +73,25 @@ const ManageUsers = () => {
     }
 
     try {
+      console.log('Deleting user:', userId);
+      
       // Usar la función edge para eliminar el usuario
       const { error } = await supabase.functions.invoke('delete-user', {
         body: { userId }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error from delete-user function:', error);
+        throw error;
+      }
 
       toast({
         title: "Usuario eliminado",
         description: "Usuario eliminado exitosamente",
       });
       
-      // No necesitamos llamar loadUsers() porque la subscripción en tiempo real lo hará
+      // Recargar usuarios después de eliminar
+      await loadUsers();
     } catch (error: any) {
       console.error('Error deleting user:', error);
       toast({
@@ -91,6 +104,8 @@ const ManageUsers = () => {
 
   const extendExpiration = async (userId: string, currentDate: string) => {
     try {
+      console.log('Extending expiration for user:', userId);
+      
       const newDate = new Date(currentDate || new Date());
       newDate.setMonth(newDate.getMonth() + 1);
       
@@ -102,14 +117,18 @@ const ManageUsers = () => {
         })
         .eq('id', userId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error extending expiration:', error);
+        throw error;
+      }
 
       toast({
         title: "Fecha extendida",
         description: "Fecha de expiración extendida por 1 mes",
       });
       
-      // No necesitamos llamar loadUsers() porque la subscripción en tiempo real lo hará
+      // Recargar usuarios después de actualizar
+      await loadUsers();
     } catch (error: any) {
       console.error('Error extending expiration:', error);
       toast({
@@ -148,7 +167,12 @@ const ManageUsers = () => {
       <CardContent>
         <div className="space-y-4">
           {users.length === 0 ? (
-            <p className="text-blue-200/70 text-center py-8">No hay usuarios registrados</p>
+            <div className="text-center py-8">
+              <p className="text-blue-200/70 mb-4">No hay usuarios registrados</p>
+              <p className="text-blue-200/50 text-sm">
+                Verifica que tengas permisos de administrador o que haya usuarios registrados en el sistema.
+              </p>
+            </div>
           ) : (
             users.map((user: any) => (
               <div key={user.id} className="bg-blue-950/30 rounded-lg p-4 border border-blue-500/20">

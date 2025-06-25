@@ -1,14 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench } from 'lucide-react';
 import ProcessForm from '@/components/ProcessForm';
+import ProcessList from '@/components/ProcessList';
 import AddUserForm from '@/components/AddUserForm';
 import ManageUsers from '@/components/ManageUsers';
 import ReloadCredits from '@/components/ReloadCredits';
 import InstanceSettings from '@/components/InstanceSettings';
+import MessageHistory from '@/components/MessageHistory';
 import { supabase } from '@/integrations/supabase/client';
 
 const AdminDashboard = () => {
@@ -28,6 +29,7 @@ const AdminDashboard = () => {
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
+    console.log('Admin auth check:', session?.user?.email);
     if (!session || session.user.email !== 'fredric@gmail.com') {
       navigate('/login');
     }
@@ -35,6 +37,8 @@ const AdminDashboard = () => {
 
   const loadStats = async () => {
     try {
+      console.log('Loading admin stats...');
+      
       // Load total users
       const { data: users } = await supabase
         .from('profiles')
@@ -49,6 +53,8 @@ const AdminDashboard = () => {
       const { data: messages } = await supabase
         .from('messages')
         .select('id');
+
+      console.log('Stats loaded:', { users, processes, messages });
 
       const totalCredits = users?.reduce((sum: number, user: any) => sum + (user.credits || 0), 0) || 0;
 
@@ -150,6 +156,12 @@ const AdminDashboard = () => {
       
       case 'add-process':
         return <ProcessForm userType="admin" />;
+      
+      case 'view-processes':
+        return <ProcessList userType="admin" />;
+      
+      case 'history':
+        return <MessageHistory />;
       
       case 'admin-access':
         return (
