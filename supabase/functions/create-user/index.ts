@@ -8,11 +8,14 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log("Create user function called");
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Initialize Supabase client with service role key
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -24,41 +27,77 @@ serve(async (req) => {
       }
     );
 
-    const { email, password, credits, expirationDate } = await req.json();
+    console.log("Supabase client initialized");
 
-    // Crear usuario con privilegios de admin
+    const requestBody = await req.json();
+    console.log("Request body:", requestBody);
+    
+    const { email, password, credits, expirationDate } = requestBody;
+
+    if (!email || !password) {
+      throw new Error("Email and password are required");
+    }
+
+    console.log("Creating user with email:", email);
+
+    // Create user with admin privileges
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
     });
 
-    if (authError) throw authError;
+    if (authError) {
+      console.error("Auth error:", authError);
+      throw authError;
+    }
 
-    // Actualizar perfil con créditos y expiración
+    console.log("User created successfully:", authData.user.id);
+
+    // Update profile with credits and expiration
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
       .update({
-        credits: parseInt(credits),
-        expiration_date: expirationDate,
+        credits: parseInt(credits) || 0,
+        expiration_date: expirationDate || null,
       })
       .eq("id", authData.user.id);
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      console.error("Profile error:", profileError);
+      throw profileError;
+    }
+
+    console.log("Profile updated successfully");
 
     return new Response(
-      JSON.stringify({ success: true, user: authData.user }),
+      JSON.stringify({ 
+        success: true, 
+        user: {
+          id: authData.user.id,
+          email: authData.user.email
+        }
+      }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { 
+          ...corsHeaders, 
+          "Content-Type": "application/json" 
+        },
         status: 200,
       }
     );
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error in create-user function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message || "Error creating user",
+        details: error.toString()
+      }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { 
+          ...corsHeaders, 
+          "Content-Type": "application/json" 
+        },
         status: 400,
       }
     );

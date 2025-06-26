@@ -21,6 +21,8 @@ const AddUserForm = () => {
     setIsLoading(true);
     
     try {
+      console.log('Starting user creation process...');
+      
       // Get admin session to use admin methods
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -28,17 +30,29 @@ const AddUserForm = () => {
         throw new Error('No tienes permisos de administrador');
       }
 
+      console.log('Admin verification passed, calling edge function...');
+
       // Use edge function to create user (admin only)
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
           email: formData.email,
           password: formData.password,
-          credits: parseInt(formData.credits),
+          credits: formData.credits,
           expirationDate: formData.expirationDate
         }
       });
 
-      if (error) throw error;
+      console.log('Edge function response:', { data, error });
+
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Error calling edge function');
+      }
+
+      if (data?.error) {
+        console.error('Function returned error:', data.error);
+        throw new Error(data.error);
+      }
 
       toast({
         title: "Usuario agregado",
@@ -55,9 +69,18 @@ const AddUserForm = () => {
 
     } catch (error: any) {
       console.error('Error creating user:', error);
+      
+      let errorMessage = "Error al crear el usuario";
+      
+      if (error.message?.includes('Failed to send a request')) {
+        errorMessage = "Error de conexión con el servidor. Verifica que la función esté desplegada correctamente.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Error",
-        description: error.message || "Error al crear el usuario",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -93,6 +116,7 @@ const AddUserForm = () => {
               onChange={(e) => setFormData({...formData, password: e.target.value})}
               className="bg-white/5 border-blue-500/30 text-white"
               required
+              minLength={6}
             />
           </div>
           
@@ -104,6 +128,7 @@ const AddUserForm = () => {
               value={formData.credits}
               onChange={(e) => setFormData({...formData, credits: e.target.value})}
               className="bg-white/5 border-blue-500/30 text-white"
+              min="0"
               required
             />
           </div>
