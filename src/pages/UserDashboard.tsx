@@ -4,15 +4,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Home, Plus, FileText, History } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
 import MessageHistory from '@/components/MessageHistory';
+import MobileSidebar from '@/components/MobileSidebar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 const UserDashboard = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userData, setUserData] = useState({
     processes: 0,
     messagesSent: 0,
@@ -176,39 +180,39 @@ const UserDashboard = () => {
       case 'dashboard':
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
               <Card className="bg-gradient-to-br from-blue-600 to-blue-800 text-white border-none">
-                <CardContent className="p-6">
+                <CardContent className="p-4 lg:p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-blue-100">Mis Procesos</p>
-                      <p className="text-3xl font-bold">{userData.processes}</p>
+                      <p className="text-blue-100 text-sm">Mis Procesos</p>
+                      <p className="text-2xl lg:text-3xl font-bold">{userData.processes}</p>
                     </div>
-                    <FileText className="h-8 w-8 text-blue-200" />
+                    <FileText className="h-6 w-6 lg:h-8 lg:w-8 text-blue-200" />
                   </div>
                 </CardContent>
               </Card>
               
               <Card className="bg-gradient-to-br from-green-600 to-green-800 text-white border-none">
-                <CardContent className="p-6">
+                <CardContent className="p-4 lg:p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-green-100">Mensajes Enviados</p>
-                      <p className="text-3xl font-bold">{userData.messagesSent}</p>
+                      <p className="text-green-100 text-sm">Mensajes Enviados</p>
+                      <p className="text-2xl lg:text-3xl font-bold">{userData.messagesSent}</p>
                     </div>
-                    <History className="h-8 w-8 text-green-200" />
+                    <History className="h-6 w-6 lg:h-8 lg:w-8 text-green-200" />
                   </div>
                 </CardContent>
               </Card>
               
-              <Card className="bg-gradient-to-br from-purple-600 to-purple-800 text-white border-none">
-                <CardContent className="p-6">
+              <Card className="bg-gradient-to-br from-purple-600 to-purple-800 text-white border-none sm:col-span-2 lg:col-span-1">
+                <CardContent className="p-4 lg:p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-purple-100">Créditos Disponibles</p>
-                      <p className="text-3xl font-bold">{userData.credits}</p>
+                      <p className="text-purple-100 text-sm">Créditos Disponibles</p>
+                      <p className="text-2xl lg:text-3xl font-bold">{userData.credits}</p>
                     </div>
-                    <Plus className="h-8 w-8 text-purple-200" />
+                    <Plus className="h-6 w-6 lg:h-8 lg:w-8 text-purple-200" />
                   </div>
                 </CardContent>
               </Card>
@@ -219,13 +223,13 @@ const UserDashboard = () => {
                 <CardTitle className="text-blue-300">Panel de Usuario Astro505</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-blue-200/70">
+                <p className="text-blue-200/70 mb-4">
                   Bienvenido a tu panel personal Astro505. Aquí puedes gestionar tus procesos y revisar tu historial.
                 </p>
-                <div className="mt-4 p-4 bg-blue-950/30 rounded-lg border border-blue-500/20">
+                <div className="p-4 bg-blue-950/30 rounded-lg border border-blue-500/20">
                   <h4 className="text-blue-300 font-semibold mb-2">Configuración Actual</h4>
-                  <p className="text-blue-200/70 text-sm">Instancia: {instanceConfig.instance}</p>
-                  <p className="text-blue-200/70 text-sm">Token: {instanceConfig.token}</p>
+                  <p className="text-blue-200/70 text-sm break-all">Instancia: {instanceConfig.instance}</p>
+                  <p className="text-blue-200/70 text-sm break-all">Token: {instanceConfig.token}</p>
                 </div>
               </CardContent>
             </Card>
@@ -262,8 +266,8 @@ const UserDashboard = () => {
       }}></div>
       
       <div className="flex">
-        {/* Sidebar */}
-        <div className="w-80 min-h-screen bg-black/30 backdrop-blur-xl border-r border-blue-500/20 p-6">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block w-80 min-h-screen bg-black/30 backdrop-blur-xl border-r border-blue-500/20 p-6">
           <div className="mb-8">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
               ASTRO505 USER
@@ -305,15 +309,28 @@ const UserDashboard = () => {
             </Button>
           </div>
         </div>
+
+        {/* Mobile Sidebar */}
+        <MobileSidebar
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+          menuItems={menuItems}
+          activeSection={activeSection}
+          onSectionChange={(section) => {
+            if (!userExpired) setActiveSection(section);
+          }}
+          onLogout={handleLogout}
+          title="ASTRO505 USER"
+        />
         
         {/* Main Content */}
-        <div className="flex-1 p-8">
+        <div className="flex-1 p-4 lg:p-8">
           <div className="max-w-7xl mx-auto">
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-white mb-2">
+            <div className="mb-6 lg:mb-8 mt-12 lg:mt-0">
+              <h2 className="text-2xl lg:text-3xl font-bold text-white mb-2">
                 {userExpired ? 'Cuenta Expirada' : menuItems.find(item => item.id === activeSection)?.label}
               </h2>
-              <p className="text-blue-200/70">
+              <p className="text-blue-200/70 text-sm lg:text-base">
                 {userExpired ? 'Acceso restringido por expiración' : menuItems.find(item => item.id === activeSection)?.description}
               </p>
             </div>

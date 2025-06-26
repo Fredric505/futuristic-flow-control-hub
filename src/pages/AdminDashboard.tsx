@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
 import AddUserForm from '@/components/AddUserForm';
@@ -11,11 +12,14 @@ import ManageUsers from '@/components/ManageUsers';
 import ReloadCredits from '@/components/ReloadCredits';
 import InstanceSettings from '@/components/InstanceSettings';
 import MessageHistory from '@/components/MessageHistory';
+import MobileSidebar from '@/components/MobileSidebar';
 import { supabase } from '@/integrations/supabase/client';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeProcesses: 0,
@@ -95,51 +99,51 @@ const AdminDashboard = () => {
       case 'dashboard':
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
               <Card className="bg-gradient-to-br from-blue-600 to-blue-800 text-white border-none">
-                <CardContent className="p-6">
+                <CardContent className="p-4 lg:p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-blue-100">Total Usuarios</p>
-                      <p className="text-3xl font-bold">{stats.totalUsers}</p>
+                      <p className="text-blue-100 text-sm">Total Usuarios</p>
+                      <p className="text-2xl lg:text-3xl font-bold">{stats.totalUsers}</p>
                     </div>
-                    <Users className="h-8 w-8 text-blue-200" />
+                    <Users className="h-6 w-6 lg:h-8 lg:w-8 text-blue-200" />
                   </div>
                 </CardContent>
               </Card>
               
               <Card className="bg-gradient-to-br from-green-600 to-green-800 text-white border-none">
-                <CardContent className="p-6">
+                <CardContent className="p-4 lg:p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-green-100">Mis Procesos</p>
-                      <p className="text-3xl font-bold">{stats.activeProcesses}</p>
+                      <p className="text-green-100 text-sm">Mis Procesos</p>
+                      <p className="text-2xl lg:text-3xl font-bold">{stats.activeProcesses}</p>
                     </div>
-                    <FileText className="h-8 w-8 text-green-200" />
+                    <FileText className="h-6 w-6 lg:h-8 lg:w-8 text-green-200" />
                   </div>
                 </CardContent>
               </Card>
               
               <Card className="bg-gradient-to-br from-purple-600 to-purple-800 text-white border-none">
-                <CardContent className="p-6">
+                <CardContent className="p-4 lg:p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-purple-100">Mis Mensajes</p>
-                      <p className="text-3xl font-bold">{stats.messagesSent}</p>
+                      <p className="text-purple-100 text-sm">Mis Mensajes</p>
+                      <p className="text-2xl lg:text-3xl font-bold">{stats.messagesSent}</p>
                     </div>
-                    <History className="h-8 w-8 text-purple-200" />
+                    <History className="h-6 w-6 lg:h-8 lg:w-8 text-purple-200" />
                   </div>
                 </CardContent>
               </Card>
               
               <Card className="bg-gradient-to-br from-orange-600 to-orange-800 text-white border-none">
-                <CardContent className="p-6">
+                <CardContent className="p-4 lg:p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-orange-100">Total Créditos</p>
-                      <p className="text-3xl font-bold">{stats.systemCredits}</p>
+                      <p className="text-orange-100 text-sm">Total Créditos</p>
+                      <p className="text-2xl lg:text-3xl font-bold">{stats.systemCredits}</p>
                     </div>
-                    <CreditCard className="h-8 w-8 text-orange-200" />
+                    <CreditCard className="h-6 w-6 lg:h-8 lg:w-8 text-orange-200" />
                   </div>
                 </CardContent>
               </Card>
@@ -216,8 +220,8 @@ const AdminDashboard = () => {
       }}></div>
       
       <div className="flex">
-        {/* Sidebar */}
-        <div className="w-80 min-h-screen bg-black/30 backdrop-blur-xl border-r border-blue-500/20 p-6">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block w-80 min-h-screen bg-black/30 backdrop-blur-xl border-r border-blue-500/20 p-6">
           <div className="mb-8">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
               ASTRO505 ADMIN
@@ -256,15 +260,26 @@ const AdminDashboard = () => {
             </Button>
           </div>
         </div>
+
+        {/* Mobile Sidebar */}
+        <MobileSidebar
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+          menuItems={menuItems}
+          activeSection={activeSection}
+          onSectionChange={setActiveSection}
+          onLogout={handleLogout}
+          title="ASTRO505 ADMIN"
+        />
         
         {/* Main Content */}
-        <div className="flex-1 p-8">
+        <div className="flex-1 p-4 lg:p-8">
           <div className="max-w-7xl mx-auto">
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-white mb-2">
+            <div className="mb-6 lg:mb-8 mt-12 lg:mt-0">
+              <h2 className="text-2xl lg:text-3xl font-bold text-white mb-2">
                 {menuItems.find(item => item.id === activeSection)?.label}
               </h2>
-              <p className="text-blue-200/70">
+              <p className="text-blue-200/70 text-sm lg:text-base">
                 {menuItems.find(item => item.id === activeSection)?.description}
               </p>
             </div>
