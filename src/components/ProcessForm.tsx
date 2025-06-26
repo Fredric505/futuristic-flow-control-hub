@@ -171,7 +171,27 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
 
   const handleCountryCodeChange = (value: string) => {
     console.log('Código de país seleccionado:', value);
-    setFormData({...formData, countryCode: value});
+    setFormData(prev => ({...prev, countryCode: value}));
+  };
+
+  const handleContactTypeChange = (value: string) => {
+    console.log('Tipo de contacto seleccionado:', value);
+    setFormData(prev => ({...prev, contactType: value}));
+  };
+
+  const handleIphoneModelChange = (value: string) => {
+    console.log('Modelo iPhone seleccionado:', value);
+    setFormData(prev => ({...prev, iphoneModel: value}));
+  };
+
+  const handleStorageChange = (value: string) => {
+    console.log('Almacenamiento seleccionado:', value);
+    setFormData(prev => ({...prev, storage: value}));
+  };
+
+  const handleColorChange = (value: string) => {
+    console.log('Color seleccionado:', value);
+    setFormData(prev => ({...prev, color: value}));
   };
 
   return (
@@ -189,7 +209,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
               <Input
                 id="clientName"
                 value={formData.clientName}
-                onChange={(e) => setFormData({...formData, clientName: e.target.value})}
+                onChange={(e) => setFormData(prev => ({...prev, clientName: e.target.value}))}
                 className="bg-white/5 border-blue-500/30 text-white"
                 required
                 disabled={isSubmitting}
@@ -206,9 +226,13 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona código" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-slate-800 border-blue-500/30 text-white max-h-[200px]">
                   {countryCodes.map((country) => (
-                    <SelectItem key={country.code} value={country.code}>
+                    <SelectItem 
+                      key={country.code} 
+                      value={country.code}
+                      className="hover:bg-blue-600/20 focus:bg-blue-600/20"
+                    >
                       {country.code} - {country.country}
                     </SelectItem>
                   ))}
@@ -221,7 +245,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
               <Input
                 id="phoneNumber"
                 value={formData.phoneNumber}
-                onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+                onChange={(e) => setFormData(prev => ({...prev, phoneNumber: e.target.value}))}
                 className="bg-white/5 border-blue-500/30 text-white"
                 required
                 disabled={isSubmitting}
@@ -232,15 +256,15 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
               <Label className="text-blue-200">Tipo de Contacto</Label>
               <Select 
                 value={formData.contactType} 
-                onValueChange={(value) => setFormData({...formData, contactType: value})}
+                onValueChange={handleContactTypeChange}
                 disabled={isSubmitting}
               >
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona tipo" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="propietario">Propietario</SelectItem>
-                  <SelectItem value="emergencia">Emergencia</SelectItem>
+                <SelectContent className="bg-slate-800 border-blue-500/30 text-white">
+                  <SelectItem value="propietario" className="hover:bg-blue-600/20 focus:bg-blue-600/20">Propietario</SelectItem>
+                  <SelectItem value="emergencia" className="hover:bg-blue-600/20 focus:bg-blue-600/20">Emergencia</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -249,15 +273,21 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
               <Label className="text-blue-200">Modelo de iPhone</Label>
               <Select 
                 value={formData.iphoneModel} 
-                onValueChange={(value) => setFormData({...formData, iphoneModel: value})}
+                onValueChange={handleIphoneModelChange}
                 disabled={isSubmitting}
               >
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona modelo" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-slate-800 border-blue-500/30 text-white max-h-[200px]">
                   {iphoneModels.map((model) => (
-                    <SelectItem key={model} value={model}>{model}</SelectItem>
+                    <SelectItem 
+                      key={model} 
+                      value={model}
+                      className="hover:bg-blue-600/20 focus:bg-blue-600/20"
+                    >
+                      {model}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -267,15 +297,21 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
               <Label className="text-blue-200">Almacenamiento</Label>
               <Select 
                 value={formData.storage} 
-                onValueChange={(value) => setFormData({...formData, storage: value})}
+                onValueChange={handleStorageChange}
                 disabled={isSubmitting}
               >
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona almacenamiento" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-slate-800 border-blue-500/30 text-white">
                   {storageOptions.map((storage) => (
-                    <SelectItem key={storage} value={storage}>{storage}</SelectItem>
+                    <SelectItem 
+                      key={storage} 
+                      value={storage}
+                      className="hover:bg-blue-600/20 focus:bg-blue-600/20"
+                    >
+                      {storage}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -285,15 +321,21 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
               <Label className="text-blue-200">Color</Label>
               <Select 
                 value={formData.color} 
-                onValueChange={(value) => setFormData({...formData, color: value})}
+                onValueChange={handleColorChange}
                 disabled={isSubmitting}
               >
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona color" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-slate-800 border-blue-500/30 text-white max-h-[200px]">
                   {colorOptions.map((color) => (
-                    <SelectItem key={color} value={color}>{color}</SelectItem>
+                    <SelectItem 
+                      key={color} 
+                      value={color}
+                      className="hover:bg-blue-600/20 focus:bg-blue-600/20"
+                    >
+                      {color}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -304,7 +346,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
               <Input
                 id="imei"
                 value={formData.imei}
-                onChange={(e) => setFormData({...formData, imei: e.target.value})}
+                onChange={(e) => setFormData(prev => ({...prev, imei: e.target.value}))}
                 className="bg-white/5 border-blue-500/30 text-white"
                 required
                 disabled={isSubmitting}
@@ -316,7 +358,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
               <Input
                 id="serialNumber"
                 value={formData.serialNumber}
-                onChange={(e) => setFormData({...formData, serialNumber: e.target.value})}
+                onChange={(e) => setFormData(prev => ({...prev, serialNumber: e.target.value}))}
                 className="bg-white/5 border-blue-500/30 text-white"
                 required
                 disabled={isSubmitting}
@@ -328,7 +370,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
               <Input
                 id="url"
                 value={formData.url}
-                onChange={(e) => setFormData({...formData, url: e.target.value})}
+                onChange={(e) => setFormData(prev => ({...prev, url: e.target.value}))}
                 className="bg-white/5 border-blue-500/30 text-white"
                 placeholder="https://ejemplo.com"
                 disabled={isSubmitting}
