@@ -26,7 +26,7 @@ serve(async (req) => {
 
     const { email, password, credits, expirationDate } = await req.json();
 
-    // Create user with admin privileges
+    // Crear usuario con privilegios de admin
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -35,7 +35,7 @@ serve(async (req) => {
 
     if (authError) throw authError;
 
-    // Update profile with credits and expiration
+    // Actualizar perfil con créditos y expiración
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
       .update({
