@@ -265,42 +265,44 @@ const UserDashboard = () => {
         backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill-opacity='0.03'%3E%3Cpolygon fill='%23ffffff' points='50 0 60 40 100 50 60 60 50 100 40 60 0 50 40 40'/%3E%3C/g%3E%3C/svg%3E")`
       }}></div>
       
-      <div className="flex">
+      <div className="flex h-screen overflow-hidden">
         {/* Desktop Sidebar */}
-        <div className="hidden lg:block w-80 min-h-screen bg-black/30 backdrop-blur-xl border-r border-blue-500/20 p-6">
-          <div className="mb-8">
+        <div className="hidden lg:flex lg:flex-col w-80 bg-black/30 backdrop-blur-xl border-r border-blue-500/20">
+          <div className="flex-shrink-0 p-6 mb-4">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
               ASTRO505 USER
             </h1>
           </div>
           
-          <nav className="space-y-2">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => !userExpired && setActiveSection(item.id)}
-                  disabled={userExpired}
-                  className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
-                    userExpired 
-                      ? 'text-gray-500 cursor-not-allowed opacity-50'
-                      : activeSection === item.id
-                        ? 'bg-blue-600/20 border border-blue-500/30 text-blue-300'
-                        : 'text-blue-200/70 hover:bg-blue-600/10 hover:text-blue-300'
-                  }`}
-                >
-                  <Icon className="h-5 w-5" />
-                  <div className="text-left">
-                    <div className="font-medium">{item.label}</div>
-                    <div className="text-xs opacity-70">{item.description}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </nav>
+          <ScrollArea className="flex-1 px-6">
+            <nav className="space-y-2 pb-4">
+              {menuItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => !userExpired && setActiveSection(item.id)}
+                    disabled={userExpired}
+                    className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
+                      userExpired 
+                        ? 'text-gray-500 cursor-not-allowed opacity-50'
+                        : activeSection === item.id
+                          ? 'bg-blue-600/20 border border-blue-500/30 text-blue-300'
+                          : 'text-blue-200/70 hover:bg-blue-600/10 hover:text-blue-300'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <div className="text-left">
+                      <div className="font-medium">{item.label}</div>
+                      <div className="text-xs opacity-70">{item.description}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </nav>
+          </ScrollArea>
           
-          <div className="mt-8 pt-8 border-t border-blue-500/20">
+          <div className="flex-shrink-0 p-6 pt-4 border-t border-blue-500/20">
             <Button 
               onClick={handleLogout}
               className="w-full bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30"
@@ -323,20 +325,28 @@ const UserDashboard = () => {
           title="ASTRO505 USER"
         />
         
-        {/* Main Content */}
-        <div className="flex-1 p-4 lg:p-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="mb-6 lg:mb-8 mt-12 lg:mt-0">
-              <h2 className="text-2xl lg:text-3xl font-bold text-white mb-2">
-                {userExpired ? 'Cuenta Expirada' : menuItems.find(item => item.id === activeSection)?.label}
-              </h2>
-              <p className="text-blue-200/70 text-sm lg:text-base">
-                {userExpired ? 'Acceso restringido por expiración' : menuItems.find(item => item.id === activeSection)?.description}
-              </p>
+        {/* Main Content with ScrollArea */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-shrink-0 p-4 lg:p-8 pt-16 lg:pt-8">
+            <div className="max-w-7xl mx-auto">
+              <div className="mb-6 lg:mb-8">
+                <h2 className="text-2xl lg:text-3xl font-bold text-white mb-2">
+                  {userExpired ? 'Cuenta Expirada' : menuItems.find(item => item.id === activeSection)?.label}
+                </h2>
+                <p className="text-blue-200/70 text-sm lg:text-base">
+                  {userExpired ? 'Acceso restringido por expiración' : menuItems.find(item => item.id === activeSection)?.description}
+                </p>
+              </div>
             </div>
-            
-            {renderContent()}
           </div>
+          
+          <ScrollArea className="flex-1">
+            <div className="p-4 lg:p-8 pt-0">
+              <div className="max-w-7xl mx-auto">
+                {renderContent()}
+              </div>
+            </div>
+          </ScrollArea>
         </div>
       </div>
       
