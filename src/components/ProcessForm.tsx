@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,6 +24,8 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
     serialNumber: '',
     url: ''
   });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Solo países de habla hispana
   const countryCodes = [
@@ -93,17 +94,25 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+    
     try {
+      console.log('Enviando formulario de proceso...');
+      
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
         toast({
-          title: "Error",
+          title: "Error de Autenticación",
           description: "Debes iniciar sesión para guardar un proceso",
           variant: "destructive",
         });
         return;
       }
+
+      console.log('Usuario autenticado, guardando proceso...');
 
       const { error } = await supabase
         .from('processes')
@@ -122,7 +131,12 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
           status: 'guardado'
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error al guardar proceso:', error);
+        throw error;
+      }
+
+      console.log('Proceso guardado exitosamente');
 
       toast({
         title: "Proceso guardado",
@@ -144,13 +158,20 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
       });
 
     } catch (error: any) {
-      console.error('Error saving process:', error);
+      console.error('Error completo al guardar proceso:', error);
       toast({
         title: "Error",
-        description: error.message || "Error al guardar el proceso",
+        description: error.message || "Error al guardar el proceso. Intenta nuevamente.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleCountryCodeChange = (value: string) => {
+    console.log('Código de país seleccionado:', value);
+    setFormData({...formData, countryCode: value});
   };
 
   return (
@@ -171,12 +192,17 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
                 onChange={(e) => setFormData({...formData, clientName: e.target.value})}
                 className="bg-white/5 border-blue-500/30 text-white"
                 required
+                disabled={isSubmitting}
               />
             </div>
 
             <div className="space-y-2">
               <Label className="text-blue-200">Código de País</Label>
-              <Select value={formData.countryCode} onValueChange={(value) => setFormData({...formData, countryCode: value})}>
+              <Select 
+                value={formData.countryCode} 
+                onValueChange={handleCountryCodeChange}
+                disabled={isSubmitting}
+              >
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona código" />
                 </SelectTrigger>
@@ -198,12 +224,17 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
                 onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
                 className="bg-white/5 border-blue-500/30 text-white"
                 required
+                disabled={isSubmitting}
               />
             </div>
 
             <div className="space-y-2">
               <Label className="text-blue-200">Tipo de Contacto</Label>
-              <Select value={formData.contactType} onValueChange={(value) => setFormData({...formData, contactType: value})}>
+              <Select 
+                value={formData.contactType} 
+                onValueChange={(value) => setFormData({...formData, contactType: value})}
+                disabled={isSubmitting}
+              >
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona tipo" />
                 </SelectTrigger>
@@ -216,7 +247,11 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
 
             <div className="space-y-2">
               <Label className="text-blue-200">Modelo de iPhone</Label>
-              <Select value={formData.iphoneModel} onValueChange={(value) => setFormData({...formData, iphoneModel: value})}>
+              <Select 
+                value={formData.iphoneModel} 
+                onValueChange={(value) => setFormData({...formData, iphoneModel: value})}
+                disabled={isSubmitting}
+              >
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona modelo" />
                 </SelectTrigger>
@@ -230,7 +265,11 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
 
             <div className="space-y-2">
               <Label className="text-blue-200">Almacenamiento</Label>
-              <Select value={formData.storage} onValueChange={(value) => setFormData({...formData, storage: value})}>
+              <Select 
+                value={formData.storage} 
+                onValueChange={(value) => setFormData({...formData, storage: value})}
+                disabled={isSubmitting}
+              >
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona almacenamiento" />
                 </SelectTrigger>
@@ -244,7 +283,11 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
 
             <div className="space-y-2">
               <Label className="text-blue-200">Color</Label>
-              <Select value={formData.color} onValueChange={(value) => setFormData({...formData, color: value})}>
+              <Select 
+                value={formData.color} 
+                onValueChange={(value) => setFormData({...formData, color: value})}
+                disabled={isSubmitting}
+              >
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona color" />
                 </SelectTrigger>
@@ -264,6 +307,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
                 onChange={(e) => setFormData({...formData, imei: e.target.value})}
                 className="bg-white/5 border-blue-500/30 text-white"
                 required
+                disabled={isSubmitting}
               />
             </div>
 
@@ -275,6 +319,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
                 onChange={(e) => setFormData({...formData, serialNumber: e.target.value})}
                 className="bg-white/5 border-blue-500/30 text-white"
                 required
+                disabled={isSubmitting}
               />
             </div>
 
@@ -286,6 +331,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
                 onChange={(e) => setFormData({...formData, url: e.target.value})}
                 className="bg-white/5 border-blue-500/30 text-white"
                 placeholder="https://ejemplo.com"
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -293,8 +339,9 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
           <Button 
             type="submit"
             className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+            disabled={isSubmitting}
           >
-            Guardar Proceso
+            {isSubmitting ? 'Guardando...' : 'Guardar Proceso'}
           </Button>
         </form>
       </CardContent>
