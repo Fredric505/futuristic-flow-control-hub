@@ -19,10 +19,36 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   public static getDerivedStateFromError(error: Error): State {
+    // Don't show error boundary for DOM manipulation errors that are not critical
+    const errorMessage = error.message?.toLowerCase() || '';
+    const isDOMError = errorMessage.includes('removechild') || 
+                       errorMessage.includes('node to be removed') ||
+                       errorMessage.includes('not a child of this node') ||
+                       errorMessage.includes('portal');
+    
+    // If it's a DOM error, log it but don't show the error boundary
+    if (isDOMError) {
+      console.warn('DOM Error caught (non-critical):', error.message);
+      return { hasError: false };
+    }
+
     return { hasError: true, error };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    const errorMessage = error.message?.toLowerCase() || '';
+    const isDOMError = errorMessage.includes('removechild') || 
+                       errorMessage.includes('node to be removed') ||
+                       errorMessage.includes('not a child of this node') ||
+                       errorMessage.includes('portal');
+
+    if (isDOMError) {
+      console.warn('DOM Error details:', error, errorInfo);
+      // Reset the error boundary state for DOM errors
+      this.setState({ hasError: false });
+      return;
+    }
+
     console.error('Error capturado por ErrorBoundary:', error, errorInfo);
   }
 
