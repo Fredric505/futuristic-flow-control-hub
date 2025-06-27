@@ -3,9 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SelectItem } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import SafeSelect from '@/components/SafeSelect';
 
 interface ProcessFormProps {
   userType?: 'admin' | 'user';
@@ -199,26 +200,23 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
 
             <div className="space-y-2">
               <Label className="text-blue-200">Código de País</Label>
-              <Select 
+              <SafeSelect 
                 value={formData.countryCode} 
                 onValueChange={(value) => handleSelectChange('countryCode', value)}
+                placeholder="Selecciona código"
                 disabled={isSubmitting}
+                className="bg-white/5 border-blue-500/30 text-white"
               >
-                <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
-                  <SelectValue placeholder="Selecciona código" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-blue-500/30 text-white max-h-[200px]">
-                  {countryCodes.map((country) => (
-                    <SelectItem 
-                      key={country.code} 
-                      value={country.code}
-                      className="hover:bg-blue-600/20 focus:bg-blue-600/20"
-                    >
-                      {country.code} - {country.country}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {countryCodes.map((country) => (
+                  <SelectItem 
+                    key={country.code} 
+                    value={country.code}
+                    className="hover:bg-blue-600/20 focus:bg-blue-600/20"
+                  >
+                    {country.code} - {country.country}
+                  </SelectItem>
+                ))}
+              </SafeSelect>
             </div>
 
             <div className="space-y-2">
@@ -235,91 +233,79 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
 
             <div className="space-y-2">
               <Label className="text-blue-200">Tipo de Contacto</Label>
-              <Select 
+              <SafeSelect 
                 value={formData.contactType} 
                 onValueChange={(value) => handleSelectChange('contactType', value)}
+                placeholder="Selecciona tipo"
                 disabled={isSubmitting}
+                className="bg-white/5 border-blue-500/30 text-white"
               >
-                <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
-                  <SelectValue placeholder="Selecciona tipo" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-blue-500/30 text-white">
-                  <SelectItem value="propietario" className="hover:bg-blue-600/20 focus:bg-blue-600/20">Propietario</SelectItem>
-                  <SelectItem value="emergencia" className="hover:bg-blue-600/20 focus:bg-blue-600/20">Emergencia</SelectItem>
-                </SelectContent>
-              </Select>
+                <SelectItem value="propietario" className="hover:bg-blue-600/20 focus:bg-blue-600/20">Propietario</SelectItem>
+                <SelectItem value="emergencia" className="hover:bg-blue-600/20 focus:bg-blue-600/20">Emergencia</SelectItem>
+              </SafeSelect>
             </div>
 
             <div className="space-y-2">
               <Label className="text-blue-200">Modelo de iPhone</Label>
-              <Select 
+              <SafeSelect 
                 value={formData.iphoneModel} 
                 onValueChange={(value) => handleSelectChange('iphoneModel', value)}
+                placeholder="Selecciona modelo"
                 disabled={isSubmitting}
+                className="bg-white/5 border-blue-500/30 text-white"
               >
-                <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
-                  <SelectValue placeholder="Selecciona modelo" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-blue-500/30 text-white max-h-[200px]">
-                  {iphoneModels.map((model) => (
-                    <SelectItem 
-                      key={model} 
-                      value={model}
-                      className="hover:bg-blue-600/20 focus:bg-blue-600/20"
-                    >
-                      {model}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {iphoneModels.map((model) => (
+                  <SelectItem 
+                    key={model} 
+                    value={model}
+                    className="hover:bg-blue-600/20 focus:bg-blue-600/20"
+                  >
+                    {model}
+                  </SelectItem>
+                ))}
+              </SafeSelect>
             </div>
 
             <div className="space-y-2">
               <Label className="text-blue-200">Almacenamiento</Label>
-              <Select 
+              <SafeSelect 
                 value={formData.storage} 
                 onValueChange={(value) => handleSelectChange('storage', value)}
+                placeholder="Selecciona almacenamiento"
                 disabled={isSubmitting}
+                className="bg-white/5 border-blue-500/30 text-white"
               >
-                <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
-                  <SelectValue placeholder="Selecciona almacenamiento" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-blue-500/30 text-white">
-                  {storageOptions.map((storage) => (
-                    <SelectItem 
-                      key={storage} 
-                      value={storage}
-                      className="hover:bg-blue-600/20 focus:bg-blue-600/20"
-                    >
-                      {storage}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {storageOptions.map((storage) => (
+                  <SelectItem 
+                    key={storage} 
+                    value={storage}
+                    className="hover:bg-blue-600/20 focus:bg-blue-600/20"
+                  >
+                    {storage}
+                  </SelectItem>
+                ))}
+              </SafeSelect>
             </div>
 
             <div className="space-y-2">
               <Label className="text-blue-200">Color</Label>
-              <Select 
+              <SafeSelect 
                 value={formData.color} 
                 onValueChange={(value) => handleSelectChange('color', value)}
+                placeholder="Selecciona color"
                 disabled={isSubmitting}
+                className="bg-white/5 border-blue-500/30 text-white"
               >
-                <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
-                  <SelectValue placeholder="Selecciona color" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-blue-500/30 text-white max-h-[200px]">
-                  {colorOptions.map((color) => (
-                    <SelectItem 
-                      key={color} 
-                      value={color}
-                      className="hover:bg-blue-600/20 focus:bg-blue-600/20"
-                    >
-                      {color}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {colorOptions.map((color) => (
+                  <SelectItem 
+                    key={color} 
+                    value={color}
+                    className="hover:bg-blue-600/20 focus:bg-blue-600/20"
+                  >
+                    {color}
+                  </SelectItem>
+                ))}
+              </SafeSelect>
             </div>
 
             <div className="space-y-2">
