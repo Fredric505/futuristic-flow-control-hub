@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import CustomSelect, { CustomSelectItem } from './CustomSelect';
 
 interface SafeSelectProps {
   value: string;
@@ -19,7 +19,6 @@ const SafeSelect: React.FC<SafeSelectProps> = ({
   className,
   children 
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -34,21 +33,45 @@ const SafeSelect: React.FC<SafeSelectProps> = ({
     );
   }
 
+  // Convert SelectItem children to CustomSelectItem
+  const convertedChildren = React.Children.map(children, (child) => {
+    if (React.isValidElement(child) && child.type === 'div' && child.props.value) {
+      return (
+        <CustomSelectItem
+          key={child.props.value}
+          value={child.props.value}
+          className={child.props.className}
+          data-value={child.props.value}
+        >
+          {child.props.children}
+        </CustomSelectItem>
+      );
+    }
+    // Handle regular SelectItem components
+    if (React.isValidElement(child) && child.props.value) {
+      return (
+        <div
+          key={child.props.value}
+          data-value={child.props.value}
+          className={child.props.className}
+        >
+          {child.props.children}
+        </div>
+      );
+    }
+    return child;
+  });
+
   return (
-    <Select 
-      value={value} 
+    <CustomSelect
+      value={value}
       onValueChange={onValueChange}
+      placeholder={placeholder}
       disabled={disabled}
-      open={isOpen}
-      onOpenChange={setIsOpen}
+      className={className}
     >
-      <SelectTrigger className={className}>
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {children}
-      </SelectContent>
-    </Select>
+      {convertedChildren}
+    </CustomSelect>
   );
 };
 
