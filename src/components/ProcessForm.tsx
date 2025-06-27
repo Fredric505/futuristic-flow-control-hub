@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -169,29 +170,14 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
     }
   };
 
-  const handleCountryCodeChange = (value: string) => {
-    console.log('Código de país seleccionado:', value);
-    setFormData(prev => ({...prev, countryCode: value}));
-  };
-
-  const handleContactTypeChange = (value: string) => {
-    console.log('Tipo de contacto seleccionado:', value);
-    setFormData(prev => ({...prev, contactType: value}));
-  };
-
-  const handleIphoneModelChange = (value: string) => {
-    console.log('Modelo iPhone seleccionado:', value);
-    setFormData(prev => ({...prev, iphoneModel: value}));
-  };
-
-  const handleStorageChange = (value: string) => {
-    console.log('Almacenamiento seleccionado:', value);
-    setFormData(prev => ({...prev, storage: value}));
-  };
-
-  const handleColorChange = (value: string) => {
-    console.log('Color seleccionado:', value);
-    setFormData(prev => ({...prev, color: value}));
+  // Wrapper function for select changes with error handling
+  const handleSelectChange = (field: string, value: string) => {
+    try {
+      console.log(`${field} seleccionado:`, value);
+      setFormData(prev => ({...prev, [field]: value}));
+    } catch (error) {
+      console.error(`Error al cambiar ${field}:`, error);
+    }
   };
 
   return (
@@ -220,13 +206,13 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
               <Label className="text-blue-200">Código de País</Label>
               <Select 
                 value={formData.countryCode} 
-                onValueChange={handleCountryCodeChange}
+                onValueChange={(value) => handleSelectChange('countryCode', value)}
                 disabled={isSubmitting}
               >
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona código" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-blue-500/30 text-white max-h-[200px]">
+                <SelectContent className="bg-slate-800 border-blue-500/30 text-white max-h-[200px] z-[9999]">
                   {countryCodes.map((country) => (
                     <SelectItem 
                       key={country.code} 
@@ -256,13 +242,13 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
               <Label className="text-blue-200">Tipo de Contacto</Label>
               <Select 
                 value={formData.contactType} 
-                onValueChange={handleContactTypeChange}
+                onValueChange={(value) => handleSelectChange('contactType', value)}
                 disabled={isSubmitting}
               >
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona tipo" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-blue-500/30 text-white">
+                <SelectContent className="bg-slate-800 border-blue-500/30 text-white z-[9999]">
                   <SelectItem value="propietario" className="hover:bg-blue-600/20 focus:bg-blue-600/20">Propietario</SelectItem>
                   <SelectItem value="emergencia" className="hover:bg-blue-600/20 focus:bg-blue-600/20">Emergencia</SelectItem>
                 </SelectContent>
@@ -273,13 +259,13 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
               <Label className="text-blue-200">Modelo de iPhone</Label>
               <Select 
                 value={formData.iphoneModel} 
-                onValueChange={handleIphoneModelChange}
+                onValueChange={(value) => handleSelectChange('iphoneModel', value)}
                 disabled={isSubmitting}
               >
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona modelo" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-blue-500/30 text-white max-h-[200px]">
+                <SelectContent className="bg-slate-800 border-blue-500/30 text-white max-h-[200px] z-[9999]">
                   {iphoneModels.map((model) => (
                     <SelectItem 
                       key={model} 
@@ -297,13 +283,13 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
               <Label className="text-blue-200">Almacenamiento</Label>
               <Select 
                 value={formData.storage} 
-                onValueChange={handleStorageChange}
+                onValueChange={(value) => handleSelectChange('storage', value)}
                 disabled={isSubmitting}
               >
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona almacenamiento" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-blue-500/30 text-white">
+                <SelectContent className="bg-slate-800 border-blue-500/30 text-white z-[9999]">
                   {storageOptions.map((storage) => (
                     <SelectItem 
                       key={storage} 
@@ -321,13 +307,13 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
               <Label className="text-blue-200">Color</Label>
               <Select 
                 value={formData.color} 
-                onValueChange={handleColorChange}
+                onValueChange={(value) => handleSelectChange('color', value)}
                 disabled={isSubmitting}
               >
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona color" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-blue-500/30 text-white max-h-[200px]">
+                <SelectContent className="bg-slate-800 border-blue-500/30 text-white max-h-[200px] z-[9999]">
                   {colorOptions.map((color) => (
                     <SelectItem 
                       key={color} 
