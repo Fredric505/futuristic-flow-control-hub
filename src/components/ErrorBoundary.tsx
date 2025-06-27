@@ -18,15 +18,41 @@ class ErrorBoundary extends Component<Props, State> {
     hasError: false
   };
 
-  public static getDerivedStateFromError(error: Error): State {
-    // Don't show error boundary for DOM manipulation errors that are not critical
+  private isDOMError(error: Error): boolean {
     const errorMessage = error.message?.toLowerCase() || '';
-    const isDOMError = errorMessage.includes('removechild') || 
-                       errorMessage.includes('node to be removed') ||
-                       errorMessage.includes('not a child of this node') ||
-                       errorMessage.includes('portal');
+    const stackTrace = error.stack?.toLowerCase() || '';
     
-    // If it's a DOM error, log it but don't show the error boundary
+    // Lista más completa de errores DOM no críticos
+    const domErrorPatterns = [
+      'removechild',
+      'node to be removed',
+      'not a child of this node',
+      'portal',
+      'failed to execute \'removechild\'',
+      'the node to be removed is not a child',
+      'cannot remove child',
+      'radix-ui',
+      'select-content'
+    ];
+    
+    return domErrorPatterns.some(pattern => 
+      errorMessage.includes(pattern) || stackTrace.includes(pattern)
+    );
+  }
+
+  public static getDerivedStateFromError(error: Error): State {
+    // Para evitar problemas con el método estático, solo retornamos error si no es DOM
+    const errorMessage = error.message?.toLowerCase() || '';
+    const isDOMError = [
+      'removechild',
+      'node to be removed',
+      'not a child of this node',
+      'portal',
+      'failed to execute \'removechild\'',
+      'radix-ui',
+      'select-content'
+    ].some(pattern => errorMessage.includes(pattern));
+
     if (isDOMError) {
       console.warn('DOM Error caught (non-critical):', error.message);
       return { hasError: false };
@@ -36,20 +62,22 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    const errorMessage = error.message?.toLowerCase() || '';
-    const isDOMError = errorMessage.includes('removechild') || 
-                       errorMessage.includes('node to be removed') ||
-                       errorMessage.includes('not a child of this node') ||
-                       errorMessage.includes('portal');
-
-    if (isDOMError) {
-      console.warn('DOM Error details:', error, errorInfo);
-      // Reset the error boundary state for DOM errors
-      this.setState({ hasError: false });
+    if (this.isDOMError(error)) {
+      console.warn('DOM Error details (filtered):', {
+        message: error.message,
+        stack: error.stack?.substring(0, 200) + '...',
+        componentStack: errorInfo.componentStack?.substring(0, 200) + '...'
+      });
+      
+      // Forzar reset del estado para errores DOM
+      setTimeout(() => {
+        this.setState({ hasError: false, error: undefined });
+      }, 100);
+      
       return;
     }
 
-    console.error('Error capturado por ErrorBoundary:', error, errorInfo);
+    console.error('Error crítico capturado por ErrorBoundary:', error, errorInfo);
   }
 
   private handleRefresh = () => {
