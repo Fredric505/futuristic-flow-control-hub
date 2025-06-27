@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -170,15 +169,11 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
     }
   };
 
-  // Wrapper function for select changes with error handling
-  const handleSelectChange = (field: string, value: string) => {
-    try {
-      console.log(`${field} seleccionado:`, value);
-      setFormData(prev => ({...prev, [field]: value}));
-    } catch (error) {
-      console.error(`Error al cambiar ${field}:`, error);
-    }
-  };
+  // Mejorado manejo de select con useCallback
+  const handleSelectChange = useCallback((field: string, value: string) => {
+    console.log(`${field} seleccionado:`, value);
+    setFormData(prev => ({...prev, [field]: value}));
+  }, []);
 
   return (
     <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
@@ -212,7 +207,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona código" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-blue-500/30 text-white max-h-[200px] z-[9999]">
+                <SelectContent className="bg-slate-800 border-blue-500/30 text-white max-h-[200px]">
                   {countryCodes.map((country) => (
                     <SelectItem 
                       key={country.code} 
@@ -248,7 +243,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona tipo" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-blue-500/30 text-white z-[9999]">
+                <SelectContent className="bg-slate-800 border-blue-500/30 text-white">
                   <SelectItem value="propietario" className="hover:bg-blue-600/20 focus:bg-blue-600/20">Propietario</SelectItem>
                   <SelectItem value="emergencia" className="hover:bg-blue-600/20 focus:bg-blue-600/20">Emergencia</SelectItem>
                 </SelectContent>
@@ -265,7 +260,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona modelo" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-blue-500/30 text-white max-h-[200px] z-[9999]">
+                <SelectContent className="bg-slate-800 border-blue-500/30 text-white max-h-[200px]">
                   {iphoneModels.map((model) => (
                     <SelectItem 
                       key={model} 
@@ -289,7 +284,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona almacenamiento" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-blue-500/30 text-white z-[9999]">
+                <SelectContent className="bg-slate-800 border-blue-500/30 text-white">
                   {storageOptions.map((storage) => (
                     <SelectItem 
                       key={storage} 
@@ -313,7 +308,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
                 <SelectTrigger className="bg-white/5 border-blue-500/30 text-white">
                   <SelectValue placeholder="Selecciona color" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-blue-500/30 text-white max-h-[200px] z-[9999]">
+                <SelectContent className="bg-slate-800 border-blue-500/30 text-white max-h-[200px]">
                   {colorOptions.map((color) => (
                     <SelectItem 
                       key={color} 
