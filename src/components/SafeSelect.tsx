@@ -11,6 +11,12 @@ interface SafeSelectProps {
   children: React.ReactNode;
 }
 
+interface SelectItemProps {
+  value: string;
+  children: React.ReactNode;
+  className?: string;
+}
+
 const SafeSelect: React.FC<SafeSelectProps> = ({ 
   value, 
   onValueChange, 
@@ -35,29 +41,21 @@ const SafeSelect: React.FC<SafeSelectProps> = ({
 
   // Convert SelectItem children to CustomSelectItem
   const convertedChildren = React.Children.map(children, (child) => {
-    if (React.isValidElement(child) && child.type === 'div' && child.props.value) {
-      return (
-        <CustomSelectItem
-          key={child.props.value}
-          value={child.props.value}
-          className={child.props.className}
-          data-value={child.props.value}
-        >
-          {child.props.children}
-        </CustomSelectItem>
-      );
-    }
-    // Handle regular SelectItem components
-    if (React.isValidElement(child) && child.props.value) {
-      return (
-        <div
-          key={child.props.value}
-          data-value={child.props.value}
-          className={child.props.className}
-        >
-          {child.props.children}
-        </div>
-      );
+    if (React.isValidElement<SelectItemProps>(child)) {
+      const childProps = child.props as SelectItemProps;
+      
+      if (childProps.value) {
+        return (
+          <CustomSelectItem
+            key={childProps.value}
+            value={childProps.value}
+            className={childProps.className}
+            data-value={childProps.value}
+          >
+            {childProps.children}
+          </CustomSelectItem>
+        );
+      }
     }
     return child;
   });
