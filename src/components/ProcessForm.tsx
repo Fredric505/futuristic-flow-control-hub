@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -105,11 +106,13 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        toast({
-          title: "Error de Autenticación",
-          description: "Debes iniciar sesión para guardar un proceso",
-          variant: "destructive",
-        });
+        setTimeout(() => {
+          toast({
+            title: "Error de Autenticación",
+            description: "Debes iniciar sesión para guardar un proceso",
+            variant: "destructive",
+          });
+        }, 100);
         return;
       }
 
@@ -139,34 +142,44 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
 
       console.log('Proceso guardado exitosamente');
 
-      toast({
-        title: "Proceso guardado",
-        description: "El proceso se ha guardado exitosamente",
-      });
+      // Usar setTimeout para evitar conflictos de DOM
+      setTimeout(() => {
+        toast({
+          title: "Proceso guardado",
+          description: "El proceso se ha guardado exitosamente",
+        });
+      }, 100);
 
-      // Reset form
-      setFormData({
-        clientName: '',
-        countryCode: '',
-        phoneNumber: '',
-        contactType: '',
-        iphoneModel: '',
-        storage: '',
-        color: '',
-        imei: '',
-        serialNumber: '',
-        url: ''
-      });
+      // Reset form después de un breve delay
+      setTimeout(() => {
+        setFormData({
+          clientName: '',
+          countryCode: '',
+          phoneNumber: '',
+          contactType: '',
+          iphoneModel: '',
+          storage: '',
+          color: '',
+          imei: '',
+          serialNumber: '',
+          url: ''
+        });
+      }, 200);
 
     } catch (error: any) {
       console.error('Error completo al guardar proceso:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Error al guardar el proceso. Intenta nuevamente.",
-        variant: "destructive",
-      });
+      setTimeout(() => {
+        toast({
+          title: "Error",
+          description: error.message || "Error al guardar el proceso. Intenta nuevamente.",
+          variant: "destructive",
+        });
+      }, 100);
     } finally {
-      setIsSubmitting(false);
+      // Delay para evitar conflictos de estado
+      setTimeout(() => {
+        setIsSubmitting(false);
+      }, 300);
     }
   };
 
