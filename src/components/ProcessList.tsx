@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Trash2, Send, RefreshCw, Edit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { getIphoneImageUrl, hasIphoneImage, getDefaultIphoneImage } from '@/utils/iphoneImages';
 
 interface Process {
   id: string;
@@ -165,7 +164,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       }
 
       setSendingMessage(process.id);
-      console.log('Sending WhatsApp message with image for process:', process.id);
+      console.log('Sending WhatsApp message for process:', process.id);
 
       // Obtener configuración de instancia
       const { data: settings } = await supabase
@@ -212,15 +211,8 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *🧾 Escribe la palabra Menu para solicitar asistencia.*`;
       }
 
-      // Obtener la URL de la imagen del iPhone
-      const imageUrl = hasIphoneImage(process.iphone_model, process.color) 
-        ? getIphoneImageUrl(process.iphone_model, process.color)
-        : getDefaultIphoneImage();
-
-      console.log('Sending image:', imageUrl);
-
-      // Enviar imagen con mensaje via WhatsApp API
-      const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/image`, {
+      // Enviar mensaje via WhatsApp API
+      const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -228,25 +220,15 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         body: new URLSearchParams({
           token: token,
           to: `${process.country_code}${process.phone_number}`,
-          image: imageUrl,
-          caption: message,
+          body: message,
         }),
       });
 
       const result = await response.json();
       console.log('WhatsApp API response:', result);
 
-      // MEJORAR EL MANEJO DE ERRORES - Verificar si hay error específico
-      if (result.error || !result.sent) {
-        const errorDetails = result.error ? 
-          (Array.isArray(result.error) ? result.error.map(e => Object.values(e).join(': ')).join(', ') : result.error) :
-          'Error desconocido en la instancia';
-        
-        throw new Error(`Error de la instancia: ${errorDetails}`);
-      }
-
-      // Solo proceder si el mensaje se envió exitosamente
-      if (result.sent === true || result.sent === "true") {
+      // VERIFICAR QUE EL MENSAJE SE ENVIÓ CORRECTAMENTE ANTES DE COBRAR
+      if (result.sent === true || (result.sent === "true")) {
         // Obtener el usuario actual
         const { data: { user } } = await supabase.auth.getUser();
         
@@ -279,8 +261,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
             process_id: process.id,
             message_content: message,
             recipient_phone: `${process.country_code}${process.phone_number}`,
-            status: 'sent',
-            image_url: imageUrl // Nuevo campo para guardar la URL de la imagen
+            status: 'sent'
           });
 
         if (messageError) {
@@ -301,12 +282,16 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         }
 
         toast({
-          title: "Mensaje con imagen enviado",
-          description: `Mensaje con imagen del ${process.iphone_model} ${process.color} enviado a ${process.client_name}. Créditos restantes: ${userCredits - 1}`,
+          title: "Mensaje enviado",
+          description: `Mensaje enviado a ${process.client_name}. Créditos restantes: ${userCredits - 1}`,
         });
 
         // Recargar procesos
         await loadProcesses();
+      } else {
+        // SI EL MENSAJE NO SE ENVIÓ, NO COBRAR Y MOSTRAR ERROR
+        const errorMessage = result.message || result.error || 'La instancia de WhatsApp no está funcionando correctamente';
+        throw new Error(`Error en la instancia: ${errorMessage}`);
       }
     } catch (error: any) {
       console.error('Error sending WhatsApp message:', error);
