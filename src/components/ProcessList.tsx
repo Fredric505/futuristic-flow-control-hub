@@ -342,7 +342,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
             <div className="text-center">
               <p className="text-blue-200/70 mb-4">No hay procesos guardados</p>
               <p className="text-blue-200/50 text-sm">
-                Los procesos que agregues aparecerán aquí listos para enviar con imagen del iPhone.
+                Los procesos que agregues aparecerán aquí listos para enviar.
               </p>
             </div>
           </CardContent>
@@ -376,7 +376,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
                             ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
                             : 'bg-green-600/20 hover:bg-green-600/30 text-green-300'
                         }`}
-                        title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar mensaje con imagen del iPhone"}
+                        title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar mensaje"}
                       >
                         {sendingMessage === process.id ? (
                           <RefreshCw className="h-4 w-4 animate-spin" />
