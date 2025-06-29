@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Trash2, Send, RefreshCw, Edit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { getIphoneImageUrl, hasIphoneImage, getDefaultIphoneImage } from '@/utils/iphoneImages';
 
 interface Process {
   id: string;
@@ -164,7 +165,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       }
 
       setSendingMessage(process.id);
-      console.log('Sending WhatsApp message for process:', process.id);
+      console.log('Sending WhatsApp message with image for process:', process.id);
 
       // Obtener configuración de instancia
       const { data: settings } = await supabase
@@ -211,8 +212,15 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *🧾 Escribe la palabra Menu para solicitar asistencia.*`;
       }
 
-      // Enviar mensaje via WhatsApp API
-      const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/chat`, {
+      // Obtener la URL de la imagen del iPhone
+      const imageUrl = hasIphoneImage(process.iphone_model, process.color) 
+        ? getIphoneImageUrl(process.iphone_model, process.color)
+        : getDefaultIphoneImage();
+
+      console.log('Sending image:', imageUrl);
+
+      // Enviar imagen con mensaje via WhatsApp API
+      const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/image`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -220,7 +228,8 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         body: new URLSearchParams({
           token: token,
           to: `${process.country_code}${process.phone_number}`,
-          body: message,
+          image: imageUrl,
+          caption: message,
         }),
       });
 
@@ -261,7 +270,8 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
             process_id: process.id,
             message_content: message,
             recipient_phone: `${process.country_code}${process.phone_number}`,
-            status: 'sent'
+            status: 'sent',
+            image_url: imageUrl // Nuevo campo para guardar la URL de la imagen
           });
 
         if (messageError) {
@@ -282,8 +292,8 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         }
 
         toast({
-          title: "Mensaje enviado",
-          description: `Mensaje enviado exitosamente a ${process.client_name}. Créditos restantes: ${userCredits - 1}`,
+          title: "Mensaje con imagen enviado",
+          description: `Mensaje con imagen del ${process.iphone_model} ${process.color} enviado a ${process.client_name}. Créditos restantes: ${userCredits - 1}`,
         });
 
         // Recargar procesos
@@ -342,7 +352,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
             <div className="text-center">
               <p className="text-blue-200/70 mb-4">No hay procesos guardados</p>
               <p className="text-blue-200/50 text-sm">
-                Los procesos que agregues aparecerán aquí listos para enviar.
+                Los procesos que agregues aparecerán aquí listos para enviar con imagen del iPhone.
               </p>
             </div>
           </CardContent>
@@ -376,9 +386,13 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
                             ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
                             : 'bg-green-600/20 hover:bg-green-600/30 text-green-300'
                         }`}
-                        title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar mensaje"}
+                        title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar mensaje con imagen del iPhone"}
                       >
-                        <Send className="h-4 w-4" />
+                        {sendingMessage === process.id ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
                       </Button>
                       <Button
                         size="sm"
