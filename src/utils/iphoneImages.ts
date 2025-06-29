@@ -75,10 +75,10 @@ export const getIphoneImageUrl = (model: string, color: string): string => {
   const finalModel = modelMappings[modelKey] || modelKey;
   const finalColor = colorMappings[colorKey] || colorKey;
   
-  // Generar la URL de la imagen
-  const imageFileName = `iphone-${finalModel}-${finalColor}.jpg`;
+  // Generar la URL de la imagen - CAMBIADO A .png
+  const imageFileName = `iphone-${finalModel}-${finalColor}.png`;
   
-  // URL base para las imágenes (puedes cambiar esto según donde guardes las imágenes)
+  // URL base para las imágenes
   const baseUrl = 'https://jclbkyyujtrpfqgrmdhl.supabase.co/storage/v1/object/public/iphone-images/';
   
   return `${baseUrl}${imageFileName}`;
@@ -100,5 +100,5 @@ export const hasIphoneImage = (model: string, color: string): boolean => {
 // Función para obtener imagen por defecto si no existe la específica
 export const getDefaultIphoneImage = (): string => {
   const baseUrl = 'https://jclbkyyujtrpfqgrmdhl.supabase.co/storage/v1/object/public/iphone-images/';
-  return `${baseUrl}iphone-default.jpg`;
+  return `${baseUrl}iphone-default.png`;
 };

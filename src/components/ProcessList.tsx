@@ -236,8 +236,17 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       const result = await response.json();
       console.log('WhatsApp API response:', result);
 
-      // VERIFICAR QUE EL MENSAJE SE ENVIÓ CORRECTAMENTE ANTES DE COBRAR
-      if (result.sent === true || (result.sent === "true")) {
+      // MEJORAR EL MANEJO DE ERRORES - Verificar si hay error específico
+      if (result.error || !result.sent) {
+        const errorDetails = result.error ? 
+          (Array.isArray(result.error) ? result.error.map(e => Object.values(e).join(': ')).join(', ') : result.error) :
+          'Error desconocido en la instancia';
+        
+        throw new Error(`Error de la instancia: ${errorDetails}`);
+      }
+
+      // Solo proceder si el mensaje se envió exitosamente
+      if (result.sent === true || result.sent === "true") {
         // Obtener el usuario actual
         const { data: { user } } = await supabase.auth.getUser();
         
@@ -298,10 +307,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
         // Recargar procesos
         await loadProcesses();
-      } else {
-        // SI EL MENSAJE NO SE ENVIÓ, NO COBRAR Y MOSTRAR ERROR
-        const errorMessage = result.message || result.error || 'La instancia de WhatsApp no está funcionando correctamente';
-        throw new Error(`Error en la instancia: ${errorMessage}`);
       }
     } catch (error: any) {
       console.error('Error sending WhatsApp message:', error);
