@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,7 @@ interface Process {
   country_code: string;
   phone_number: string;
   contact_type: string;
-  owner_name: string | null; // Nuevo campo
+  owner_name: string | null;
   iphone_model: string;
   storage: string;
   color: string;

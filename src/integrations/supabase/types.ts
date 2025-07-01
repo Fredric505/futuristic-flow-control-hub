@@ -64,6 +64,7 @@ export type Database = {
           id: string
           imei: string
           iphone_model: string
+          owner_name: string | null
           phone_number: string
           serial_number: string
           status: string | null
@@ -81,6 +82,7 @@ export type Database = {
           id?: string
           imei: string
           iphone_model: string
+          owner_name?: string | null
           phone_number: string
           serial_number: string
           status?: string | null
@@ -98,6 +100,7 @@ export type Database = {
           id?: string
           imei?: string
           iphone_model?: string
+          owner_name?: string | null
           phone_number?: string
           serial_number?: string
           status?: string | null
