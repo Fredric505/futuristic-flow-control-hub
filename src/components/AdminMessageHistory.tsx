@@ -43,6 +43,7 @@ const AdminMessageHistory = () => {
       setIsLoading(true);
       console.log('Loading all messages for admin...');
 
+      // Remove the user_id filter to get ALL messages from ALL users
       const { data, error } = await supabase
         .from('messages')
         .select(`
