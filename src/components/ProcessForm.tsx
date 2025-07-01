@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -71,26 +72,18 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
     '16GB', '32GB', '64GB', '128GB', '256GB', '512GB', '1TB', '2TB'
   ];
 
+  // Lista de colores limpia sin duplicados
   const colorOptions = [
-    // iPhone 16 series
-    'Ultramarino', 'Verde azulado', 'Rosa', 'Blanco', 'Negro',
-    // iPhone 15 series
+    // Colores básicos
+    'Negro', 'Blanco', 'Azul', 'Verde', 'Rosa', 'Amarillo', 'Púrpura', 'Rojo',
+    // Colores específicos iPhone 16
+    'Ultramarino', 'Verde azulado',
+    // Colores Titanio
     'Titanio Natural', 'Titanio Azul', 'Titanio Blanco', 'Titanio Negro',
-    'Rosa', 'Amarillo', 'Verde', 'Azul', 'Negro',
-    // iPhone 14 series
-    'Púrpura Intenso', 'Oro', 'Plata', 'Grafito',
-    'Púrpura', 'Azul', 'Medianoche', 'Luz de estrella', 'PRODUCT(RED)',
-    // iPhone 13 series
-    'Sierra Blue', 'Grafito', 'Oro', 'Plata',
-    'Rosa', 'Azul', 'Medianoche', 'Luz de estrella', 'PRODUCT(RED)',
-    // iPhone 12 series
-    'Azul Pacífico', 'Grafito', 'Oro', 'Plata',
-    'Púrpura', 'Azul', 'Verde', 'Negro', 'Blanco', 'PRODUCT(RED)',
-    // iPhone 11 series
-    'Verde Noche', 'Oro', 'Gris Espacial', 'Plata',
-    'Púrpura', 'Amarillo', 'Verde', 'Negro', 'Blanco', 'PRODUCT(RED)',
-    // Otros modelos
-    'Gris Espacial', 'Plata', 'Oro Rosa'
+    // Colores especiales
+    'Medianoche', 'Luz de estrella', 'Oro', 'Plata', 'Grafito',
+    'Púrpura Intenso', 'Sierra Blue', 'Azul Pacífico', 'Verde Noche',
+    'Gris Espacial', 'Oro Rosa'
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {

