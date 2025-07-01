@@ -43,7 +43,11 @@ const AdminMessageHistory = () => {
       setIsLoading(true);
       console.log('Loading all messages for admin...');
 
-      // Remove the user_id filter to get ALL messages from ALL users
+      // Verificar que somos admin
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('Current user:', user?.email);
+
+      // Obtener TODOS los mensajes (las políticas RLS ahora permiten esto para admin)
       const { data, error } = await supabase
         .from('messages')
         .select(`
@@ -57,9 +61,13 @@ const AdminMessageHistory = () => {
         `)
         .order('sent_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading messages:', error);
+        throw error;
+      }
       
-      console.log('Admin messages loaded:', data?.length || 0);
+      console.log('Total messages loaded:', data?.length || 0);
+      console.log('Sample messages:', data?.slice(0, 3));
       setMessages(data || []);
     } catch (error) {
       console.error('Error loading admin messages:', error);
