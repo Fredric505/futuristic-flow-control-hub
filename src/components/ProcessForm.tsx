@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,6 +18,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
     countryCode: '',
     phoneNumber: '',
     contactType: '',
+    ownerName: '', // Nuevo campo para nombre del propietario/contacto
     iphoneModel: '',
     storage: '',
     color: '',
@@ -126,6 +126,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
           country_code: formData.countryCode,
           phone_number: formData.phoneNumber,
           contact_type: formData.contactType,
+          owner_name: formData.ownerName || null, // Guardar nombre del propietario/contacto
           iphone_model: formData.iphoneModel,
           storage: formData.storage,
           color: formData.color,
@@ -157,6 +158,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
           countryCode: '',
           phoneNumber: '',
           contactType: '',
+          ownerName: '',
           iphoneModel: '',
           storage: '',
           color: '',
@@ -256,6 +258,20 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
                 <SelectItem value="propietario" className="hover:bg-blue-600/20 focus:bg-blue-600/20">Propietario</SelectItem>
                 <SelectItem value="emergencia" className="hover:bg-blue-600/20 focus:bg-blue-600/20">Emergencia</SelectItem>
               </SafeSelect>
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="ownerName" className="text-blue-200">
+                {formData.contactType === 'propietario' ? 'Nombre del Propietario (Opcional)' : 'Nombre del Contacto de Emergencia (Opcional)'}
+              </Label>
+              <Input
+                id="ownerName"
+                value={formData.ownerName}
+                onChange={(e) => setFormData(prev => ({...prev, ownerName: e.target.value}))}
+                className="bg-white/5 border-blue-500/30 text-white"
+                placeholder={formData.contactType === 'propietario' ? 'Nombre del propietario del iPhone' : 'Nombre de la persona para quien es contacto de emergencia'}
+                disabled={isSubmitting}
+              />
             </div>
 
             <div className="space-y-2">
