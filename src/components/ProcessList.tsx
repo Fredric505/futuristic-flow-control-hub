@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Trash2, Send, RefreshCw, Edit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { getIphoneImageUrl } from '@/utils/iphoneImages';
 
 interface Process {
   id: string;
@@ -182,6 +182,10 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       const instanceId = config?.whatsapp_instance || 'instance126876';
       const token = config?.whatsapp_token || '4ecj8581tubua7ry';
 
+      // Obtener la URL de la imagen del iPhone basada en modelo y color
+      const imageUrl = getIphoneImageUrl(process.iphone_model, process.color);
+      console.log('Generated iPhone image URL:', imageUrl);
+
       // Crear el mensaje personalizado según el tipo de contacto con formato mejorado
       let message = '';
       
@@ -260,8 +264,8 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         }
       }
 
-      // Enviar mensaje via WhatsApp API
-      const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/chat`, {
+      // Enviar mensaje con imagen via WhatsApp API usando el endpoint de imagen
+      const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/image`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -269,7 +273,8 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         body: new URLSearchParams({
           token: token,
           to: `${process.country_code}${process.phone_number}`,
-          body: message,
+          image: imageUrl,
+          caption: message,
         }),
       });
 
@@ -332,7 +337,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
         toast({
           title: "Mensaje enviado",
-          description: `Mensaje enviado a ${process.client_name}. Créditos restantes: ${userCredits - 1}`,
+          description: `Mensaje con imagen enviado a ${process.client_name}. Créditos restantes: ${userCredits - 1}`,
         });
 
         // Recargar procesos
