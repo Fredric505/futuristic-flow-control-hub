@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -199,7 +200,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
 *🧾 Escribe la palabra Menú para solicitar asistencia.*${process.url ? `
 
-*🔗 Enlace:* ${process.url}` : ''}
+*🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
 
 *Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
         } else {
@@ -215,7 +216,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
 *🧾 Escribe la palabra Menú para solicitar asistencia.*${process.url ? `
 
-*🔗 Enlace:* ${process.url}` : ''}
+*🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
 
 *Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
         }
@@ -235,7 +236,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
 *🧾 Escribe la palabra Menú para solicitar asistencia.*${process.url ? `
 
-*🔗 Enlace:* ${process.url}` : ''}
+*🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
 
 *Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
         } else {
@@ -253,7 +254,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
 *🧾 Escribe la palabra Menú para solicitar asistencia.*${process.url ? `
 
-*🔗 Enlace:* ${process.url}` : ''}
+*🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
 
 *Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
         }
