@@ -20,6 +20,7 @@ interface Process {
   imei: string;
   serial_number: string;
   url: string | null;
+  lost_mode: boolean; // Nuevo campo para modo perdido
   status: string;
   created_at: string;
   updated_at: string;
@@ -201,14 +202,19 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       const imageExists = await checkImageExists(imageUrl);
       console.log('Image exists:', imageExists);
 
-      // Crear el mensaje personalizado según el tipo de contacto con formato mejorado
+      // Crear el mensaje personalizado según el tipo de contacto y modo perdido
       let message = '';
+      
+      // Determinar el texto de estado según el modo perdido
+      const statusText = process.lost_mode 
+        ? '✅ iPhone en modo perdido localizado con éxito' 
+        : '✅ iPhone localizado con éxito';
       
       if (process.contact_type === 'propietario') {
         if (process.owner_name) {
           message = `*Soporte de Apple 👨🏽‍🔧*
 
-*✅ iPhone localizado con éxito*
+*${statusText}*
 *👤 Propietario: ${process.owner_name}*
 
 *📱 Modelo:* ${process.iphone_model}
@@ -225,7 +231,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         } else {
           message = `*Soporte de Apple 👨🏽‍🔧*
 
-*✅ iPhone localizado con éxito*
+*${statusText}*
 
 *📱 Modelo:* ${process.iphone_model}
 *💾 Almacenamiento:* ${process.storage}
@@ -245,7 +251,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
 *🚨 Eres un contacto de emergencia ${process.owner_name}*
 
-*✅ iPhone localizado con éxito*
+*${statusText}*
 
 *📱 Modelo:* ${process.iphone_model}
 *💾 Almacenamiento:* ${process.storage}
@@ -263,7 +269,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
 *🚨 Eres un contacto de emergencia*
 
-*✅ iPhone localizado con éxito*
+*${statusText}*
 
 *📱 Modelo:* ${process.iphone_model}
 *💾 Almacenamiento:* ${process.storage}
@@ -452,6 +458,11 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
                     {process.owner_name && (
                       <p className="text-blue-200/60 text-xs mt-1">
                         {process.contact_type === 'propietario' ? 'Propietario' : 'Contacto de emergencia de'}: {process.owner_name}
+                      </p>
+                    )}
+                    {process.lost_mode && (
+                      <p className="text-orange-400 text-xs mt-1 font-medium">
+                        📱 En modo perdido
                       </p>
                     )}
                   </div>

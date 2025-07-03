@@ -1,10 +1,10 @@
-
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SelectItem } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import SafeSelect from '@/components/SafeSelect';
@@ -19,13 +19,14 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
     countryCode: '',
     phoneNumber: '',
     contactType: '',
-    ownerName: '', // Nuevo campo para nombre del propietario/contacto
+    ownerName: '',
     iphoneModel: '',
     storage: '',
     color: '',
     imei: '',
     serialNumber: '',
-    url: ''
+    url: '',
+    lostMode: false
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -119,13 +120,14 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
           country_code: formData.countryCode,
           phone_number: formData.phoneNumber,
           contact_type: formData.contactType,
-          owner_name: formData.ownerName || null, // Guardar nombre del propietario/contacto
+          owner_name: formData.ownerName || null,
           iphone_model: formData.iphoneModel,
           storage: formData.storage,
           color: formData.color,
           imei: formData.imei,
           serial_number: formData.serialNumber,
           url: formData.url || null,
+          lost_mode: formData.lostMode,
           status: 'guardado'
         });
 
@@ -136,7 +138,6 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
 
       console.log('Proceso guardado exitosamente');
 
-      // Usar setTimeout para evitar conflictos de DOM
       setTimeout(() => {
         toast({
           title: "Proceso guardado",
@@ -144,7 +145,6 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
         });
       }, 100);
 
-      // Reset form después de un breve delay
       setTimeout(() => {
         setFormData({
           clientName: '',
@@ -157,7 +157,8 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
           color: '',
           imei: '',
           serialNumber: '',
-          url: ''
+          url: '',
+          lostMode: false
         });
       }, 200);
 
@@ -171,7 +172,6 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
         });
       }, 100);
     } finally {
-      // Delay para evitar conflictos de estado
       setTimeout(() => {
         setIsSubmitting(false);
       }, 300);
@@ -364,6 +364,27 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
                 placeholder="https://ejemplo.com"
                 disabled={isSubmitting}
               />
+            </div>
+
+            {/* Nuevo campo para modo perdido */}
+            <div className="space-y-2 md:col-span-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="lostMode"
+                  checked={formData.lostMode}
+                  onCheckedChange={(checked) => 
+                    setFormData(prev => ({...prev, lostMode: checked === true}))
+                  }
+                  disabled={isSubmitting}
+                  className="border-blue-500/30 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                />
+                <Label htmlFor="lostMode" className="text-blue-200">
+                  iPhone en modo perdido
+                </Label>
+              </div>
+              <p className="text-xs text-blue-200/60">
+                Selecciona esta opción si el iPhone está en modo perdido para personalizar el mensaje
+              </p>
             </div>
           </div>
 
