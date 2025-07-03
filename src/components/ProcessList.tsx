@@ -153,6 +153,17 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     }
   };
 
+  // Función para verificar si una imagen existe
+  const checkImageExists = async (url: string): Promise<boolean> => {
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      return response.ok;
+    } catch (error) {
+      console.log('Image check failed:', error);
+      return false;
+    }
+  };
+
   const sendWhatsAppMessage = async (process: Process) => {
     try {
       // Verificar créditos antes de enviar
@@ -185,6 +196,10 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       // Obtener la URL de la imagen del iPhone basada en modelo y color
       const imageUrl = getIphoneImageUrl(process.iphone_model, process.color);
       console.log('Generated iPhone image URL:', imageUrl);
+
+      // Verificar si la imagen existe
+      const imageExists = await checkImageExists(imageUrl);
+      console.log('Image exists:', imageExists);
 
       // Crear el mensaje personalizado según el tipo de contacto con formato mejorado
       let message = '';
@@ -264,21 +279,42 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         }
       }
 
-      // Enviar mensaje con imagen via WhatsApp API usando el endpoint de imagen
-      const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/image`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          token: token,
-          to: `${process.country_code}${process.phone_number}`,
-          image: imageUrl,
-          caption: message,
-        }),
-      });
+      let result;
 
-      const result = await response.json();
+      // Enviar mensaje con imagen si existe, solo texto si no existe
+      if (imageExists) {
+        console.log('Sending message with image');
+        // Enviar mensaje con imagen via WhatsApp API usando el endpoint de imagen
+        const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/image`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            token: token,
+            to: `${process.country_code}${process.phone_number}`,
+            image: imageUrl,
+            caption: message,
+          }),
+        });
+        result = await response.json();
+      } else {
+        console.log('Image not found, sending text only message');
+        // Enviar solo mensaje de texto si la imagen no existe
+        const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            token: token,
+            to: `${process.country_code}${process.phone_number}`,
+            body: message,
+          }),
+        });
+        result = await response.json();
+      }
+
       console.log('WhatsApp API response:', result);
 
       // VERIFICAR QUE EL MENSAJE SE ENVIÓ CORRECTAMENTE ANTES DE COBRAR
@@ -335,9 +371,10 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
           console.error('Error updating process status:', updateError);
         }
 
+        const messageType = imageExists ? 'con imagen' : 'solo texto (imagen no disponible)';
         toast({
           title: "Mensaje enviado",
-          description: `Mensaje con imagen enviado a ${process.client_name}. Créditos restantes: ${userCredits - 1}`,
+          description: `Mensaje ${messageType} enviado a ${process.client_name}. Créditos restantes: ${userCredits - 1}`,
         });
 
         // Recargar procesos
