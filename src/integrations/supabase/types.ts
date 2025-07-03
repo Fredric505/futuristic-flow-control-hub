@@ -64,6 +64,7 @@ export type Database = {
           id: string
           imei: string
           iphone_model: string
+          lost_mode: boolean | null
           owner_name: string | null
           phone_number: string
           serial_number: string
@@ -82,6 +83,7 @@ export type Database = {
           id?: string
           imei: string
           iphone_model: string
+          lost_mode?: boolean | null
           owner_name?: string | null
           phone_number: string
           serial_number: string
@@ -100,6 +102,7 @@ export type Database = {
           id?: string
           imei?: string
           iphone_model?: string
+          lost_mode?: boolean | null
           owner_name?: string | null
           phone_number?: string
           serial_number?: string

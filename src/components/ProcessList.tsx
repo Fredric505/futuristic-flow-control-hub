@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ interface Process {
   imei: string;
   serial_number: string;
   url: string | null;
-  lost_mode: boolean; // Nuevo campo para modo perdido
+  lost_mode?: boolean; // Made optional to handle existing data
   status: string;
   created_at: string;
   updated_at: string;
