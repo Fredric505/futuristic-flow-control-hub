@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -194,7 +193,7 @@ const SmsProcessForm = () => {
           {templates.length > 0 && (
             <div className="space-y-2 pb-4 border-b border-blue-500/20">
               <Label className="text-blue-200">
-                <Template className="h-4 w-4 inline mr-1" />
+                <FileText className="h-4 w-4 inline mr-1" />
                 Aplicar Plantilla (Opcional)
               </Label>
               <Select onValueChange={handleTemplateSelect}>

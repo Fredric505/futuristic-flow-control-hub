@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -91,7 +90,7 @@ const AdminDashboard = () => {
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
     { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Solo es texto' },
     { id: 'sms-process', icon: MessageCircle, label: 'Proceso SMS', description: 'Crear procesos de SMS para envío masivo' },
-    { id: 'sms-templates', icon: Template, label: 'Plantillas SMS', description: 'Crear y gestionar plantillas para agilizar procesos' },
+    { id: 'sms-templates', icon: FileText, label: 'Plantillas SMS', description: 'Crear y gestionar plantillas para agilizar procesos' },
     { id: 'send-sms', icon: MessageCircle, label: 'Enviar SMS', description: 'Enviar mensajes de texto directamente' },
     { id: 'sms-settings', icon: Settings, label: 'Configurar SMS', description: 'Configurar API de mensajes de texto' },
     { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -169,7 +168,7 @@ const SmsTemplates = () => {
       <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
         <CardHeader>
           <CardTitle className="text-blue-300 flex items-center">
-            <Template className="h-5 w-5 mr-2" />
+            <FileText className="h-5 w-5 mr-2" />
             Crear Nueva Plantilla SMS
           </CardTitle>
         </CardHeader>
