@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Save, Trash2, Template } from 'lucide-react';
+import { Plus, Save, Trash2, FileText } from 'lucide-react';
 import { countryCodes } from '@/utils/countryCodes';
 
 interface SmsTemplate {
