@@ -324,8 +324,15 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
       console.log('WhatsApp API response:', result);
 
-      // VERIFICAR QUE EL MENSAJE SE ENVIÓ CORRECTAMENTE ANTES DE COBRAR
-      if (result.sent === true || (result.sent === "true")) {
+      // VERIFICACIÓN MEJORADA: Solo cobrar si el mensaje fue enviado exitosamente
+      // Verificar que no haya errores de instancia o autenticación
+      const isSuccessful = (result.sent === true || result.sent === "true") && 
+                          !result.message?.includes("instance is not authenticated") &&
+                          !result.message?.includes("not working") &&
+                          !result.message?.includes("error") &&
+                          !result.error;
+
+      if (isSuccessful) {
         // Obtener el usuario actual
         const { data: { user } } = await supabase.auth.getUser();
         
@@ -387,9 +394,20 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         // Recargar procesos
         await loadProcesses();
       } else {
-        // SI EL MENSAJE NO SE ENVIÓ, NO COBRAR Y MOSTRAR ERROR
-        const errorMessage = result.message || result.error || 'La instancia de WhatsApp no está funcionando correctamente';
-        throw new Error(`Error en la instancia: ${errorMessage}`);
+        // SI EL MENSAJE NO SE ENVIÓ CORRECTAMENTE, NO COBRAR Y MOSTRAR ERROR DETALLADO
+        let errorMessage = 'Error desconocido';
+        
+        if (result.message?.includes("instance is not authenticated")) {
+          errorMessage = 'La instancia de WhatsApp no está autenticada. Verifica la configuración.';
+        } else if (result.message?.includes("not working")) {
+          errorMessage = 'La instancia de WhatsApp no está funcionando correctamente.';
+        } else if (result.error) {
+          errorMessage = `Error de API: ${result.error}`;
+        } else if (result.message) {
+          errorMessage = `Error de instancia: ${result.message}`;
+        }
+        
+        throw new Error(errorMessage);
       }
     } catch (error: any) {
       console.error('Error sending WhatsApp message:', error);
