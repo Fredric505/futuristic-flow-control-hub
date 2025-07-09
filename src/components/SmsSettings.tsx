@@ -8,17 +8,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Save, TestTube } from 'lucide-react';
+import { Save, TestTube, Settings } from 'lucide-react';
 
 const SmsSettings = () => {
   const { toast } = useToast();
   const [settings, setSettings] = useState({
-    description: '',
-    client_description: '',
     api_url: '',
     request_type: 'GET',
     api_key: '',
-    token: ''
+    token: '',
+    user_domains: '',
+    message_scripts: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -33,12 +33,12 @@ const SmsSettings = () => {
         .from('system_settings')
         .select('setting_key, setting_value')
         .in('setting_key', [
-          'sms_description',
-          'sms_client_description', 
           'sms_api_url',
           'sms_request_type',
           'sms_api_key',
-          'sms_token'
+          'sms_token', 
+          'user_domains',
+          'message_scripts'
         ]);
 
       if (error) throw error;
@@ -49,12 +49,12 @@ const SmsSettings = () => {
       });
 
       setSettings({
-        description: settingsMap['sms_description'] || '',
-        client_description: settingsMap['sms_client_description'] || '',
         api_url: settingsMap['sms_api_url'] || '',
         request_type: settingsMap['sms_request_type'] || 'GET',
         api_key: settingsMap['sms_api_key'] || '',
-        token: settingsMap['sms_token'] || ''
+        token: settingsMap['sms_token'] || '',
+        user_domains: settingsMap['user_domains'] || '',
+        message_scripts: settingsMap['message_scripts'] || ''
       });
     } catch (error) {
       console.error('Error loading SMS settings:', error);
@@ -70,12 +70,12 @@ const SmsSettings = () => {
     setIsLoading(true);
     try {
       const settingsToUpdate = [
-        { key: 'sms_description', value: settings.description },
-        { key: 'sms_client_description', value: settings.client_description },
         { key: 'sms_api_url', value: settings.api_url },
         { key: 'sms_request_type', value: settings.request_type },
         { key: 'sms_api_key', value: settings.api_key },
-        { key: 'sms_token', value: settings.token }
+        { key: 'sms_token', value: settings.token },
+        { key: 'user_domains', value: settings.user_domains },
+        { key: 'message_scripts', value: settings.message_scripts }
       ];
 
       for (const setting of settingsToUpdate) {
@@ -121,13 +121,11 @@ const SmsSettings = () => {
 
     setIsTesting(true);
     try {
-      // Aquí puedes implementar la lógica de prueba según la API específica
       toast({
         title: "Prueba iniciada",
         description: "Se está probando la conexión con la API de SMS..."
       });
       
-      // Simulación de prueba - esto se puede personalizar según la API
       setTimeout(() => {
         toast({
           title: "Prueba completada",
@@ -147,91 +145,94 @@ const SmsSettings = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-        <CardHeader>
-          <CardTitle className="text-blue-300">Configuración de SMS</CardTitle>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-blue-300 flex items-center text-lg">
+            <Settings className="h-5 w-5 mr-2" />
+            Configuración SMS
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="description" className="text-blue-200">Descripción</Label>
+              <Label htmlFor="api_url" className="text-blue-200 text-sm">URL de la API</Label>
               <Input
-                id="description"
-                placeholder="Bulk SMS"
-                value={settings.description}
-                onChange={(e) => setSettings({ ...settings, description: e.target.value })}
-                className="bg-black/20 border-blue-500/20 text-blue-200"
+                id="api_url"
+                placeholder="https://apisms.com/v1/sendsms.php"
+                value={settings.api_url}
+                onChange={(e) => setSettings({ ...settings, api_url: e.target.value })}
+                className="bg-black/20 border-blue-500/20 text-blue-200 h-9"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="client_description" className="text-blue-200">Descripción para el cliente</Label>
-              <Input
-                id="client_description"
-                placeholder="Long Code"
-                value={settings.client_description}
-                onChange={(e) => setSettings({ ...settings, client_description: e.target.value })}
-                className="bg-black/20 border-blue-500/20 text-blue-200"
-              />
+              <Label htmlFor="request_type" className="text-blue-200 text-sm">Tipo de solicitud</Label>
+              <Select value={settings.request_type} onValueChange={(value) => setSettings({ ...settings, request_type: value })}>
+                <SelectTrigger className="bg-black/20 border-blue-500/20 text-blue-200 h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-blue-500/20">
+                  <SelectItem value="GET">GET</SelectItem>
+                  <SelectItem value="POST">POST</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="api_url" className="text-blue-200">URL de solicitud</Label>
-            <Input
-              id="api_url"
-              placeholder="https://apisms.com/v1/sendsms.php"
-              value={settings.api_url}
-              onChange={(e) => setSettings({ ...settings, api_url: e.target.value })}
-              className="bg-black/20 border-blue-500/20 text-blue-200"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="request_type" className="text-blue-200">Tipo de solicitud</Label>
-            <Select value={settings.request_type} onValueChange={(value) => setSettings({ ...settings, request_type: value })}>
-              <SelectTrigger className="bg-black/20 border-blue-500/20 text-blue-200">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-800 border-blue-500/20">
-                <SelectItem value="GET">GET</SelectItem>
-                <SelectItem value="POST">POST</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="api_key" className="text-blue-200">API Key</Label>
+              <Label htmlFor="api_key" className="text-blue-200 text-sm">API Key</Label>
               <Input
                 id="api_key"
                 placeholder="XXX-XXX-XXX-XXX"
                 value={settings.api_key}
                 onChange={(e) => setSettings({ ...settings, api_key: e.target.value })}
-                className="bg-black/20 border-blue-500/20 text-blue-200"
+                className="bg-black/20 border-blue-500/20 text-blue-200 h-9"
                 type="password"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="token" className="text-blue-200">Token</Label>
+              <Label htmlFor="token" className="text-blue-200 text-sm">Token</Label>
               <Input
                 id="token"
                 placeholder="XXX-XXX-XXX-XXX"
                 value={settings.token}
                 onChange={(e) => setSettings({ ...settings, token: e.target.value })}
-                className="bg-black/20 border-blue-500/20 text-blue-200"
+                className="bg-black/20 border-blue-500/20 text-blue-200 h-9"
                 type="password"
               />
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 pt-4">
+          <div className="space-y-2">
+            <Label htmlFor="user_domains" className="text-blue-200 text-sm">Dominios de Usuarios (separados por comas)</Label>
+            <Input
+              id="user_domains"
+              placeholder="domain1.com, domain2.com, domain3.com"
+              value={settings.user_domains}
+              onChange={(e) => setSettings({ ...settings, user_domains: e.target.value })}
+              className="bg-black/20 border-blue-500/20 text-blue-200 h-9"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="message_scripts" className="text-blue-200 text-sm">Scripts de Mensajes (separados por comas)</Label>
+            <Input
+              id="message_scripts"
+              placeholder="Script1, Script2, Script3"
+              value={settings.message_scripts}
+              onChange={(e) => setSettings({ ...settings, message_scripts: e.target.value })}
+              className="bg-black/20 border-blue-500/20 text-blue-200 h-9"
+            />
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2 pt-3">
             <Button
               onClick={handleSave}
               disabled={isLoading}
-              className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30"
+              className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 h-9"
             >
               <Save className="h-4 w-4 mr-2" />
               {isLoading ? 'Guardando...' : 'Guardar'}
@@ -241,10 +242,10 @@ const SmsSettings = () => {
               onClick={handleTest}
               disabled={isTesting || !settings.api_url}
               variant="outline"
-              className="border-green-500/30 text-green-300 hover:bg-green-600/10"
+              className="border-green-500/30 text-green-300 hover:bg-green-600/10 h-9"
             >
               <TestTube className="h-4 w-4 mr-2" />
-              {isTesting ? 'Probando...' : 'Probar Conexión'}
+              {isTesting ? 'Probando...' : 'Probar'}
             </Button>
           </div>
         </CardContent>

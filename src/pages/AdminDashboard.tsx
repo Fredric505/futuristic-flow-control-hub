@@ -17,6 +17,7 @@ import MobileSidebar from '@/components/MobileSidebar';
 import { supabase } from '@/integrations/supabase/client';
 import SmsSettings from '@/components/SmsSettings';
 import SmsSender from '@/components/SmsSender';
+import SmsProcessForm from '@/components/SmsProcessForm';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -87,6 +88,7 @@ const AdminDashboard = () => {
     { id: 'history', icon: History, label: 'Historial', description: 'Mi historial de mensajes enviados' },
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
     { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Solo es texto' },
+    { id: 'sms-process', icon: MessageCircle, label: 'Proceso SMS', description: 'Crear procesos de SMS para envío masivo' },
     { id: 'send-sms', icon: MessageCircle, label: 'Enviar SMS', description: 'Enviar mensajes de texto directamente' },
     { id: 'sms-settings', icon: Settings, label: 'Configurar SMS', description: 'Configurar API de mensajes de texto' },
     { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },
@@ -180,6 +182,9 @@ const AdminDashboard = () => {
       case 'admin-messages':
         return <AdminMessageHistory />;
       
+      case 'sms-process':
+        return <SmsProcessForm />;
+        
       case 'send-sms':
         return <SmsSender />;
         
