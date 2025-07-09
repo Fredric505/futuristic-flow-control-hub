@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageCircle } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageCircle, Template } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import SmsSettings from '@/components/SmsSettings';
 import SmsSender from '@/components/SmsSender';
 import SmsProcessForm from '@/components/SmsProcessForm';
+import SmsTemplates from '@/components/SmsTemplates';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -89,6 +90,7 @@ const AdminDashboard = () => {
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
     { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Solo es texto' },
     { id: 'sms-process', icon: MessageCircle, label: 'Proceso SMS', description: 'Crear procesos de SMS para envío masivo' },
+    { id: 'sms-templates', icon: Template, label: 'Plantillas SMS', description: 'Crear y gestionar plantillas para agilizar procesos' },
     { id: 'send-sms', icon: MessageCircle, label: 'Enviar SMS', description: 'Enviar mensajes de texto directamente' },
     { id: 'sms-settings', icon: Settings, label: 'Configurar SMS', description: 'Configurar API de mensajes de texto' },
     { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },
@@ -184,6 +186,9 @@ const AdminDashboard = () => {
       
       case 'sms-process':
         return <SmsProcessForm />;
+        
+      case 'sms-templates':
+        return <SmsTemplates />;
         
       case 'send-sms':
         return <SmsSender />;
