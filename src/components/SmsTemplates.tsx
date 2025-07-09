@@ -1,20 +1,18 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Save, Trash2, FileText } from 'lucide-react';
-import { countryCodes } from '@/utils/countryCodes';
+import { Save, Trash2, FileText } from 'lucide-react';
 
 interface SmsTemplate {
   id: string;
   name: string;
-  country_code: string;
-  assigned_domain: string;
-  message_script: string;
+  message_text: string;
   created_at: string;
 }
 
@@ -22,40 +20,14 @@ const SmsTemplates = () => {
   const { toast } = useToast();
   const [templates, setTemplates] = useState<SmsTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [domains, setDomains] = useState<string[]>([]);
-  const [scripts, setScripts] = useState<string[]>([]);
   const [newTemplate, setNewTemplate] = useState({
     name: '',
-    country_code: '',
-    assigned_domain: '',
-    message_script: ''
+    message_text: ''
   });
 
   useEffect(() => {
     loadTemplates();
-    loadDomainsAndScripts();
   }, []);
-
-  const loadDomainsAndScripts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('setting_key, setting_value')
-        .in('setting_key', ['user_domains', 'message_scripts']);
-
-      if (error) throw error;
-
-      const settingsMap: { [key: string]: string } = {};
-      data?.forEach(item => {
-        settingsMap[item.setting_key] = item.setting_value;
-      });
-
-      setDomains(settingsMap['user_domains']?.split(',').map(d => d.trim()) || []);
-      setScripts(settingsMap['message_scripts']?.split(',').map(s => s.trim()) || []);
-    } catch (error) {
-      console.error('Error loading domains and scripts:', error);
-    }
-  };
 
   const loadTemplates = async () => {
     try {
@@ -73,9 +45,7 @@ const SmsTemplates = () => {
           templateData.push({
             id: item.id,
             name: template.name,
-            country_code: template.country_code,
-            assigned_domain: template.assigned_domain,
-            message_script: template.message_script,
+            message_text: template.message_text,
             created_at: item.created_at
           });
         } catch (e) {
@@ -90,10 +60,10 @@ const SmsTemplates = () => {
   };
 
   const handleSaveTemplate = async () => {
-    if (!newTemplate.name || !newTemplate.country_code || !newTemplate.assigned_domain || !newTemplate.message_script) {
+    if (!newTemplate.name || !newTemplate.message_text) {
       toast({
         title: "Error",
-        description: "Por favor completa todos los campos de la plantilla",
+        description: "Por favor completa el nombre y el texto del mensaje",
         variant: "destructive"
       });
       return;
@@ -120,9 +90,7 @@ const SmsTemplates = () => {
 
       setNewTemplate({
         name: '',
-        country_code: '',
-        assigned_domain: '',
-        message_script: ''
+        message_text: ''
       });
 
       loadTemplates();
@@ -173,83 +141,31 @@ const SmsTemplates = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="template_name" className="text-blue-200">
-                Nombre de la Plantilla *
-              </Label>
-              <Input
-                id="template_name"
-                placeholder="Nombre de la plantilla"
-                value={newTemplate.name}
-                onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
-                className="bg-black/20 border-blue-500/20 text-blue-200"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="template_country" className="text-blue-200">
-                Código de País *
-              </Label>
-              <Select value={newTemplate.country_code} onValueChange={(value) => setNewTemplate({ ...newTemplate, country_code: value })}>
-                <SelectTrigger className="bg-black/20 border-blue-500/20 text-blue-200">
-                  <SelectValue placeholder="Seleccionar código" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-blue-500/20 max-h-60">
-                  {countryCodes.map((country) => (
-                    <SelectItem key={country.code} value={country.code} className="text-white hover:bg-slate-800">
-                      {country.code} - {country.country}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="template_name" className="text-blue-200">
+              Nombre de la Plantilla *
+            </Label>
+            <Input
+              id="template_name"
+              placeholder="Nombre de la plantilla"
+              value={newTemplate.name}
+              onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
+              className="bg-black/20 border-blue-500/20 text-blue-200"
+            />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="template_domain" className="text-blue-200">
-                Dominio Asignado *
-              </Label>
-              <Select value={newTemplate.assigned_domain} onValueChange={(value) => setNewTemplate({ ...newTemplate, assigned_domain: value })}>
-                <SelectTrigger className="bg-black/20 border-blue-500/20 text-blue-200">
-                  <SelectValue placeholder="Seleccionar dominio" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-blue-500/20">
-                  {domains.length > 0 ? domains.map((domain) => (
-                    <SelectItem key={domain} value={domain} className="text-white hover:bg-slate-800">
-                      {domain}
-                    </SelectItem>
-                  )) : (
-                    <SelectItem value="no-domains" disabled className="text-gray-400">
-                      No hay dominios configurados
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="template_script" className="text-blue-200">
-                Script del Mensaje *
-              </Label>
-              <Select value={newTemplate.message_script} onValueChange={(value) => setNewTemplate({ ...newTemplate, message_script: value })}>
-                <SelectTrigger className="bg-black/20 border-blue-500/20 text-blue-200">
-                  <SelectValue placeholder="Seleccionar script" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-blue-500/20">
-                  {scripts.length > 0 ? scripts.map((script) => (
-                    <SelectItem key={script} value={script} className="text-white hover:bg-slate-800">
-                      {script}
-                    </SelectItem>
-                  )) : (
-                    <SelectItem value="no-scripts" disabled className="text-gray-400">
-                      No hay scripts configurados
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="template_message" className="text-blue-200">
+              Texto del Mensaje *
+            </Label>
+            <Textarea
+              id="template_message"
+              placeholder="Escribe aquí el texto del mensaje SMS..."
+              value={newTemplate.message_text}
+              onChange={(e) => setNewTemplate({ ...newTemplate, message_text: e.target.value })}
+              className="bg-black/20 border-blue-500/20 text-blue-200 min-h-[100px]"
+              rows={4}
+            />
           </div>
 
           <div className="pt-4">
@@ -277,19 +193,17 @@ const SmsTemplates = () => {
               {templates.map((template) => (
                 <div key={template.id} className="bg-black/10 border border-blue-500/20 rounded-lg p-4">
                   <div className="flex justify-between items-start">
-                    <div className="space-y-2">
+                    <div className="space-y-2 flex-1">
                       <h3 className="text-blue-200 font-medium">{template.name}</h3>
-                      <div className="text-sm text-blue-200/70 space-y-1">
-                        <p>País: {template.country_code}</p>
-                        <p>Dominio: {template.assigned_domain}</p>
-                        <p>Script: {template.message_script}</p>
+                      <div className="text-sm text-blue-200/70 bg-black/20 p-3 rounded border border-blue-500/10">
+                        <p className="whitespace-pre-wrap">{template.message_text}</p>
                       </div>
                     </div>
                     <Button
                       onClick={() => handleDeleteTemplate(template.id)}
                       size="sm"
                       variant="outline"
-                      className="border-red-500/30 text-red-300 hover:bg-red-600/10"
+                      className="border-red-500/30 text-red-300 hover:bg-red-600/10 ml-4"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
