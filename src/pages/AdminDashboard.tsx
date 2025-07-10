@@ -95,17 +95,22 @@ const AdminDashboard = () => {
     // HISTORIAL SECTION
     { id: 'history', icon: History, label: 'Mi Historial', description: 'Mi historial de mensajes enviados' },
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
+    { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Configuraciones administrativas' },
     
     // USUARIOS SECTION
     { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },
     { id: 'manage-users', icon: Users, label: 'Gestionar Usuarios', description: 'Editar, borrar y renovar usuarios' },
     { id: 'reload-credits', icon: CreditCard, label: 'Recargar Créditos', description: 'Recargar créditos a usuarios' },
     
+    // CONFIGURACIONES DE SERVIDOR
+    { id: 'server-config', icon: Settings, label: 'Configurar Servidor', description: 'Configurar conexión al servidor' },
+    { id: 'domains', icon: Settings, label: 'Dominios', description: 'Gestionar dominios del sistema' },
+    { id: 'subdomains', icon: Settings, label: 'Subdominios', description: 'Gestionar subdominios del sistema' },
+    
     // CONFIGURACIONES ADMIN
     { id: 'sms-templates', icon: FileText, label: 'Plantillas SMS', description: 'Crear y gestionar plantillas SMS' },
     { id: 'sms-settings', icon: Settings, label: 'Configurar SMS', description: 'Configurar API de mensajes de texto' },
     { id: 'settings', icon: Settings, label: 'Configuraciones', description: 'Configurar instancia y token' },
-    { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Configuraciones administrativas' },
   ];
 
   const handleLogout = async () => {
@@ -184,12 +189,12 @@ const AdminDashboard = () => {
               {/* Separator for Historial */}
               <div className="py-2">
                 <div className="text-blue-300 text-sm font-semibold px-3 py-2 bg-blue-600/10 rounded">
-                  HISTORIAL
+                  HISTORIAL Y ACCESOS
                 </div>
               </div>
               
               {/* Historial Section */}
-              {menuItems.slice(5, 7).map((item) => {
+              {menuItems.slice(5, 8).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -218,7 +223,7 @@ const AdminDashboard = () => {
               </div>
               
               {/* Usuarios Section */}
-              {menuItems.slice(7, 10).map((item) => {
+              {menuItems.slice(8, 11).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -239,7 +244,36 @@ const AdminDashboard = () => {
                 );
               })}
               
-              {/* Separator for Configuraciones */}
+              {/* Separator for Configuraciones de Servidor */}
+              <div className="py-2">
+                <div className="text-orange-300 text-sm font-semibold px-3 py-2 bg-orange-600/10 rounded">
+                  CONFIGURACIONES DE SERVIDOR
+                </div>
+              </div>
+              
+              {/* Servidor Section */}
+              {menuItems.slice(11, 14).map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveSection(item.id)}
+                    className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
+                      activeSection === item.id
+                        ? 'bg-orange-600/20 border border-orange-500/30 text-orange-300'
+                        : 'text-orange-200/70 hover:bg-orange-600/10 hover:text-orange-300'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <div className="text-left">
+                      <div className="font-medium">{item.label}</div>
+                      <div className="text-xs opacity-70">{item.description}</div>
+                    </div>
+                  </button>
+                );
+              })}
+              
+              {/* Separator for Configuraciones Admin */}
               <div className="py-2">
                 <div className="text-red-300 text-sm font-semibold px-3 py-2 bg-red-600/10 rounded">
                   CONFIGURACIONES ADMIN
@@ -247,7 +281,7 @@ const AdminDashboard = () => {
               </div>
               
               {/* Configuraciones Section */}
-              {menuItems.slice(10).map((item) => {
+              {menuItems.slice(14).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -423,26 +457,6 @@ const AdminDashboard = () => {
       
       case 'admin-messages':
         return <AdminMessageHistory />;
-      
-      // USUARIOS
-      case 'add-user':
-        return <AddUserForm />;
-      
-      case 'manage-users':
-        return <ManageUsers />;
-      
-      case 'reload-credits':
-        return <ReloadCredits />;
-      
-      // CONFIGURACIONES ADMIN
-      case 'sms-templates':
-        return <SmsTemplates />;
-        
-      case 'sms-settings':
-        return <SmsSettings />;
-      
-      case 'settings':
-        return <InstanceSettings />;
         
       case 'admin-access':
         return (
@@ -459,6 +473,116 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
         );
+      
+      // USUARIOS
+      case 'add-user':
+        return <AddUserForm />;
+      
+      case 'manage-users':
+        return <ManageUsers />;
+      
+      case 'reload-credits':
+        return <ReloadCredits />;
+      
+      // CONFIGURACIONES DE SERVIDOR
+      case 'server-config':
+        return (
+          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+            <CardHeader>
+              <CardTitle className="text-blue-300">Configurar Servidor</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-blue-300 mb-2">
+                      Chat ID
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="7219932215"
+                      className="w-full p-3 bg-black/30 border border-blue-500/30 rounded-lg text-white placeholder-blue-300/50 focus:outline-none focus:border-blue-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-blue-300 mb-2">
+                      Token
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="7785623280:AAE3v4kmlOZTpJDLCsp_xE5Ka5Yu-B5cQA"
+                      className="w-full p-3 bg-black/30 border border-blue-500/30 rounded-lg text-white placeholder-blue-300/50 focus:outline-none focus:border-blue-400"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    Guardar Configuración
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+        
+      case 'domains':
+        return (
+          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+            <CardHeader>
+              <CardTitle className="text-blue-300">Gestión de Dominios</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <p className="text-blue-200/70">No tienes dominios configurados</p>
+                  <div className="flex gap-2">
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                      Agregar Dominio
+                    </Button>
+                    <Button variant="outline" className="border-blue-500/30 text-blue-300 hover:bg-blue-600/10">
+                      Ver nameservers
+                    </Button>
+                  </div>
+                </div>
+                <div className="text-center py-8 text-blue-200/50">
+                  <p>Aquí aparecerán los dominios cuando los agregues</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+        
+      case 'subdomains':
+        return (
+          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+            <CardHeader>
+              <CardTitle className="text-blue-300">Gestión de Subdominios</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <p className="text-blue-200/70">No tienes subdominios configurados</p>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    Agregar Subdominio
+                  </Button>
+                </div>
+                <div className="text-center py-8 text-blue-200/50">
+                  <p>Aquí aparecerán los subdominios cuando los agregues</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      
+      // CONFIGURACIONES ADMIN
+      case 'sms-templates':
+        return <SmsTemplates />;
+        
+      case 'sms-settings':
+        return <SmsSettings />;
+      
+      case 'settings':
+        return <InstanceSettings />;
       
       default:
         return (
