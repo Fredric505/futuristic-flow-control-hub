@@ -154,6 +154,47 @@ export type Database = {
         }
         Relationships: []
       }
+      script_captures: {
+        Row: {
+          captured_data: Json
+          created_at: string
+          id: string
+          process_id: string | null
+          script_type: string
+          subdomain: string
+          telegram_sent: boolean | null
+          user_id: string
+        }
+        Insert: {
+          captured_data: Json
+          created_at?: string
+          id?: string
+          process_id?: string | null
+          script_type: string
+          subdomain: string
+          telegram_sent?: boolean | null
+          user_id: string
+        }
+        Update: {
+          captured_data?: Json
+          created_at?: string
+          id?: string
+          process_id?: string | null
+          script_type?: string
+          subdomain?: string
+          telegram_sent?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "script_captures_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_settings: {
         Row: {
           created_at: string | null
@@ -178,11 +219,80 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_bots: {
+        Row: {
+          bot_token: string
+          chat_id: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bot_token: string
+          chat_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bot_token?: string
+          chat_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_domains: {
+        Row: {
+          created_at: string
+          domain_name: string
+          id: string
+          is_active: boolean | null
+          subdomain_prefix: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          domain_name: string
+          id?: string
+          is_active?: boolean | null
+          subdomain_prefix: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          domain_name?: string
+          id?: string
+          is_active?: boolean | null
+          subdomain_prefix?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      get_user_config_by_subdomain: {
+        Args: { subdomain_param: string }
+        Returns: {
+          user_id: string
+          bot_token: string
+          chat_id: string
+          domain_name: string
+        }[]
+      }
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean

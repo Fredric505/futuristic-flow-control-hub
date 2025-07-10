@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,6 +19,8 @@ import SmsSettings from '@/components/SmsSettings';
 import SmsSender from '@/components/SmsSender';
 import SmsProcessForm from '@/components/SmsProcessForm';
 import SmsTemplates from '@/components/SmsTemplates';
+import DomainManager from '@/components/DomainManager';
+import TelegramBotManager from '@/components/TelegramBotManager';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -116,6 +117,7 @@ const AdminDashboard = () => {
     { id: 'server-config-main', label: 'Configurar Servidor', description: 'Chat ID y Token' },
     { id: 'domains', label: 'Dominios', description: 'Gestionar dominios del sistema' },
     { id: 'subdomains', label: 'Subdominios', description: 'Gestionar subdominios del sistema' },
+    { id: 'telegram-bots', label: 'Bots de Telegram', description: 'Configurar bots para captura de datos' },
   ];
 
   const handleLogout = async () => {
@@ -552,63 +554,42 @@ const AdminDashboard = () => {
         );
         
       case 'domains':
-        return (
-          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-            <CardHeader>
-              <CardTitle className="text-blue-300">Gestión de Dominios</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <p className="text-blue-200/70">No tienes dominios configurados</p>
-                  <div className="flex gap-2">
-                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                      Agregar Dominio
-                    </Button>
-                    <Button variant="outline" className="border-blue-500/30 text-blue-300 hover:bg-blue-600/10">
-                      Ver nameservers
-                    </Button>
-                  </div>
-                </div>
-                <div className="text-center py-8 text-blue-200/50">
-                  <p>Aquí aparecerán los dominios cuando los agregues</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        );
+        return <DomainManager />;
         
       case 'subdomains':
         return (
-          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+          <Card className="bg-black/20 backdrop-blur-xl border border-orange-500/20">
             <CardHeader>
-              <CardTitle className="text-blue-300">Gestión de Subdominios</CardTitle>
+              <CardTitle className="text-orange-300">Gestión de Subdominios</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <p className="text-blue-200/70">No tienes subdominios configurados</p>
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                    Agregar Subdominio
-                  </Button>
+                <div className="bg-blue-600/10 border border-blue-500/20 rounded-lg p-4">
+                  <h3 className="text-blue-300 font-medium mb-2">Información sobre Subdominios</h3>
+                  <p className="text-blue-200/70 text-sm mb-3">
+                    Los subdominios se gestionan automáticamente cuando configuras dominios en la sección "Dominios".
+                    Cada subdominio que agregues estará disponible para tus scripts SMS.
+                  </p>
+                  <p className="text-blue-200/70 text-sm">
+                    <strong>Ejemplo:</strong> Si configuras el subdominio "usuario1" con el dominio "ubicacion-device.co",
+                    tus scripts serán accesibles en: usuario1.ubicacion-device.co
+                  </p>
                 </div>
-                <div className="text-center py-8 text-blue-200/50">
-                  <p>Aquí aparecerán los subdominios cuando los agregues</p>
+                <div className="text-center">
+                  <Button 
+                    onClick={() => setActiveSection('domains')}
+                    className="bg-orange-600/20 hover:bg-orange-600/30 text-orange-300 border border-orange-500/30"
+                  >
+                    Ir a Gestión de Dominios
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
         );
-      
-      // CONFIGURACIONES ADMIN
-      case 'sms-templates':
-        return <SmsTemplates />;
-        
-      case 'sms-settings':
-        return <SmsSettings />;
-      
-      case 'settings':
-        return <InstanceSettings />;
+
+      case 'telegram-bots':
+        return <TelegramBotManager />;
       
       default:
         return (

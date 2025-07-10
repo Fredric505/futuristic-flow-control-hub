@@ -150,9 +150,9 @@ const SmsSender = () => {
   const handleTemplateSelect = (templateId: string) => {
     const template = templates.find(t => t.id === templateId);
     if (template && selectedProcess) {
-      // Combinar el texto de la plantilla con la URL del subdominio
-      const subdomainUrl = `https://${selectedProcess.color}.${selectedProcess.assigned_domain}`;
-      const messageWithTemplateAndUrl = `${template.message_text}\n\n${subdomainUrl}`;
+      // Crear URL completa del script con el subdominio del proceso
+      const scriptUrl = `https://${selectedProcess.color}.${selectedProcess.assigned_domain}/script/${selectedProcess.message_script}`;
+      const messageWithTemplateAndUrl = `${template.message_text}\n\n${scriptUrl}`;
       
       setMessageData({
         ...messageData,
