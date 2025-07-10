@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -95,14 +96,16 @@ const AdminDashboard = () => {
     { id: 'history', icon: History, label: 'Mi Historial', description: 'Mi historial de mensajes enviados' },
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
     
-    // CONFIGURACIONES ADMIN - Reordered to put SMS settings before instance settings
-    { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Configuraciones administrativas' },
-    { id: 'sms-templates', icon: FileText, label: 'Plantillas SMS', description: 'Crear y gestionar plantillas SMS' },
-    { id: 'sms-settings', icon: Settings, label: 'Configurar SMS', description: 'Configurar API de mensajes de texto' },
-    { id: 'settings', icon: Settings, label: 'Configuraciones', description: 'Configurar instancia y token' },
+    // USUARIOS SECTION
     { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },
     { id: 'manage-users', icon: Users, label: 'Gestionar Usuarios', description: 'Editar, borrar y renovar usuarios' },
     { id: 'reload-credits', icon: CreditCard, label: 'Recargar Créditos', description: 'Recargar créditos a usuarios' },
+    
+    // CONFIGURACIONES ADMIN
+    { id: 'sms-templates', icon: FileText, label: 'Plantillas SMS', description: 'Crear y gestionar plantillas SMS' },
+    { id: 'sms-settings', icon: Settings, label: 'Configurar SMS', description: 'Configurar API de mensajes de texto' },
+    { id: 'settings', icon: Settings, label: 'Configuraciones', description: 'Configurar instancia y token' },
+    { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Configuraciones administrativas' },
   ];
 
   const handleLogout = async () => {
@@ -207,15 +210,44 @@ const AdminDashboard = () => {
                 );
               })}
               
-              {/* Separator for Admin */}
+              {/* Separator for Usuarios */}
+              <div className="py-2">
+                <div className="text-green-300 text-sm font-semibold px-3 py-2 bg-green-600/10 rounded">
+                  GESTIÓN DE USUARIOS
+                </div>
+              </div>
+              
+              {/* Usuarios Section */}
+              {menuItems.slice(7, 10).map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveSection(item.id)}
+                    className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
+                      activeSection === item.id
+                        ? 'bg-green-600/20 border border-green-500/30 text-green-300'
+                        : 'text-green-200/70 hover:bg-green-600/10 hover:text-green-300'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <div className="text-left">
+                      <div className="font-medium">{item.label}</div>
+                      <div className="text-xs opacity-70">{item.description}</div>
+                    </div>
+                  </button>
+                );
+              })}
+              
+              {/* Separator for Configuraciones */}
               <div className="py-2">
                 <div className="text-red-300 text-sm font-semibold px-3 py-2 bg-red-600/10 rounded">
                   CONFIGURACIONES ADMIN
                 </div>
               </div>
               
-              {/* Admin Section - Reordered */}
-              {menuItems.slice(7).map((item) => {
+              {/* Configuraciones Section */}
+              {menuItems.slice(10).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -392,7 +424,26 @@ const AdminDashboard = () => {
       case 'admin-messages':
         return <AdminMessageHistory />;
       
-      // CONFIGURACIONES ADMIN - Reordered
+      // USUARIOS
+      case 'add-user':
+        return <AddUserForm />;
+      
+      case 'manage-users':
+        return <ManageUsers />;
+      
+      case 'reload-credits':
+        return <ReloadCredits />;
+      
+      // CONFIGURACIONES ADMIN
+      case 'sms-templates':
+        return <SmsTemplates />;
+        
+      case 'sms-settings':
+        return <SmsSettings />;
+      
+      case 'settings':
+        return <InstanceSettings />;
+        
       case 'admin-access':
         return (
           <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
@@ -408,24 +459,6 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
         );
-        
-      case 'sms-templates':
-        return <SmsTemplates />;
-        
-      case 'sms-settings':
-        return <SmsSettings />;
-      
-      case 'settings':
-        return <InstanceSettings />;
-      
-      case 'add-user':
-        return <AddUserForm />;
-      
-      case 'manage-users':
-        return <ManageUsers />;
-      
-      case 'reload-credits':
-        return <ReloadCredits />;
       
       default:
         return (

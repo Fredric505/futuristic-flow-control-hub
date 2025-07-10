@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Save, TestTube, Settings } from 'lucide-react';
@@ -17,7 +16,7 @@ const SmsSettings = () => {
     request_type: 'GET',
     api_key: '',
     token: '',
-    user_domains: '',
+    bulk_sms: '',
     message_scripts: ''
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -36,8 +35,8 @@ const SmsSettings = () => {
           'sms_api_url',
           'sms_request_type',
           'sms_api_key',
-          'sms_token', 
-          'user_domains',
+          'sms_token',
+          'bulk_sms',
           'message_scripts'
         ]);
 
@@ -53,7 +52,7 @@ const SmsSettings = () => {
         request_type: settingsMap['sms_request_type'] || 'GET',
         api_key: settingsMap['sms_api_key'] || '',
         token: settingsMap['sms_token'] || '',
-        user_domains: settingsMap['user_domains'] || '',
+        bulk_sms: settingsMap['bulk_sms'] || '',
         message_scripts: settingsMap['message_scripts'] || ''
       });
     } catch (error) {
@@ -74,7 +73,7 @@ const SmsSettings = () => {
         { key: 'sms_request_type', value: settings.request_type },
         { key: 'sms_api_key', value: settings.api_key },
         { key: 'sms_token', value: settings.token },
-        { key: 'user_domains', value: settings.user_domains },
+        { key: 'bulk_sms', value: settings.bulk_sms },
         { key: 'message_scripts', value: settings.message_scripts }
       ];
 
@@ -219,12 +218,12 @@ const SmsSettings = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="user_domains" className="text-blue-200 text-sm">Dominios de Usuarios (separados por comas)</Label>
+            <Label htmlFor="bulk_sms" className="text-blue-200 text-sm">Bulk SMS</Label>
             <Input
-              id="user_domains"
-              placeholder="domain1.com, domain2.com, domain3.com"
-              value={settings.user_domains}
-              onChange={(e) => setSettings({ ...settings, user_domains: e.target.value })}
+              id="bulk_sms"
+              placeholder="Configuración de SMS masivos"
+              value={settings.bulk_sms}
+              onChange={(e) => setSettings({ ...settings, bulk_sms: e.target.value })}
               className="bg-black/20 border-blue-500/20 text-blue-200 h-9"
             />
           </div>
