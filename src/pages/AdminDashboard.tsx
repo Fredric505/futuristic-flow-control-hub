@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageCircle, MessageSquare } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageCircle, MessageSquare, ChevronDown, ChevronRight } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
@@ -26,6 +26,7 @@ const AdminDashboard = () => {
   const isMobile = useIsMobile();
   const [activeSection, setActiveSection] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [serverConfigOpen, setServerConfigOpen] = useState(false);
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeProcesses: 0,
@@ -103,9 +104,7 @@ const AdminDashboard = () => {
     { id: 'reload-credits', icon: CreditCard, label: 'Recargar Créditos', description: 'Recargar créditos a usuarios' },
     
     // CONFIGURACIONES DE SERVIDOR
-    { id: 'server-config', icon: Settings, label: 'Configurar Servidor', description: 'Configurar conexión al servidor' },
-    { id: 'domains', icon: Settings, label: 'Dominios', description: 'Gestionar dominios del sistema' },
-    { id: 'subdomains', icon: Settings, label: 'Subdominios', description: 'Gestionar subdominios del sistema' },
+    { id: 'server-config', icon: Settings, label: 'Configuración de Servidor', description: 'Configurar conexión al servidor', hasSubmenu: true },
     
     // CONFIGURACIONES ADMIN
     { id: 'sms-templates', icon: FileText, label: 'Plantillas SMS', description: 'Crear y gestionar plantillas SMS' },
@@ -113,9 +112,19 @@ const AdminDashboard = () => {
     { id: 'settings', icon: Settings, label: 'Configuraciones', description: 'Configurar instancia y token' },
   ];
 
+  const serverSubmenuItems = [
+    { id: 'server-config-main', label: 'Configurar Servidor', description: 'Chat ID y Token' },
+    { id: 'domains', label: 'Dominios', description: 'Gestionar dominios del sistema' },
+    { id: 'subdomains', label: 'Subdominios', description: 'Gestionar subdominios del sistema' },
+  ];
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/login');
+  };
+
+  const handleServerConfigClick = () => {
+    setServerConfigOpen(!serverConfigOpen);
   };
 
   return (
@@ -251,27 +260,42 @@ const AdminDashboard = () => {
                 </div>
               </div>
               
-              {/* Servidor Section */}
-              {menuItems.slice(11, 14).map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveSection(item.id)}
-                    className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
-                      activeSection === item.id
-                        ? 'bg-orange-600/20 border border-orange-500/30 text-orange-300'
-                        : 'text-orange-200/70 hover:bg-orange-600/10 hover:text-orange-300'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <div className="text-left">
-                      <div className="font-medium">{item.label}</div>
-                      <div className="text-xs opacity-70">{item.description}</div>
-                    </div>
-                  </button>
-                );
-              })}
+              {/* Configuración de Servidor with Submenu */}
+              <div>
+                <button
+                  onClick={handleServerConfigClick}
+                  className="w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 text-orange-200/70 hover:bg-orange-600/10 hover:text-orange-300"
+                >
+                  <Settings className="h-5 w-5" />
+                  <div className="text-left flex-1">
+                    <div className="font-medium">Configuración de Servidor</div>
+                    <div className="text-xs opacity-70">Configurar conexión al servidor</div>
+                  </div>
+                  {serverConfigOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                </button>
+                
+                {/* Submenu */}
+                {serverConfigOpen && (
+                  <div className="ml-6 mt-1 space-y-1">
+                    {serverSubmenuItems.map((subItem) => (
+                      <button
+                        key={subItem.id}
+                        onClick={() => setActiveSection(subItem.id)}
+                        className={`w-full flex items-center space-x-3 p-2 rounded-lg transition-all duration-200 ${
+                          activeSection === subItem.id
+                            ? 'bg-orange-600/20 border border-orange-500/30 text-orange-300'
+                            : 'text-orange-200/60 hover:bg-orange-600/10 hover:text-orange-300'
+                        }`}
+                      >
+                        <div className="text-left">
+                          <div className="font-medium text-sm">{subItem.label}</div>
+                          <div className="text-xs opacity-70">{subItem.description}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               
               {/* Separator for Configuraciones Admin */}
               <div className="py-2">
@@ -281,7 +305,7 @@ const AdminDashboard = () => {
               </div>
               
               {/* Configuraciones Section */}
-              {menuItems.slice(14).map((item) => {
+              {menuItems.slice(12).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -331,10 +355,12 @@ const AdminDashboard = () => {
             <div className="max-w-7xl mx-auto">
               <div className="mb-6 lg:mb-8">
                 <h2 className="text-2xl lg:text-3xl font-bold text-white mb-2">
-                  {menuItems.find(item => item.id === activeSection)?.label}
+                  {menuItems.find(item => item.id === activeSection)?.label || 
+                   serverSubmenuItems.find(item => item.id === activeSection)?.label}
                 </h2>
                 <p className="text-blue-200/70 text-sm lg:text-base">
-                  {menuItems.find(item => item.id === activeSection)?.description}
+                  {menuItems.find(item => item.id === activeSection)?.description ||
+                   serverSubmenuItems.find(item => item.id === activeSection)?.description}
                 </p>
               </div>
             </div>
@@ -485,7 +511,7 @@ const AdminDashboard = () => {
         return <ReloadCredits />;
       
       // CONFIGURACIONES DE SERVIDOR
-      case 'server-config':
+      case 'server-config-main':
         return (
           <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
             <CardHeader>
