@@ -16,8 +16,7 @@ const SmsSettings = () => {
     request_type: 'GET',
     api_key: '',
     token: '',
-    bulk_sms: '',
-    message_scripts: ''
+    bulk_sms: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -36,8 +35,7 @@ const SmsSettings = () => {
           'sms_request_type',
           'sms_api_key',
           'sms_token',
-          'bulk_sms',
-          'message_scripts'
+          'bulk_sms'
         ]);
 
       if (error) throw error;
@@ -52,8 +50,7 @@ const SmsSettings = () => {
         request_type: settingsMap['sms_request_type'] || 'GET',
         api_key: settingsMap['sms_api_key'] || '',
         token: settingsMap['sms_token'] || '',
-        bulk_sms: settingsMap['bulk_sms'] || '',
-        message_scripts: settingsMap['message_scripts'] || ''
+        bulk_sms: settingsMap['bulk_sms'] || ''
       });
     } catch (error) {
       console.error('Error loading SMS settings:', error);
@@ -73,8 +70,7 @@ const SmsSettings = () => {
         { key: 'sms_request_type', value: settings.request_type },
         { key: 'sms_api_key', value: settings.api_key },
         { key: 'sms_token', value: settings.token },
-        { key: 'bulk_sms', value: settings.bulk_sms },
-        { key: 'message_scripts', value: settings.message_scripts }
+        { key: 'bulk_sms', value: settings.bulk_sms }
       ];
 
       for (const setting of settingsToUpdate) {
@@ -224,17 +220,6 @@ const SmsSettings = () => {
               placeholder="Configuración de SMS masivos"
               value={settings.bulk_sms}
               onChange={(e) => setSettings({ ...settings, bulk_sms: e.target.value })}
-              className="bg-black/20 border-blue-500/20 text-blue-200 h-9"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="message_scripts" className="text-blue-200 text-sm">Scripts de Mensajes (separados por comas)</Label>
-            <Input
-              id="message_scripts"
-              placeholder="Script1, Script2, Script3"
-              value={settings.message_scripts}
-              onChange={(e) => setSettings({ ...settings, message_scripts: e.target.value })}
               className="bg-black/20 border-blue-500/20 text-blue-200 h-9"
             />
           </div>
