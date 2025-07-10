@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Send, FileText, Phone } from 'lucide-react';
+import { Send, FileText, Phone, ArrowLeft } from 'lucide-react';
 import { countryCodes } from '@/utils/countryCodes';
 
 interface SmsTemplate {
@@ -25,22 +25,33 @@ interface Process {
   message_script: string;
 }
 
+interface SmsApi {
+  name: string;
+  url: string;
+  key: string;
+  token: string;
+}
+
 const SmsSender = () => {
   const { toast } = useToast();
   const [templates, setTemplates] = useState<SmsTemplate[]>([]);
   const [processes, setProcesses] = useState<Process[]>([]);
+  const [smsApis, setSmsApis] = useState<SmsApi[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState<'select' | 'send'>('select');
+  const [selectedProcess, setSelectedProcess] = useState<Process | null>(null);
   const [messageData, setMessageData] = useState({
     country_code: '',
     phone_number: '',
     message_text: '',
     selected_template: '',
-    selected_process: ''
+    selected_api: ''
   });
 
   useEffect(() => {
     loadTemplates();
     loadProcesses();
+    loadSmsApis();
   }, []);
 
   const loadTemplates = async () => {
@@ -99,41 +110,66 @@ const SmsSender = () => {
     }
   };
 
-  const handleTemplateSelect = (templateId: string) => {
-    const template = templates.find(t => t.id === templateId);
-    if (template) {
-      setMessageData({
-        ...messageData,
-        selected_template: templateId,
-        message_text: template.message_text
+  const loadSmsApis = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('setting_key, setting_value')
+        .in('setting_key', ['sms_api_url', 'sms_api_key', 'sms_token', 'user_domains']);
+
+      if (error) throw error;
+
+      const settingsMap: { [key: string]: string } = {};
+      data?.forEach(item => {
+        settingsMap[item.setting_key] = item.setting_value;
       });
+
+      // Crear array de APIs basado en los dominios configurados
+      const domains = settingsMap['user_domains']?.split(',').map(d => d.trim()) || [];
+      const apiData: SmsApi[] = domains.map((domain, index) => ({
+        name: `API ${domain}`,
+        url: settingsMap['sms_api_url'] || '',
+        key: settingsMap['sms_api_key'] || '',
+        token: settingsMap['sms_token'] || ''
+      }));
+
+      setSmsApis(apiData);
+    } catch (error) {
+      console.error('Error loading SMS APIs:', error);
     }
   };
 
   const handleProcessSelect = (processId: string) => {
     const process = processes.find(p => p.id === processId);
     if (process) {
-      // Generar la URL completa del subdominio
-      const subdomainUrl = `https://${process.color}.${process.assigned_domain}`;
+      setSelectedProcess(process);
       
-      // Agregar la URL al mensaje actual
-      const updatedMessage = messageData.message_text + `\n\n${subdomainUrl}`;
+      // Generar la URL completa del subdominio y configurar el mensaje
+      const subdomainUrl = `https://${process.color}.${process.assigned_domain}`;
+      const messageWithUrl = process.message_script + `\n\n${subdomainUrl}`;
       
       setMessageData({
         ...messageData,
-        selected_process: processId,
-        message_text: updatedMessage
+        message_text: messageWithUrl
       });
 
-      toast({
-        title: "URL agregada",
-        description: `Se agregó la URL del subdominio: ${subdomainUrl}`
+      setCurrentStep('send');
+    }
+  };
+
+  const handleTemplateSelect = (templateId: string) => {
+    const template = templates.find(t => t.id === templateId);
+    if (template) {
+      setMessageData({
+        ...messageData,
+        selected_template: templateId,
+        message_text: template.message_text + (selectedProcess ? `\n\nhttps://${selectedProcess.color}.${selectedProcess.assigned_domain}` : '')
       });
     }
   };
 
   const handleSendSms = async () => {
-    if (!messageData.country_code || !messageData.phone_number || !messageData.message_text) {
+    if (!messageData.country_code || !messageData.phone_number || !messageData.message_text || !messageData.selected_api) {
       toast({
         title: "Error",
         description: "Por favor completa todos los campos requeridos",
@@ -154,7 +190,8 @@ const SmsSender = () => {
           user_id: user.id,
           recipient_phone: `${messageData.country_code}${messageData.phone_number}`,
           message_content: messageData.message_text,
-          status: 'sent'
+          status: 'sent',
+          process_id: selectedProcess?.id || null
         });
 
       if (error) throw error;
@@ -164,13 +201,15 @@ const SmsSender = () => {
         description: "El mensaje se ha enviado correctamente"
       });
 
-      // Limpiar formulario
+      // Resetear formulario
+      setCurrentStep('select');
+      setSelectedProcess(null);
       setMessageData({
         country_code: '',
         phone_number: '',
         message_text: '',
         selected_template: '',
-        selected_process: ''
+        selected_api: ''
       });
     } catch (error) {
       console.error('Error sending SMS:', error);
@@ -184,59 +223,86 @@ const SmsSender = () => {
     }
   };
 
+  const handleBack = () => {
+    setCurrentStep('select');
+    setSelectedProcess(null);
+    setMessageData({
+      country_code: '',
+      phone_number: '',
+      message_text: '',
+      selected_template: '',
+      selected_api: ''
+    });
+  };
+
+  if (currentStep === 'select') {
+    return (
+      <div className="space-y-6">
+        <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+          <CardHeader>
+            <CardTitle className="text-blue-300 flex items-center">
+              <Send className="h-5 w-5 mr-2" />
+              Seleccionar Proceso para Enviar SMS
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {processes.length === 0 ? (
+              <p className="text-blue-200/70 text-center py-8">
+                No hay procesos de SMS guardados. Crea un proceso primero en la sección "Proceso SMS".
+              </p>
+            ) : (
+              <div className="grid gap-3">
+                {processes.map((process) => (
+                  <div
+                    key={process.id}
+                    className="bg-black/10 border border-blue-500/20 rounded-lg p-4 hover:bg-blue-600/10 cursor-pointer transition-colors"
+                    onClick={() => handleProcessSelect(process.id)}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="text-blue-200 font-medium">{process.client_name}</h3>
+                        <p className="text-blue-200/70 text-sm">
+                          {process.color}.{process.assigned_domain}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30"
+                      >
+                        Seleccionar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
         <CardHeader>
-          <CardTitle className="text-blue-300 flex items-center">
-            <Send className="h-5 w-5 mr-2" />
-            Enviar SMS
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-blue-300 flex items-center">
+              <Send className="h-5 w-5 mr-2" />
+              Enviar SMS - {selectedProcess?.client_name}
+            </CardTitle>
+            <Button
+              onClick={handleBack}
+              variant="outline"
+              size="sm"
+              className="border-blue-500/30 text-blue-300 hover:bg-blue-600/10"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Selector de plantillas */}
-          {templates.length > 0 && (
-            <div className="space-y-2">
-              <Label className="text-blue-200">
-                <FileText className="h-4 w-4 inline mr-1" />
-                Seleccionar Plantilla (Opcional)
-              </Label>
-              <Select value={messageData.selected_template} onValueChange={handleTemplateSelect}>
-                <SelectTrigger className="bg-black/20 border-blue-500/20 text-blue-200">
-                  <SelectValue placeholder="Seleccionar plantilla guardada" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-blue-500/20 z-50">
-                  {templates.map((template) => (
-                    <SelectItem key={template.id} value={template.id} className="text-white hover:bg-slate-800">
-                      {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Selector de procesos para agregar URL */}
-          {processes.length > 0 && (
-            <div className="space-y-2">
-              <Label className="text-blue-200">
-                Agregar URL de Proceso (Opcional)
-              </Label>
-              <Select value={messageData.selected_process} onValueChange={handleProcessSelect}>
-                <SelectTrigger className="bg-black/20 border-blue-500/20 text-blue-200">
-                  <SelectValue placeholder="Seleccionar proceso para agregar URL" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-blue-500/20 z-50">
-                  {processes.map((process) => (
-                    <SelectItem key={process.id} value={process.id} className="text-white hover:bg-slate-800">
-                      {process.client_name} - {process.color}.{process.assigned_domain}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="country_code" className="text-blue-200">
@@ -271,28 +337,92 @@ const SmsSender = () => {
             </div>
           </div>
 
+          {/* API SMS Selection */}
+          <div className="space-y-2">
+            <Label className="text-blue-200">API SMS *</Label>
+            <Select value={messageData.selected_api} onValueChange={(value) => setMessageData({ ...messageData, selected_api: value })}>
+              <SelectTrigger className="bg-black/20 border-blue-500/20 text-blue-200">
+                <SelectValue placeholder="Seleccionar API de mensajería" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-blue-500/20 z-50">
+                {smsApis.map((api, index) => (
+                  <SelectItem key={index} value={api.name} className="text-white hover:bg-slate-800">
+                    {api.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Translation Template Selector */}
+          <div className="space-y-2">
+            <Label className="text-blue-200">TRADUCCIÓN DE PLANTILLA</Label>
+            <Select value="Español" onValueChange={() => {}}>
+              <SelectTrigger className="bg-black/20 border-blue-500/20 text-blue-200">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-blue-500/20 z-50">
+                <SelectItem value="Español" className="text-white hover:bg-slate-800">
+                  Español
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Plantillas */}
+          {templates.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-blue-200">
+                <FileText className="h-4 w-4 inline mr-1" />
+                Plantillas
+              </Label>
+              <Select value={messageData.selected_template} onValueChange={handleTemplateSelect}>
+                <SelectTrigger className="bg-black/20 border-blue-500/20 text-blue-200">
+                  <SelectValue placeholder="Seleccione una plantilla" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-blue-500/20 z-50">
+                  {templates.map((template) => (
+                    <SelectItem key={template.id} value={template.id} className="text-white hover:bg-slate-800">
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="message_text" className="text-blue-200">
               Mensaje *
             </Label>
             <Textarea
               id="message_text"
-              placeholder="Escribe tu mensaje aquí..."
+              placeholder="Seleccione una plantilla"
               value={messageData.message_text}
               onChange={(e) => setMessageData({ ...messageData, message_text: e.target.value })}
               className="bg-black/20 border-blue-500/20 text-blue-200 min-h-[120px]"
               rows={5}
             />
+            <div className="text-right text-sm text-blue-200/70">
+              {messageData.message_text.length}/160
+            </div>
           </div>
 
-          <div className="pt-4">
+          <div className="flex gap-2 pt-4">
             <Button
               onClick={handleSendSms}
               disabled={isLoading}
-              className="w-full bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30"
+              className="bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/30"
             >
               <Send className="h-4 w-4 mr-2" />
               {isLoading ? 'Enviando...' : 'Enviar SMS'}
+            </Button>
+            
+            <Button
+              variant="outline"
+              className="border-red-500/30 text-red-300 hover:bg-red-600/10"
+            >
+              Atrás
             </Button>
           </div>
         </CardContent>
