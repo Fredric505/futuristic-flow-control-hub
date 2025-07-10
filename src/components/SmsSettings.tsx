@@ -144,6 +144,11 @@ const SmsSettings = () => {
     }
   };
 
+  const handleRequestTypeChange = (value: string) => {
+    console.log('Request type changing to:', value);
+    setSettings({ ...settings, request_type: value });
+  };
+
   return (
     <div className="space-y-4">
       <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
@@ -168,13 +173,20 @@ const SmsSettings = () => {
             
             <div className="space-y-2">
               <Label htmlFor="request_type" className="text-blue-200 text-sm">Tipo de solicitud</Label>
-              <Select value={settings.request_type} onValueChange={(value) => setSettings({ ...settings, request_type: value })}>
+              <Select 
+                value={settings.request_type} 
+                onValueChange={handleRequestTypeChange}
+              >
                 <SelectTrigger className="bg-black/20 border-blue-500/20 text-blue-200 h-9">
-                  <SelectValue />
+                  <SelectValue placeholder="Seleccionar tipo" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-blue-500/20">
-                  <SelectItem value="GET">GET</SelectItem>
-                  <SelectItem value="POST">POST</SelectItem>
+                <SelectContent className="bg-slate-800 border-blue-500/20 z-50">
+                  <SelectItem value="GET" className="text-white hover:bg-slate-700 focus:bg-slate-700">
+                    GET
+                  </SelectItem>
+                  <SelectItem value="POST" className="text-white hover:bg-slate-700 focus:bg-slate-700">
+                    POST
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

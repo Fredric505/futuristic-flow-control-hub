@@ -95,166 +95,19 @@ const AdminDashboard = () => {
     { id: 'history', icon: History, label: 'Mi Historial', description: 'Mi historial de mensajes enviados' },
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
     
-    // CONFIGURACIONES ADMIN
+    // CONFIGURACIONES ADMIN - Reordered to put SMS settings before instance settings
     { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Configuraciones administrativas' },
     { id: 'sms-templates', icon: FileText, label: 'Plantillas SMS', description: 'Crear y gestionar plantillas SMS' },
     { id: 'sms-settings', icon: Settings, label: 'Configurar SMS', description: 'Configurar API de mensajes de texto' },
+    { id: 'settings', icon: Settings, label: 'Configuraciones', description: 'Configurar instancia y token' },
     { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },
     { id: 'manage-users', icon: Users, label: 'Gestionar Usuarios', description: 'Editar, borrar y renovar usuarios' },
     { id: 'reload-credits', icon: CreditCard, label: 'Recargar Créditos', description: 'Recargar créditos a usuarios' },
-    { id: 'settings', icon: Settings, label: 'Configuraciones', description: 'Configurar instancia y token' },
   ];
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/login');
-  };
-
-  const renderContent = () => {
-    switch (activeSection) {
-      case 'dashboard':
-        return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-              <Card className="bg-gradient-to-br from-blue-600 to-blue-800 text-white border-none">
-                <CardContent className="p-4 lg:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-blue-100 text-sm">Total Usuarios</p>
-                      <p className="text-2xl lg:text-3xl font-bold">{stats.totalUsers}</p>
-                    </div>
-                    <Users className="h-6 w-6 lg:h-8 lg:w-8 text-blue-200" />
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gradient-to-br from-green-600 to-green-800 text-white border-none">
-                <CardContent className="p-4 lg:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-green-100 text-sm">Mis Procesos</p>
-                      <p className="text-2xl lg:text-3xl font-bold">{stats.activeProcesses}</p>
-                    </div>
-                    <FileText className="h-6 w-6 lg:h-8 lg:w-8 text-green-200" />
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gradient-to-br from-purple-600 to-purple-800 text-white border-none">
-                <CardContent className="p-4 lg:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-purple-100 text-sm">Mis Mensajes</p>
-                      <p className="text-2xl lg:text-3xl font-bold">{stats.messagesSent}</p>
-                    </div>
-                    <History className="h-6 w-6 lg:h-8 lg:w-8 text-purple-200" />
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gradient-to-br from-orange-600 to-orange-800 text-white border-none">
-                <CardContent className="p-4 lg:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-orange-100 text-sm">Total Créditos</p>
-                      <p className="text-2xl lg:text-3xl font-bold">{stats.systemCredits}</p>
-                    </div>
-                    <CreditCard className="h-6 w-6 lg:h-8 lg:w-8 text-orange-200" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-              <CardHeader>
-                <CardTitle className="text-blue-300">Panel de Control Astro505</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-blue-200/70">
-                  Bienvenido al sistema de gestión Astro505. Desde aquí puedes administrar todos los aspectos de la plataforma.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        );
-      
-      // PROCESOS WHATSAPP
-      case 'add-process':
-        return <ProcessForm userType="admin" />;
-      
-      case 'view-processes':
-        return <ProcessList userType="admin" />;
-      
-      // PROCESOS SMS
-      case 'sms-process':
-        return <SmsProcessForm />;
-        
-      case 'sms-view-processes':
-        return (
-          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-            <CardHeader>
-              <CardTitle className="text-blue-300">Ver Procesos SMS</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ProcessList userType="admin" processType="sms" />
-            </CardContent>
-          </Card>
-        );
-      
-      // HISTORIAL
-      case 'history':
-        return <MessageHistory />;
-      
-      case 'admin-messages':
-        return <AdminMessageHistory />;
-      
-      // CONFIGURACIONES ADMIN
-      case 'admin-access':
-        return (
-          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-            <CardHeader>
-              <CardTitle className="text-blue-300">Accesos Administrativos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 text-blue-200/70">
-                <p>Este es el panel de accesos administrativos del sistema.</p>
-                <p>Desde aquí se pueden gestionar los permisos y configuraciones avanzadas.</p>
-                <p>Solo los administradores tienen acceso a estas funcionalidades.</p>
-              </div>
-            </CardContent>
-          </Card>
-        );
-        
-      case 'sms-templates':
-        return <SmsTemplates />;
-        
-      case 'sms-settings':
-        return <SmsSettings />;
-      
-      case 'add-user':
-        return <AddUserForm />;
-      
-      case 'manage-users':
-        return <ManageUsers />;
-      
-      case 'reload-credits':
-        return <ReloadCredits />;
-      
-      case 'settings':
-        return <InstanceSettings />;
-      
-      default:
-        return (
-          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-            <CardHeader>
-              <CardTitle className="text-blue-300">Sección en Desarrollo</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-blue-200/70">Esta sección estará disponible próximamente.</p>
-            </CardContent>
-          </Card>
-        );
-    }
   };
 
   return (
@@ -361,7 +214,7 @@ const AdminDashboard = () => {
                 </div>
               </div>
               
-              {/* Admin Section */}
+              {/* Admin Section - Reordered */}
               {menuItems.slice(7).map((item) => {
                 const Icon = item.icon;
                 return (
@@ -440,6 +293,153 @@ const AdminDashboard = () => {
       </div>
     </div>
   );
+
+  function renderContent() {
+    switch (activeSection) {
+      case 'dashboard':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+              <Card className="bg-gradient-to-br from-blue-600 to-blue-800 text-white border-none">
+                <CardContent className="p-4 lg:p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-blue-100 text-sm">Total Usuarios</p>
+                      <p className="text-2xl lg:text-3xl font-bold">{stats.totalUsers}</p>
+                    </div>
+                    <Users className="h-6 w-6 lg:h-8 lg:w-8 text-blue-200" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-br from-green-600 to-green-800 text-white border-none">
+                <CardContent className="p-4 lg:p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-green-100 text-sm">Mis Procesos</p>
+                      <p className="text-2xl lg:text-3xl font-bold">{stats.activeProcesses}</p>
+                    </div>
+                    <FileText className="h-6 w-6 lg:h-8 lg:w-8 text-green-200" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-br from-purple-600 to-purple-800 text-white border-none">
+                <CardContent className="p-4 lg:p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-purple-100 text-sm">Mis Mensajes</p>
+                      <p className="text-2xl lg:text-3xl font-bold">{stats.messagesSent}</p>
+                    </div>
+                    <History className="h-6 w-6 lg:h-8 lg:w-8 text-purple-200" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-br from-orange-600 to-orange-800 text-white border-none">
+                <CardContent className="p-4 lg:p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-orange-100 text-sm">Total Créditos</p>
+                      <p className="text-2xl lg:text-3xl font-bold">{stats.systemCredits}</p>
+                    </div>
+                    <CreditCard className="h-6 w-6 lg:h-8 lg:w-8 text-orange-200" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+              <CardHeader>
+                <CardTitle className="text-blue-300">Panel de Control Astro505</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-blue-200/70">
+                  Bienvenido al sistema de gestión Astro505. Desde aquí puedes administrar todos los aspectos de la plataforma.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      
+      // PROCESOS WHATSAPP
+      case 'add-process':
+        return <ProcessForm userType="admin" />;
+      
+      case 'view-processes':
+        return <ProcessList userType="admin" />;
+      
+      // PROCESOS SMS
+      case 'sms-process':
+        return <SmsProcessForm />;
+        
+      case 'sms-view-processes':
+        return (
+          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+            <CardHeader>
+              <CardTitle className="text-blue-300">Ver Procesos SMS</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProcessList userType="admin" processType="sms" />
+            </CardContent>
+          </Card>
+        );
+      
+      // HISTORIAL
+      case 'history':
+        return <MessageHistory />;
+      
+      case 'admin-messages':
+        return <AdminMessageHistory />;
+      
+      // CONFIGURACIONES ADMIN - Reordered
+      case 'admin-access':
+        return (
+          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+            <CardHeader>
+              <CardTitle className="text-blue-300">Accesos Administrativos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 text-blue-200/70">
+                <p>Este es el panel de accesos administrativos del sistema.</p>
+                <p>Desde aquí se pueden gestionar los permisos y configuraciones avanzadas.</p>
+                <p>Solo los administradores tienen acceso a estas funcionalidades.</p>
+              </div>
+            </CardContent>
+          </Card>
+        );
+        
+      case 'sms-templates':
+        return <SmsTemplates />;
+        
+      case 'sms-settings':
+        return <SmsSettings />;
+      
+      case 'settings':
+        return <InstanceSettings />;
+      
+      case 'add-user':
+        return <AddUserForm />;
+      
+      case 'manage-users':
+        return <ManageUsers />;
+      
+      case 'reload-credits':
+        return <ReloadCredits />;
+      
+      default:
+        return (
+          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+            <CardHeader>
+              <CardTitle className="text-blue-300">Sección en Desarrollo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-blue-200/70">Esta sección estará disponible próximamente.</p>
+            </CardContent>
+          </Card>
+        );
+    }
+  }
 };
 
 export default AdminDashboard;
