@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Send, FileText, Phone, ArrowLeft } from 'lucide-react';
+import { Send, FileText, Phone, ArrowLeft, Trash2 } from 'lucide-react';
 import { countryCodes } from '@/utils/countryCodes';
 
 interface SmsTemplate {
@@ -143,27 +143,46 @@ const SmsSender = () => {
     const process = processes.find(p => p.id === processId);
     if (process) {
       setSelectedProcess(process);
-      
-      // Generar la URL completa del subdominio y configurar el mensaje
-      const subdomainUrl = `https://${process.color}.${process.assigned_domain}`;
-      const messageWithUrl = process.message_script + `\n\n${subdomainUrl}`;
-      
-      setMessageData({
-        ...messageData,
-        message_text: messageWithUrl
-      });
-
       setCurrentStep('send');
     }
   };
 
   const handleTemplateSelect = (templateId: string) => {
     const template = templates.find(t => t.id === templateId);
-    if (template) {
+    if (template && selectedProcess) {
+      // Combinar el texto de la plantilla con la URL del subdominio
+      const subdomainUrl = `https://${selectedProcess.color}.${selectedProcess.assigned_domain}`;
+      const messageWithTemplateAndUrl = `${template.message_text}\n\n${subdomainUrl}`;
+      
       setMessageData({
         ...messageData,
         selected_template: templateId,
-        message_text: template.message_text + (selectedProcess ? `\n\nhttps://${selectedProcess.color}.${selectedProcess.assigned_domain}` : '')
+        message_text: messageWithTemplateAndUrl
+      });
+    }
+  };
+
+  const handleDeleteProcess = async (processId: string) => {
+    try {
+      const { error } = await supabase
+        .from('processes')
+        .delete()
+        .eq('id', processId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Proceso eliminado",
+        description: "El proceso SMS se ha eliminado correctamente"
+      });
+
+      loadProcesses();
+    } catch (error) {
+      console.error('Error deleting process:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el proceso",
+        variant: "destructive"
       });
     }
   };
@@ -183,6 +202,24 @@ const SmsSender = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuario no autenticado');
 
+      // Verificar créditos del usuario
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      if (profile.credits <= 0) {
+        toast({
+          title: "Sin créditos",
+          description: "No tienes créditos suficientes para enviar SMS",
+          variant: "destructive"
+        });
+        return;
+      }
+
       // Guardar en la tabla messages
       const { error } = await supabase
         .from('messages')
@@ -195,6 +232,24 @@ const SmsSender = () => {
         });
 
       if (error) throw error;
+
+      // Descontar un crédito
+      const { error: creditError } = await supabase
+        .from('profiles')
+        .update({ credits: profile.credits - 1 })
+        .eq('id', user.id);
+
+      if (creditError) throw creditError;
+
+      // Actualizar status del proceso a "enviado"
+      if (selectedProcess) {
+        const { error: processError } = await supabase
+          .from('processes')
+          .update({ status: 'enviado' })
+          .eq('id', selectedProcess.id);
+
+        if (processError) console.error('Error updating process status:', processError);
+      }
 
       toast({
         title: "SMS enviado",
@@ -255,8 +310,7 @@ const SmsSender = () => {
                 {processes.map((process) => (
                   <div
                     key={process.id}
-                    className="bg-black/10 border border-blue-500/20 rounded-lg p-4 hover:bg-blue-600/10 cursor-pointer transition-colors"
-                    onClick={() => handleProcessSelect(process.id)}
+                    className="bg-black/10 border border-blue-500/20 rounded-lg p-4"
                   >
                     <div className="flex justify-between items-center">
                       <div>
@@ -265,12 +319,23 @@ const SmsSender = () => {
                           {process.color}.{process.assigned_domain}
                         </p>
                       </div>
-                      <Button
-                        size="sm"
-                        className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30"
-                      >
-                        Seleccionar
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handleProcessSelect(process.id)}
+                          size="sm"
+                          className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30"
+                        >
+                          Enviar SMS
+                        </Button>
+                        <Button
+                          onClick={() => handleDeleteProcess(process.id)}
+                          size="sm"
+                          variant="outline"
+                          className="border-red-500/30 text-red-300 hover:bg-red-600/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -374,7 +439,7 @@ const SmsSender = () => {
             <div className="space-y-2">
               <Label className="text-blue-200">
                 <FileText className="h-4 w-4 inline mr-1" />
-                Plantillas
+                Plantillas Guardadas
               </Label>
               <Select value={messageData.selected_template} onValueChange={handleTemplateSelect}>
                 <SelectTrigger className="bg-black/20 border-blue-500/20 text-blue-200">
@@ -397,7 +462,7 @@ const SmsSender = () => {
             </Label>
             <Textarea
               id="message_text"
-              placeholder="Seleccione una plantilla"
+              placeholder="Escriba su mensaje o seleccione una plantilla"
               value={messageData.message_text}
               onChange={(e) => setMessageData({ ...messageData, message_text: e.target.value })}
               className="bg-black/20 border-blue-500/20 text-blue-200 min-h-[120px]"
@@ -419,6 +484,7 @@ const SmsSender = () => {
             </Button>
             
             <Button
+              onClick={handleBack}
               variant="outline"
               className="border-red-500/30 text-red-300 hover:bg-red-600/10"
             >
