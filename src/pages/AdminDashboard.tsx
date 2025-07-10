@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -97,6 +98,7 @@ const AdminDashboard = () => {
     // HISTORIAL SECTION
     { id: 'history', icon: History, label: 'Mi Historial', description: 'Mi historial de mensajes enviados' },
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
+    { id: 'sms-templates', icon: FileText, label: 'Plantillas SMS', description: 'Crear y gestionar plantillas SMS' },
     { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Configuraciones administrativas' },
     
     // USUARIOS SECTION
@@ -108,7 +110,6 @@ const AdminDashboard = () => {
     { id: 'server-config', icon: Settings, label: 'Configuración de Servidor', description: 'Configurar conexión al servidor', hasSubmenu: true },
     
     // CONFIGURACIONES ADMIN
-    { id: 'sms-templates', icon: FileText, label: 'Plantillas SMS', description: 'Crear y gestionar plantillas SMS' },
     { id: 'sms-settings', icon: Settings, label: 'Configurar SMS', description: 'Configurar API de mensajes de texto' },
     { id: 'settings', icon: Settings, label: 'Configuraciones', description: 'Configurar instancia y token' },
   ];
@@ -200,12 +201,12 @@ const AdminDashboard = () => {
               {/* Separator for Historial */}
               <div className="py-2">
                 <div className="text-blue-300 text-sm font-semibold px-3 py-2 bg-blue-600/10 rounded">
-                  HISTORIAL Y ACCESOS
+                  HISTORIAL Y PLANTILLAS
                 </div>
               </div>
               
               {/* Historial Section */}
-              {menuItems.slice(5, 8).map((item) => {
+              {menuItems.slice(5, 9).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -234,7 +235,7 @@ const AdminDashboard = () => {
               </div>
               
               {/* Usuarios Section */}
-              {menuItems.slice(8, 11).map((item) => {
+              {menuItems.slice(9, 12).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -307,7 +308,7 @@ const AdminDashboard = () => {
               </div>
               
               {/* Configuraciones Section */}
-              {menuItems.slice(12).map((item) => {
+              {menuItems.slice(13).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -479,12 +480,15 @@ const AdminDashboard = () => {
           </Card>
         );
       
-      // HISTORIAL
+      // HISTORIAL Y PLANTILLAS
       case 'history':
         return <MessageHistory />;
       
       case 'admin-messages':
         return <AdminMessageHistory />;
+
+      case 'sms-templates':
+        return <SmsTemplates />;
         
       case 'admin-access':
         return (
@@ -590,6 +594,13 @@ const AdminDashboard = () => {
 
       case 'telegram-bots':
         return <TelegramBotManager />;
+
+      // CONFIGURACIONES ADMIN
+      case 'sms-settings':
+        return <SmsSettings />;
+      
+      case 'settings':
+        return <InstanceSettings />;
       
       default:
         return (
