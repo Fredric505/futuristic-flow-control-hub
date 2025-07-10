@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,9 +29,10 @@ interface Process {
 
 interface ProcessListProps {
   userType: 'admin' | 'user';
+  processType?: 'whatsapp' | 'sms';
 }
 
-const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
+const ProcessList: React.FC<ProcessListProps> = ({ userType, processType = 'whatsapp' }) => {
   const [processes, setProcesses] = useState<Process[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendingMessage, setSendingMessage] = useState<string | null>(null);
@@ -57,7 +57,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userType]);
+  }, [userType, processType]);
 
   const loadUserCredits = async () => {
     try {
@@ -79,7 +79,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
   const loadProcesses = async () => {
     try {
       setLoading(true);
-      console.log('Loading processes for userType:', userType);
+      console.log('Loading processes for userType:', userType, 'processType:', processType);
       
       // Verificar sesión del usuario
       const { data: { session } } = await supabase.auth.getSession();
@@ -99,7 +99,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false });
       
-      console.log('Processes query result:', { data, error, userType });
+      console.log('Processes query result:', { data, error, userType, processType });
 
       if (error) {
         console.error('Error loading processes:', error);
@@ -431,11 +431,15 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     );
   }
 
+  const getProcessTypeLabel = () => {
+    return processType === 'sms' ? 'SMS' : 'WhatsApp';
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-blue-300">
-          Mis Procesos ({processes.length})
+          Mis Procesos {getProcessTypeLabel()} ({processes.length})
         </h2>
         <div className="flex items-center space-x-4">
           <div className="bg-gradient-to-r from-purple-600 to-purple-800 text-white px-4 py-2 rounded-lg">
@@ -456,7 +460,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
           <CardContent className="p-8">
             <div className="text-center">
-              <p className="text-blue-200/70 mb-4">No hay procesos guardados</p>
+              <p className="text-blue-200/70 mb-4">No hay procesos {getProcessTypeLabel().toLowerCase()} guardados</p>
               <p className="text-blue-200/50 text-sm">
                 Los procesos que agregues aparecerán aquí listos para enviar.
               </p>
@@ -493,23 +497,25 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
                       {process.status}
                     </Badge>
                     <div className="flex space-x-1">
-                      <Button
-                        size="sm"
-                        onClick={() => sendWhatsAppMessage(process)}
-                        disabled={sendingMessage === process.id || userCredits <= 0}
-                        className={`${
-                          userCredits <= 0 
-                            ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
-                            : 'bg-green-600/20 hover:bg-green-600/30 text-green-300'
-                        }`}
-                        title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar mensaje"}
-                      >
-                        {sendingMessage === process.id ? (
-                          <RefreshCw className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Send className="h-4 w-4" />
-                        )}
-                      </Button>
+                      {processType === 'whatsapp' && (
+                        <Button
+                          size="sm"
+                          onClick={() => sendWhatsAppMessage(process)}
+                          disabled={sendingMessage === process.id || userCredits <= 0}
+                          className={`${
+                            userCredits <= 0 
+                              ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
+                              : 'bg-green-600/20 hover:bg-green-600/30 text-green-300'
+                          }`}
+                          title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar mensaje"}
+                        >
+                          {sendingMessage === process.id ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         onClick={() => deleteProcess(process.id)}
