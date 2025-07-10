@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,16 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Send, Plus, Phone, FileText } from 'lucide-react';
+import { Send, Plus, Phone } from 'lucide-react';
 import { countryCodes } from '@/utils/countryCodes';
-
-interface SmsTemplate {
-  id: string;
-  name: string;
-  country_code: string;
-  assigned_domain: string;
-  message_script: string;
-}
 
 const SmsProcessForm = () => {
   const { toast } = useToast();
@@ -32,11 +25,9 @@ const SmsProcessForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [domains, setDomains] = useState<string[]>([]);
   const [scripts, setScripts] = useState<string[]>([]);
-  const [templates, setTemplates] = useState<SmsTemplate[]>([]);
 
   useEffect(() => {
     loadDomainsAndScripts();
-    loadTemplates();
   }, []);
 
   const generateUniqueSubdomain = () => {
@@ -63,54 +54,6 @@ const SmsProcessForm = () => {
       setScripts(settingsMap['message_scripts']?.split(',').map(s => s.trim()) || []);
     } catch (error) {
       console.error('Error loading domains and scripts:', error);
-    }
-  };
-
-  const loadTemplates = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('*')
-        .like('setting_key', 'sms_template_%');
-
-      if (error) throw error;
-
-      const templateData: SmsTemplate[] = [];
-      data?.forEach(item => {
-        try {
-          const template = JSON.parse(item.setting_value);
-          templateData.push({
-            id: item.id,
-            name: template.name,
-            country_code: template.country_code,
-            assigned_domain: template.assigned_domain,
-            message_script: template.message_script
-          });
-        } catch (e) {
-          console.error('Error parsing template:', e);
-        }
-      });
-
-      setTemplates(templateData);
-    } catch (error) {
-      console.error('Error loading templates:', error);
-    }
-  };
-
-  const handleTemplateSelect = (templateId: string) => {
-    const template = templates.find(t => t.id === templateId);
-    if (template) {
-      setProcessData({
-        ...processData,
-        country_code: template.country_code,
-        assigned_domain: template.assigned_domain,
-        message_script: template.message_script
-      });
-      
-      toast({
-        title: "Plantilla aplicada",
-        description: `Plantilla "${template.name}" aplicada correctamente`
-      });
     }
   };
 
@@ -189,28 +132,6 @@ const SmsProcessForm = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Selector de plantillas */}
-          {templates.length > 0 && (
-            <div className="space-y-2 pb-4 border-b border-blue-500/20">
-              <Label className="text-blue-200">
-                <FileText className="h-4 w-4 inline mr-1" />
-                Aplicar Plantilla (Opcional)
-              </Label>
-              <Select onValueChange={handleTemplateSelect}>
-                <SelectTrigger className="bg-black/20 border-blue-500/20 text-blue-200">
-                  <SelectValue placeholder="Seleccionar plantilla guardada" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-blue-500/20">
-                  {templates.map((template) => (
-                    <SelectItem key={template.id} value={template.id} className="text-white hover:bg-slate-800">
-                      {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="client_name" className="text-blue-200">
@@ -333,13 +254,6 @@ const SmsProcessForm = () => {
                 )}
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mt-4">
-            <p className="text-blue-200 text-sm">
-              <strong>Nota:</strong> El subdominio se generará automáticamente de forma única para cada proceso. 
-              Este subdominio cargará el script seleccionado.
-            </p>
           </div>
 
           <div className="pt-4">
