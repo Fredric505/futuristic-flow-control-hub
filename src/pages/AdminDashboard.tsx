@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageCircle } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageCircle, MessageSquare } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
@@ -84,14 +85,21 @@ const AdminDashboard = () => {
 
   const menuItems = [
     { id: 'dashboard', icon: Home, label: 'Dashboard', description: 'Pantalla de inicio' },
-    { id: 'add-process', icon: Plus, label: 'Agregar Proceso', description: 'Agregar formulario para luego guardar' },
-    { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Mis procesos guardados y listos para enviar' },
-    { id: 'history', icon: History, label: 'Historial', description: 'Mi historial de mensajes enviados' },
+    
+    // PROCESOS SECTION
+    { id: 'add-process', icon: Plus, label: 'Agregar Proceso WhatsApp', description: 'Crear formulario para WhatsApp' },
+    { id: 'view-processes', icon: FileText, label: 'Ver Procesos WhatsApp', description: 'Mis procesos WhatsApp guardados' },
+    { id: 'sms-process', icon: MessageCircle, label: 'Agregar Proceso SMS', description: 'Crear formulario para SMS' },
+    { id: 'sms-view-processes', icon: MessageSquare, label: 'Ver Procesos SMS', description: 'Mis procesos SMS guardados' },
+    { id: 'send-sms', icon: MessageCircle, label: 'Enviar SMS', description: 'Enviar mensajes de texto desde procesos' },
+    
+    // HISTORIAL SECTION
+    { id: 'history', icon: History, label: 'Mi Historial', description: 'Mi historial de mensajes enviados' },
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
-    { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Solo es texto' },
-    { id: 'sms-process', icon: MessageCircle, label: 'Proceso SMS', description: 'Crear procesos de SMS para envío masivo' },
-    { id: 'sms-templates', icon: FileText, label: 'Plantillas SMS', description: 'Crear y gestionar plantillas para agilizar procesos' },
-    { id: 'send-sms', icon: MessageCircle, label: 'Enviar SMS', description: 'Enviar mensajes de texto directamente' },
+    
+    // CONFIGURACIONES ADMIN
+    { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Configuraciones administrativas' },
+    { id: 'sms-templates', icon: FileText, label: 'Plantillas SMS', description: 'Crear y gestionar plantillas SMS' },
     { id: 'sms-settings', icon: Settings, label: 'Configurar SMS', description: 'Configurar API de mensajes de texto' },
     { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },
     { id: 'manage-users', icon: Users, label: 'Gestionar Usuarios', description: 'Editar, borrar y renovar usuarios' },
@@ -172,30 +180,40 @@ const AdminDashboard = () => {
           </div>
         );
       
+      // PROCESOS WHATSAPP
       case 'add-process':
         return <ProcessForm userType="admin" />;
       
       case 'view-processes':
         return <ProcessList userType="admin" />;
       
+      // PROCESOS SMS
+      case 'sms-process':
+        return <SmsProcessForm />;
+        
+      case 'sms-view-processes':
+        return (
+          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+            <CardHeader>
+              <CardTitle className="text-blue-300">Ver Procesos SMS</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProcessList userType="admin" processType="sms" />
+            </CardContent>
+          </Card>
+        );
+        
+      case 'send-sms':
+        return <SmsSender />;
+      
+      // HISTORIAL
       case 'history':
         return <MessageHistory />;
       
       case 'admin-messages':
         return <AdminMessageHistory />;
       
-      case 'sms-process':
-        return <SmsProcessForm />;
-        
-      case 'sms-templates':
-        return <SmsTemplates />;
-        
-      case 'send-sms':
-        return <SmsSender />;
-        
-      case 'sms-settings':
-        return <SmsSettings />;
-      
+      // CONFIGURACIONES ADMIN
       case 'admin-access':
         return (
           <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
@@ -211,6 +229,12 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
         );
+        
+      case 'sms-templates':
+        return <SmsTemplates />;
+        
+      case 'sms-settings':
+        return <SmsSettings />;
       
       case 'add-user':
         return <AddUserForm />;
@@ -255,7 +279,8 @@ const AdminDashboard = () => {
           
           <ScrollArea className="flex-1 px-6">
             <nav className="space-y-2 pb-4">
-              {menuItems.map((item) => {
+              {/* Dashboard */}
+              {menuItems.slice(0, 1).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -265,6 +290,93 @@ const AdminDashboard = () => {
                       activeSection === item.id
                         ? 'bg-blue-600/20 border border-blue-500/30 text-blue-300'
                         : 'text-blue-200/70 hover:bg-blue-600/10 hover:text-blue-300'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <div className="text-left">
+                      <div className="font-medium">{item.label}</div>
+                      <div className="text-xs opacity-70">{item.description}</div>
+                    </div>
+                  </button>
+                );
+              })}
+              
+              {/* Separator for Procesos */}
+              <div className="py-2">
+                <div className="text-blue-300 text-sm font-semibold px-3 py-2 bg-blue-600/10 rounded">
+                  GESTIÓN DE PROCESOS
+                </div>
+              </div>
+              
+              {/* Procesos Section */}
+              {menuItems.slice(1, 6).map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveSection(item.id)}
+                    className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
+                      activeSection === item.id
+                        ? 'bg-blue-600/20 border border-blue-500/30 text-blue-300'
+                        : 'text-blue-200/70 hover:bg-blue-600/10 hover:text-blue-300'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <div className="text-left">
+                      <div className="font-medium">{item.label}</div>
+                      <div className="text-xs opacity-70">{item.description}</div>
+                    </div>
+                  </button>
+                );
+              })}
+              
+              {/* Separator for Historial */}
+              <div className="py-2">
+                <div className="text-blue-300 text-sm font-semibold px-3 py-2 bg-blue-600/10 rounded">
+                  HISTORIAL
+                </div>
+              </div>
+              
+              {/* Historial Section */}
+              {menuItems.slice(6, 8).map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveSection(item.id)}
+                    className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
+                      activeSection === item.id
+                        ? 'bg-blue-600/20 border border-blue-500/30 text-blue-300'
+                        : 'text-blue-200/70 hover:bg-blue-600/10 hover:text-blue-300'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <div className="text-left">
+                      <div className="font-medium">{item.label}</div>
+                      <div className="text-xs opacity-70">{item.description}</div>
+                    </div>
+                  </button>
+                );
+              })}
+              
+              {/* Separator for Admin */}
+              <div className="py-2">
+                <div className="text-red-300 text-sm font-semibold px-3 py-2 bg-red-600/10 rounded">
+                  CONFIGURACIONES ADMIN
+                </div>
+              </div>
+              
+              {/* Admin Section */}
+              {menuItems.slice(8).map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveSection(item.id)}
+                    className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
+                      activeSection === item.id
+                        ? 'bg-red-600/20 border border-red-500/30 text-red-300'
+                        : 'text-red-200/70 hover:bg-red-600/10 hover:text-red-300'
                     }`}
                   >
                     <Icon className="h-5 w-5" />
