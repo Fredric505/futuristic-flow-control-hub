@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -519,36 +518,36 @@ const AdminDashboard = () => {
       // CONFIGURACIONES DE SERVIDOR
       case 'server-config-main':
         return (
-          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+          <Card className="bg-black/20 backdrop-blur-xl border border-orange-500/20">
             <CardHeader>
-              <CardTitle className="text-blue-300">Configurar Servidor</CardTitle>
+              <CardTitle className="text-orange-300">Configurar Servidor</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-blue-300 mb-2">
+                    <label className="block text-sm font-medium text-orange-300 mb-2">
                       Chat ID
                     </label>
                     <input
                       type="text"
                       placeholder="7219932215"
-                      className="w-full p-3 bg-black/30 border border-blue-500/30 rounded-lg text-white placeholder-blue-300/50 focus:outline-none focus:border-blue-400"
+                      className="w-full p-3 bg-black/30 border border-orange-500/30 rounded-lg text-white placeholder-orange-300/50 focus:outline-none focus:border-orange-400"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-blue-300 mb-2">
+                    <label className="block text-sm font-medium text-orange-300 mb-2">
                       Token
                     </label>
                     <input
                       type="text"
                       placeholder="7785623280:AAE3v4kmlOZTpJDLCsp_xE5Ka5Yu-B5cQA"
-                      className="w-full p-3 bg-black/30 border border-blue-500/30 rounded-lg text-white placeholder-blue-300/50 focus:outline-none focus:border-blue-400"
+                      className="w-full p-3 bg-black/30 border border-orange-500/30 rounded-lg text-white placeholder-orange-300/50 focus:outline-none focus:border-orange-400"
                     />
                   </div>
                 </div>
                 <div className="flex justify-end">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                  <Button className="bg-orange-600/20 hover:bg-orange-600/30 text-orange-300 border border-orange-500/30">
                     Guardar Configuración
                   </Button>
                 </div>
