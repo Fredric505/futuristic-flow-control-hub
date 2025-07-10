@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Trash2, Send, RefreshCw, Edit } from 'lucide-react';
+import { Trash2, Send, RefreshCw, Edit, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { getIphoneImageUrl } from '@/utils/iphoneImages';
 
@@ -91,13 +91,25 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType, processType = 'what
         return;
       }
 
-      // Todos los usuarios (incluido admin) solo ven sus propios procesos
-      console.log('Loading processes for user:', session.user.id);
-      const { data, error } = await supabase
+      // Filtrar por tipo de proceso basado en el campo contact_type
+      const contactTypeFilter = processType === 'sms' ? 'sms' : ['propietario', 'contacto_emergencia'];
+      
+      console.log('Loading processes for user:', session.user.id, 'with contact_type:', contactTypeFilter);
+      
+      let query = supabase
         .from('processes')
         .select('*')
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false });
+
+      // Aplicar filtro según el tipo de proceso
+      if (processType === 'sms') {
+        query = query.eq('contact_type', 'sms');
+      } else {
+        query = query.in('contact_type', ['propietario', 'contacto_emergencia']);
+      }
+
+      const { data, error } = await query;
       
       console.log('Processes query result:', { data, error, userType, processType });
 
@@ -152,6 +164,112 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType, processType = 'what
         description: error.message || "Error al eliminar proceso",
         variant: "destructive",
       });
+    }
+  };
+
+  const sendSmsMessage = async (process: Process) => {
+    try {
+      // Verificar créditos antes de enviar
+      if (userCredits <= 0) {
+        toast({
+          title: "Sin créditos suficientes",
+          description: "No tienes créditos suficientes para enviar mensajes. Contacta al administrador.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSendingMessage(process.id);
+      console.log('Sending SMS message for process:', process.id);
+
+      // Obtener configuración de SMS API
+      const { data: settings } = await supabase
+        .from('system_settings')
+        .select('*')
+        .in('setting_key', ['sms_api_url', 'sms_api_key', 'sms_token']);
+
+      const config = settings?.reduce((acc: any, setting: any) => {
+        acc[setting.setting_key] = setting.setting_value;
+        return acc;
+      }, {});
+
+      // Construir el mensaje SMS con la URL del subdominio
+      const subdomainUrl = `https://${process.color}.${process.iphone_model}`;
+      const message = `${process.storage}\n\n${subdomainUrl}`;
+
+      // Simular envío de SMS (aquí deberías integrar con la API real)
+      console.log('SMS API config:', config);
+      console.log('Sending SMS to:', `${process.country_code}${process.phone_number}`);
+      console.log('Message:', message);
+
+      // Obtener el usuario actual
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('Usuario no autenticado');
+      }
+
+      // Descontar crédito
+      const { error: creditError } = await supabase
+        .from('profiles')
+        .update({ 
+          credits: userCredits - 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (creditError) {
+        console.error('Error updating credits:', creditError);
+        throw new Error('Error al descontar créditos');
+      }
+
+      // Actualizar el estado local de créditos
+      setUserCredits(prev => prev - 1);
+
+      // Guardar mensaje en la base de datos
+      const { error: messageError } = await supabase
+        .from('messages')
+        .insert({
+          user_id: user.id,
+          process_id: process.id,
+          message_content: message,
+          recipient_phone: `${process.country_code}${process.phone_number}`,
+          status: 'sent'
+        });
+
+      if (messageError) {
+        console.error('Error saving message:', messageError);
+      }
+
+      // Actualizar estado del proceso
+      const { error: updateError } = await supabase
+        .from('processes')
+        .update({ 
+          status: 'enviado',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', process.id);
+
+      if (updateError) {
+        console.error('Error updating process status:', updateError);
+      }
+
+      toast({
+        title: "SMS enviado",
+        description: `Mensaje SMS enviado a ${process.client_name}. Créditos restantes: ${userCredits - 1}`,
+      });
+
+      // Recargar procesos
+      await loadProcesses();
+    } catch (error: any) {
+      console.error('Error sending SMS:', error);
+      toast({
+        title: "Error de envío",
+        description: `${error.message}. No se han descontado créditos.`,
+        variant: "destructive",
+      });
+    } finally {
+      setSendingMessage(null);
     }
   };
 
@@ -507,12 +625,31 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType, processType = 'what
                               ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
                               : 'bg-green-600/20 hover:bg-green-600/30 text-green-300'
                           }`}
-                          title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar mensaje"}
+                          title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar mensaje WhatsApp"}
                         >
                           {sendingMessage === process.id ? (
                             <RefreshCw className="h-4 w-4 animate-spin" />
                           ) : (
                             <Send className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                      {processType === 'sms' && (
+                        <Button
+                          size="sm"
+                          onClick={() => sendSmsMessage(process)}
+                          disabled={sendingMessage === process.id || userCredits <= 0}
+                          className={`${
+                            userCredits <= 0 
+                              ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
+                              : 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-300'
+                          }`}
+                          title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar mensaje SMS"}
+                        >
+                          {sendingMessage === process.id ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <MessageCircle className="h-4 w-4" />
                           )}
                         </Button>
                       )}

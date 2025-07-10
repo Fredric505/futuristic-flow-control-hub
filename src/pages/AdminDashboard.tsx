@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -91,7 +90,6 @@ const AdminDashboard = () => {
     { id: 'view-processes', icon: FileText, label: 'Ver Procesos WhatsApp', description: 'Mis procesos WhatsApp guardados' },
     { id: 'sms-process', icon: MessageCircle, label: 'Agregar Proceso SMS', description: 'Crear formulario para SMS' },
     { id: 'sms-view-processes', icon: MessageSquare, label: 'Ver Procesos SMS', description: 'Mis procesos SMS guardados' },
-    { id: 'send-sms', icon: MessageCircle, label: 'Enviar SMS', description: 'Enviar mensajes de texto desde procesos' },
     
     // HISTORIAL SECTION
     { id: 'history', icon: History, label: 'Mi Historial', description: 'Mi historial de mensajes enviados' },
@@ -202,9 +200,6 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
         );
-        
-      case 'send-sms':
-        return <SmsSender />;
       
       // HISTORIAL
       case 'history':
@@ -309,7 +304,7 @@ const AdminDashboard = () => {
               </div>
               
               {/* Procesos Section */}
-              {menuItems.slice(1, 6).map((item) => {
+              {menuItems.slice(1, 5).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -338,7 +333,7 @@ const AdminDashboard = () => {
               </div>
               
               {/* Historial Section */}
-              {menuItems.slice(6, 8).map((item) => {
+              {menuItems.slice(5, 7).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -367,7 +362,7 @@ const AdminDashboard = () => {
               </div>
               
               {/* Admin Section */}
-              {menuItems.slice(8).map((item) => {
+              {menuItems.slice(7).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
