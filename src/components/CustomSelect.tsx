@@ -60,12 +60,20 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
       }
     };
 
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
     };
   }, [isOpen]);
 
@@ -123,15 +131,30 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
       </button>
       
       {isOpen && (
-        <div
-          ref={dropdownRef}
-          className="absolute top-full left-0 z-[50] mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-lg animate-in fade-in-0 zoom-in-95"
-          style={{ minWidth: '8rem', maxHeight: '24rem', overflowY: 'auto' }}
-        >
-          <div className="p-1">
-            {renderItems(children)}
+        <>
+          {/* Overlay backdrop */}
+          <div 
+            className="fixed inset-0 z-[999]"
+            onClick={() => setIsOpen(false)}
+          />
+          
+          {/* Dropdown content */}
+          <div
+            ref={dropdownRef}
+            className="absolute top-full left-0 z-[1000] mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-lg animate-in fade-in-0 zoom-in-95"
+            style={{ 
+              minWidth: '8rem', 
+              maxHeight: '24rem', 
+              overflowY: 'auto',
+              position: 'absolute',
+              zIndex: 1000
+            }}
+          >
+            <div className="p-1">
+              {renderItems(children)}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
