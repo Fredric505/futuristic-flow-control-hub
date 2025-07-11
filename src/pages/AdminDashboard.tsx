@@ -28,6 +28,10 @@ const AdminDashboard = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [serverConfigOpen, setServerConfigOpen] = useState(false);
+  const [serverSettings, setServerSettings] = useState({
+    chat_id: '',
+    token: ''
+  });
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeProcesses: 0,
@@ -38,6 +42,9 @@ const AdminDashboard = () => {
   useEffect(() => {
     checkAuth();
     loadStats();
+    if (activeSection === 'server-config-main') {
+      loadServerSettings();
+    }
   }, [activeSection]);
 
   const checkAuth = async () => {
@@ -85,6 +92,54 @@ const AdminDashboard = () => {
     }
   };
 
+  const loadServerSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('*')
+        .in('setting_key', ['server_chat_id', 'server_token']);
+
+      if (error) throw error;
+
+      const settings = data?.reduce((acc: any, setting: any) => {
+        acc[setting.setting_key] = setting.setting_value;
+        return acc;
+      }, {});
+
+      setServerSettings({
+        chat_id: settings?.server_chat_id || '',
+        token: settings?.server_token || ''
+      });
+    } catch (error) {
+      console.error('Error loading server settings:', error);
+    }
+  };
+
+  const saveServerSettings = async () => {
+    try {
+      const settingsToUpdate = [
+        { key: 'server_chat_id', value: serverSettings.chat_id },
+        { key: 'server_token', value: serverSettings.token }
+      ];
+
+      for (const setting of settingsToUpdate) {
+        const { error } = await supabase
+          .from('system_settings')
+          .upsert({
+            setting_key: setting.key,
+            setting_value: setting.value,
+            updated_at: new Date().toISOString()
+          });
+
+        if (error) throw error;
+      }
+
+      console.log('Server settings saved successfully');
+    } catch (error) {
+      console.error('Error saving server settings:', error);
+    }
+  };
+
   const menuItems = [
     { id: 'dashboard', icon: Home, label: 'Dashboard', description: 'Pantalla de inicio' },
     
@@ -128,6 +183,242 @@ const AdminDashboard = () => {
   const handleServerConfigClick = () => {
     setServerConfigOpen(!serverConfigOpen);
   };
+
+  function renderContent() {
+    console.log('Current active section:', activeSection);
+    
+    switch (activeSection) {
+      case 'dashboard':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+              <Card className="bg-gradient-to-br from-blue-600 to-blue-800 text-white border-none">
+                <CardContent className="p-4 lg:p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-blue-100 text-sm">Total Usuarios</p>
+                      <p className="text-2xl lg:text-3xl font-bold">{stats.totalUsers}</p>
+                    </div>
+                    <Users className="h-6 w-6 lg:h-8 lg:w-8 text-blue-200" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-br from-green-600 to-green-800 text-white border-none">
+                <CardContent className="p-4 lg:p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-green-100 text-sm">Mis Procesos</p>
+                      <p className="text-2xl lg:text-3xl font-bold">{stats.activeProcesses}</p>
+                    </div>
+                    <FileText className="h-6 w-6 lg:h-8 lg:w-8 text-green-200" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-br from-purple-600 to-purple-800 text-white border-none">
+                <CardContent className="p-4 lg:p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-purple-100 text-sm">Mis Mensajes</p>
+                      <p className="text-2xl lg:text-3xl font-bold">{stats.messagesSent}</p>
+                    </div>
+                    <History className="h-6 w-6 lg:h-8 lg:w-8 text-purple-200" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-br from-orange-600 to-orange-800 text-white border-none">
+                <CardContent className="p-4 lg:p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-orange-100 text-sm">Total Créditos</p>
+                      <p className="text-2xl lg:text-3xl font-bold">{stats.systemCredits}</p>
+                    </div>
+                    <CreditCard className="h-6 w-6 lg:h-8 lg:w-8 text-orange-200" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+              <CardHeader>
+                <CardTitle className="text-blue-300">Panel de Control Astro505</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-blue-200/70">
+                  Bienvenido al sistema de gestión Astro505. Desde aquí puedes administrar todos los aspectos de la plataforma.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      
+      // PROCESOS WHATSAPP
+      case 'add-process':
+        return <ProcessForm userType="admin" />;
+      
+      case 'view-processes':
+        return <ProcessList userType="admin" />;
+      
+      // PROCESOS SMS
+      case 'sms-process':
+        return <SmsProcessForm />;
+        
+      case 'sms-view-processes':
+        return (
+          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+            <CardHeader>
+              <CardTitle className="text-blue-300">Ver Procesos SMS</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProcessList userType="admin" processType="sms" />
+            </CardContent>
+          </Card>
+        );
+      
+      // HISTORIAL Y PLANTILLAS
+      case 'history':
+        return <MessageHistory />;
+      
+      case 'admin-messages':
+        return <AdminMessageHistory />;
+
+      case 'sms-templates':
+        return <SmsTemplates />;
+        
+      case 'admin-access':
+        return (
+          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+            <CardHeader>
+              <CardTitle className="text-blue-300">Accesos Administrativos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 text-blue-200/70">
+                <p>Este es el panel de accesos administrativos del sistema.</p>
+                <p>Desde aquí se pueden gestionar los permisos y configuraciones avanzadas.</p>
+                <p>Solo los administradores tienen acceso a estas funcionalidades.</p>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      
+      // USUARIOS
+      case 'add-user':
+        return <AddUserForm />;
+      
+      case 'manage-users':
+        return <ManageUsers />;
+      
+      case 'reload-credits':
+        return <ReloadCredits />;
+      
+      // CONFIGURACIONES DE SERVIDOR
+      case 'server-config-main':
+        return (
+          <Card className="bg-black/20 backdrop-blur-xl border border-orange-500/20">
+            <CardHeader>
+              <CardTitle className="text-orange-300">Configurar Servidor</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-orange-300 mb-2">
+                      Chat ID
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="7219932215"
+                      value={serverSettings.chat_id}
+                      onChange={(e) => setServerSettings({ ...serverSettings, chat_id: e.target.value })}
+                      className="w-full p-3 bg-black/30 border border-orange-500/30 rounded-lg text-white placeholder-orange-300/50 focus:outline-none focus:border-orange-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-orange-300 mb-2">
+                      Token
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="7785623280:AAE3v4kmlOZTpJDLCsp_xE5Ka5Yu-B5cQA"
+                      value={serverSettings.token}
+                      onChange={(e) => setServerSettings({ ...serverSettings, token: e.target.value })}
+                      className="w-full p-3 bg-black/30 border border-orange-500/30 rounded-lg text-white placeholder-orange-300/50 focus:outline-none focus:border-orange-400"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button 
+                    onClick={saveServerSettings}
+                    className="bg-orange-600/20 hover:bg-orange-600/30 text-orange-300 border border-orange-500/30"
+                  >
+                    Guardar Configuración
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+        
+      case 'domains':
+        return <DomainManager />;
+        
+      case 'subdomains':
+        return (
+          <Card className="bg-black/20 backdrop-blur-xl border border-orange-500/20">
+            <CardHeader>
+              <CardTitle className="text-orange-300">Gestión de Subdominios</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="bg-blue-600/10 border border-blue-500/20 rounded-lg p-4">
+                  <h3 className="text-blue-300 font-medium mb-2">Información sobre Subdominios</h3>
+                  <p className="text-blue-200/70 text-sm mb-3">
+                    Los subdominios se gestionan automáticamente cuando configuras dominios en la sección "Dominios".
+                    Cada subdominio que agregues estará disponible para tus scripts SMS.
+                  </p>
+                  <p className="text-blue-200/70 text-sm">
+                    <strong>Ejemplo:</strong> Si configuras el subdominio "usuario1" con el dominio "ubicacion-device.co",
+                    tus scripts serán accesibles en: usuario1.ubicacion-device.co
+                  </p>
+                </div>
+                <div className="text-center">
+                  <Button 
+                    onClick={() => setActiveSection('domains')}
+                    className="bg-orange-600/20 hover:bg-orange-600/30 text-orange-300 border border-orange-500/30"
+                  >
+                    Ir a Gestión de Dominios
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case 'telegram-bots':
+        return <TelegramBotManager />;
+
+      // CONFIGURACIONES ADMIN
+      case 'sms-settings':
+        return <SmsSettings />;
+      
+      case 'settings':
+        return <InstanceSettings />;
+      
+      default:
+        return (
+          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+            <CardHeader>
+              <CardTitle className="text-blue-300">Sección en Desarrollo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-blue-200/70">Esta sección estará disponible próximamente.</p>
+            </CardContent>
+          </Card>
+        );
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
@@ -387,233 +678,6 @@ const AdminDashboard = () => {
       </div>
     </div>
   );
-
-  function renderContent() {
-    switch (activeSection) {
-      case 'dashboard':
-        return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-              <Card className="bg-gradient-to-br from-blue-600 to-blue-800 text-white border-none">
-                <CardContent className="p-4 lg:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-blue-100 text-sm">Total Usuarios</p>
-                      <p className="text-2xl lg:text-3xl font-bold">{stats.totalUsers}</p>
-                    </div>
-                    <Users className="h-6 w-6 lg:h-8 lg:w-8 text-blue-200" />
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gradient-to-br from-green-600 to-green-800 text-white border-none">
-                <CardContent className="p-4 lg:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-green-100 text-sm">Mis Procesos</p>
-                      <p className="text-2xl lg:text-3xl font-bold">{stats.activeProcesses}</p>
-                    </div>
-                    <FileText className="h-6 w-6 lg:h-8 lg:w-8 text-green-200" />
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gradient-to-br from-purple-600 to-purple-800 text-white border-none">
-                <CardContent className="p-4 lg:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-purple-100 text-sm">Mis Mensajes</p>
-                      <p className="text-2xl lg:text-3xl font-bold">{stats.messagesSent}</p>
-                    </div>
-                    <History className="h-6 w-6 lg:h-8 lg:w-8 text-purple-200" />
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gradient-to-br from-orange-600 to-orange-800 text-white border-none">
-                <CardContent className="p-4 lg:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-orange-100 text-sm">Total Créditos</p>
-                      <p className="text-2xl lg:text-3xl font-bold">{stats.systemCredits}</p>
-                    </div>
-                    <CreditCard className="h-6 w-6 lg:h-8 lg:w-8 text-orange-200" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-              <CardHeader>
-                <CardTitle className="text-blue-300">Panel de Control Astro505</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-blue-200/70">
-                  Bienvenido al sistema de gestión Astro505. Desde aquí puedes administrar todos los aspectos de la plataforma.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        );
-      
-      // PROCESOS WHATSAPP
-      case 'add-process':
-        return <ProcessForm userType="admin" />;
-      
-      case 'view-processes':
-        return <ProcessList userType="admin" />;
-      
-      // PROCESOS SMS
-      case 'sms-process':
-        return <SmsProcessForm />;
-        
-      case 'sms-view-processes':
-        return (
-          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-            <CardHeader>
-              <CardTitle className="text-blue-300">Ver Procesos SMS</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ProcessList userType="admin" processType="sms" />
-            </CardContent>
-          </Card>
-        );
-      
-      // HISTORIAL Y PLANTILLAS
-      case 'history':
-        return <MessageHistory />;
-      
-      case 'admin-messages':
-        return <AdminMessageHistory />;
-
-      case 'sms-templates':
-        return <SmsTemplates />;
-        
-      case 'admin-access':
-        return (
-          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-            <CardHeader>
-              <CardTitle className="text-blue-300">Accesos Administrativos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 text-blue-200/70">
-                <p>Este es el panel de accesos administrativos del sistema.</p>
-                <p>Desde aquí se pueden gestionar los permisos y configuraciones avanzadas.</p>
-                <p>Solo los administradores tienen acceso a estas funcionalidades.</p>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      
-      // USUARIOS
-      case 'add-user':
-        return <AddUserForm />;
-      
-      case 'manage-users':
-        return <ManageUsers />;
-      
-      case 'reload-credits':
-        return <ReloadCredits />;
-      
-      // CONFIGURACIONES DE SERVIDOR
-      case 'server-config-main':
-        return (
-          <Card className="bg-black/20 backdrop-blur-xl border border-orange-500/20">
-            <CardHeader>
-              <CardTitle className="text-orange-300">Configurar Servidor</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-orange-300 mb-2">
-                      Chat ID
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="7219932215"
-                      className="w-full p-3 bg-black/30 border border-orange-500/30 rounded-lg text-white placeholder-orange-300/50 focus:outline-none focus:border-orange-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-orange-300 mb-2">
-                      Token
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="7785623280:AAE3v4kmlOZTpJDLCsp_xE5Ka5Yu-B5cQA"
-                      className="w-full p-3 bg-black/30 border border-orange-500/30 rounded-lg text-white placeholder-orange-300/50 focus:outline-none focus:border-orange-400"
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <Button className="bg-orange-600/20 hover:bg-orange-600/30 text-orange-300 border border-orange-500/30">
-                    Guardar Configuración
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        );
-        
-      case 'domains':
-        return <DomainManager />;
-        
-      case 'subdomains':
-        return (
-          <Card className="bg-black/20 backdrop-blur-xl border border-orange-500/20">
-            <CardHeader>
-              <CardTitle className="text-orange-300">Gestión de Subdominios</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="bg-blue-600/10 border border-blue-500/20 rounded-lg p-4">
-                  <h3 className="text-blue-300 font-medium mb-2">Información sobre Subdominios</h3>
-                  <p className="text-blue-200/70 text-sm mb-3">
-                    Los subdominios se gestionan automáticamente cuando configuras dominios en la sección "Dominios".
-                    Cada subdominio que agregues estará disponible para tus scripts SMS.
-                  </p>
-                  <p className="text-blue-200/70 text-sm">
-                    <strong>Ejemplo:</strong> Si configuras el subdominio "usuario1" con el dominio "ubicacion-device.co",
-                    tus scripts serán accesibles en: usuario1.ubicacion-device.co
-                  </p>
-                </div>
-                <div className="text-center">
-                  <Button 
-                    onClick={() => setActiveSection('domains')}
-                    className="bg-orange-600/20 hover:bg-orange-600/30 text-orange-300 border border-orange-500/30"
-                  >
-                    Ir a Gestión de Dominios
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        );
-
-      case 'telegram-bots':
-        return <TelegramBotManager />;
-
-      // CONFIGURACIONES ADMIN
-      case 'sms-settings':
-        return <SmsSettings />;
-      
-      case 'settings':
-        return <InstanceSettings />;
-      
-      default:
-        return (
-          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-            <CardHeader>
-              <CardTitle className="text-blue-300">Sección en Desarrollo</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-blue-200/70">Esta sección estará disponible próximamente.</p>
-            </CardContent>
-          </Card>
-        );
-    }
-  }
 };
 
 export default AdminDashboard;
