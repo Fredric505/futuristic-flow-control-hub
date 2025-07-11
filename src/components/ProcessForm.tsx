@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import CustomSelect from './CustomSelect';
 import { countryCodes } from '@/utils/countryCodes';
-import { iphoneModels, iphoneImages } from '@/utils/iphoneImages';
 import ProcessUrlDisplay from './ProcessUrlDisplay';
 
 interface ProcessFormProps {
@@ -33,6 +33,36 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [createdUrl, setCreatedUrl] = useState<string>('');
   const { toast } = useToast();
+
+  const iphoneModels = [
+    'iPhone 15 Pro Max',
+    'iPhone 15 Pro',
+    'iPhone 15 Plus',
+    'iPhone 15',
+    'iPhone 14 Pro Max',
+    'iPhone 14 Pro',
+    'iPhone 14 Plus',
+    'iPhone 14',
+    'iPhone 13 Pro Max',
+    'iPhone 13 Pro',
+    'iPhone 13 mini',
+    'iPhone 13',
+    'iPhone 12 Pro Max',
+    'iPhone 12 Pro',
+    'iPhone 12 mini',
+    'iPhone 12',
+    'iPhone 11 Pro Max',
+    'iPhone 11 Pro',
+    'iPhone 11',
+    'iPhone XS Max',
+    'iPhone XS',
+    'iPhone XR',
+    'iPhone X',
+    'iPhone 8 Plus',
+    'iPhone 8',
+    'iPhone 7 Plus',
+    'iPhone 7'
+  ];
 
   const colors = ['Negro', 'Blanco', 'Rojo', 'Azul', 'Verde', 'Amarillo', 'Morado', 'Rosa', 'Oro', 'Plata'];
   const storageOptions = ['64GB', '128GB', '256GB', '512GB', '1TB'];
@@ -202,10 +232,10 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
               <Label className="text-blue-300">Código de País</Label>
               <CustomSelect
                 value={formData.countryCode}
-                onChange={(value) => setFormData(prev => ({ ...prev, countryCode: value }))}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, countryCode: value }))}
                 options={countryCodes.map(country => ({
                   value: country.code,
-                  label: `${country.flag} ${country.code} ${country.name}`
+                  label: `${country.code} ${country.country}`
                 }))}
                 placeholder="Seleccionar código"
               />
@@ -231,10 +261,9 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
               <Label className="text-blue-300">Modelo de iPhone *</Label>
               <CustomSelect
                 value={formData.iphoneModel}
-                onChange={(value) => setFormData(prev => ({ ...prev, iphoneModel: value }))}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, iphoneModel: value }))}
                 options={iphoneModels.map(model => ({ value: model, label: model }))}
                 placeholder="Seleccionar modelo"
-                required
               />
             </div>
 
@@ -242,10 +271,9 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
               <Label className="text-blue-300">Color *</Label>
               <CustomSelect
                 value={formData.color}
-                onChange={(value) => setFormData(prev => ({ ...prev, color: value }))}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, color: value }))}
                 options={colors.map(color => ({ value: color, label: color }))}
                 placeholder="Seleccionar color"
-                required
               />
             </div>
           </div>
@@ -255,10 +283,9 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
               <Label className="text-blue-300">Almacenamiento *</Label>
               <CustomSelect
                 value={formData.storage}
-                onChange={(value) => setFormData(prev => ({ ...prev, storage: value }))}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, storage: value }))}
                 options={storageOptions.map(storage => ({ value: storage, label: storage }))}
                 placeholder="Seleccionar almacenamiento"
-                required
               />
             </div>
 
@@ -266,7 +293,7 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
               <Label className="text-blue-300">Tipo de Contacto</Label>
               <CustomSelect
                 value={formData.contactType}
-                onChange={(value) => setFormData(prev => ({ ...prev, contactType: value }))}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, contactType: value }))}
                 options={contactTypes}
                 placeholder="Seleccionar tipo"
               />

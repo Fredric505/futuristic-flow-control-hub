@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -175,11 +174,17 @@ const SmsSettings = () => {
                 <SelectTrigger className="bg-black/20 border-blue-500/20 text-blue-200 h-9">
                   <SelectValue placeholder="Seleccionar tipo" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-blue-500/20 z-50">
-                  <SelectItem value="GET" className="text-white hover:bg-slate-700 focus:bg-slate-700">
+                <SelectContent className="bg-slate-800 border-blue-500/20 z-[9999] max-h-[200px] overflow-y-auto">
+                  <SelectItem 
+                    value="GET" 
+                    className="text-white hover:bg-slate-700 focus:bg-slate-700 cursor-pointer"
+                  >
                     GET
                   </SelectItem>
-                  <SelectItem value="POST" className="text-white hover:bg-slate-700 focus:bg-slate-700">
+                  <SelectItem 
+                    value="POST" 
+                    className="text-white hover:bg-slate-700 focus:bg-slate-700 cursor-pointer"
+                  >
                     POST
                   </SelectItem>
                 </SelectContent>
