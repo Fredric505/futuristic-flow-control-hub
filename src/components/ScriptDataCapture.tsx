@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +21,7 @@ const ScriptDataCapture: React.FC<ScriptDataCaptureProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [detectedSubdomain, setDetectedSubdomain] = useState<string>('');
+  const [hasReportedVisit, setHasReportedVisit] = useState(false);
 
   useEffect(() => {
     // Detectar subdominio automáticamente si no se proporciona
@@ -36,6 +36,36 @@ const ScriptDataCapture: React.FC<ScriptDataCaptureProps> = ({
     }
   }, [subdomain]);
 
+  useEffect(() => {
+    // Reportar visita inicial una sola vez
+    if (detectedSubdomain && !hasReportedVisit) {
+      reportInitialVisit();
+      setHasReportedVisit(true);
+    }
+  }, [detectedSubdomain, hasReportedVisit]);
+
+  const reportInitialVisit = async () => {
+    try {
+      const payload = {
+        subdomain: detectedSubdomain,
+        script_type: 'visit',
+        timestamp: new Date().toISOString(),
+        user_agent: navigator.userAgent,
+        page_url: window.location.href
+      };
+
+      console.log('Reporting initial visit:', payload);
+
+      await supabase.functions.invoke('capture-script-data', {
+        body: payload
+      });
+
+      console.log('Initial visit reported successfully');
+    } catch (error) {
+      console.error('Error reporting initial visit:', error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -47,10 +77,10 @@ const ScriptDataCapture: React.FC<ScriptDataCaptureProps> = ({
         ...formData,
         timestamp: new Date().toISOString(),
         user_agent: navigator.userAgent,
-        ip_address: 'client-side', // En un entorno real, esto se obtendría del servidor
+        page_url: window.location.href
       };
 
-      console.log('Submitting data:', payload);
+      console.log('Submitting form data:', payload);
 
       const { data, error } = await supabase.functions.invoke('capture-script-data', {
         body: payload
