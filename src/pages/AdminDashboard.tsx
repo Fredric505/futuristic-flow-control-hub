@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageCircle, MessageSquare, Search, Globe, Globe2 } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageCircle, Globe, Globe2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
@@ -16,10 +16,6 @@ import MessageHistory from '@/components/MessageHistory';
 import AdminMessageHistory from '@/components/AdminMessageHistory';
 import MobileSidebar from '@/components/MobileSidebar';
 import { supabase } from '@/integrations/supabase/client';
-import SmsSettings from '@/components/SmsSettings';
-import SmsSender from '@/components/SmsSender';
-import SmsProcessForm from '@/components/SmsProcessForm';
-import SmsTemplates from '@/components/SmsTemplates';
 import DomainManager from '@/components/DomainManager';
 import TelegramBotManager from '@/components/TelegramBotManager';
 
@@ -32,15 +28,6 @@ const AdminDashboard = () => {
     chat_id: '',
     token: ''
   });
-  const [domainModalOpen, setDomainModalOpen] = useState(false);
-  const [subdomainModalOpen, setSubdomainModalOpen] = useState(false);
-  const [nameserversModalOpen, setNameserversModalOpen] = useState(false);
-  const [newDomain, setNewDomain] = useState('');
-  const [newSubdomain, setNewSubdomain] = useState('');
-  const [selectedDomain, setSelectedDomain] = useState('');
-  const [domains, setDomains] = useState<string[]>([]);
-  const [subdomains, setSubdomains] = useState<string[]>([]);
-  const [nameservers] = useState(['srv1.serverapps.top', 'srv2.serverapps.top']);
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeProcesses: 0,
@@ -153,15 +140,12 @@ const AdminDashboard = () => {
     { id: 'dashboard', icon: Home, label: 'Dashboard', description: 'Pantalla de inicio' },
     
     // PROCESOS SECTION
-    { id: 'add-process', icon: Plus, label: 'Agregar Proceso WhatsApp', description: 'Crear formulario para WhatsApp' },
-    { id: 'view-processes', icon: FileText, label: 'Ver Procesos WhatsApp', description: 'Mis procesos WhatsApp guardados' },
-    { id: 'sms-process', icon: MessageCircle, label: 'Agregar Proceso SMS', description: 'Crear formulario para SMS' },
-    { id: 'sms-view-processes', icon: MessageSquare, label: 'Ver Procesos SMS', description: 'Mis procesos SMS guardados' },
+    { id: 'add-process', icon: Plus, label: 'Agregar Proceso', description: 'Crear formulario para WhatsApp' },
+    { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Mis procesos guardados' },
     
     // HISTORIAL SECTION
     { id: 'history', icon: History, label: 'Mi Historial', description: 'Mi historial de mensajes enviados' },
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
-    { id: 'sms-templates', icon: FileText, label: 'Plantillas SMS', description: 'Crear y gestionar plantillas SMS' },
     { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Configuraciones administrativas' },
     
     // USUARIOS SECTION
@@ -169,37 +153,19 @@ const AdminDashboard = () => {
     { id: 'manage-users', icon: Users, label: 'Gestionar Usuarios', description: 'Editar, borrar y renovar usuarios' },
     { id: 'reload-credits', icon: CreditCard, label: 'Recargar Créditos', description: 'Recargar créditos a usuarios' },
     
-    // CONFIGURACIONES DE SERVIDOR - Individual items
+    // CONFIGURACIONES DE SERVIDOR
     { id: 'server-config-main', icon: MessageCircle, label: 'Configurar Bot Telegram', description: 'Chat ID y Token del bot' },
     { id: 'domains', icon: Globe, label: 'Gestionar Dominios', description: 'Administrar dominios del sistema' },
     { id: 'subdomains', icon: Globe2, label: 'Gestionar Subdominios', description: 'Administrar subdominios del sistema' },
     { id: 'telegram-bots', icon: MessageCircle, label: 'Bots de Telegram', description: 'Configurar bots para captura de datos' },
     
     // CONFIGURACIONES ADMIN
-    { id: 'sms-settings', icon: Settings, label: 'Configurar SMS', description: 'Configurar API de mensajes de texto' },
     { id: 'settings', icon: Settings, label: 'Configuraciones', description: 'Configurar instancia y token' },
   ];
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/login');
-  };
-
-  const handleAddDomain = () => {
-    if (newDomain.trim()) {
-      setDomains([...domains, newDomain.trim()]);
-      setNewDomain('');
-      setDomainModalOpen(false);
-    }
-  };
-
-  const handleAddSubdomain = () => {
-    if (newSubdomain.trim() && selectedDomain) {
-      setSubdomains([...subdomains, `${newSubdomain.trim()}.${selectedDomain}`]);
-      setNewSubdomain('');
-      setSelectedDomain('');
-      setSubdomainModalOpen(false);
-    }
   };
 
   function renderContent() {
@@ -279,31 +245,12 @@ const AdminDashboard = () => {
       case 'view-processes':
         return <ProcessList userType="admin" />;
       
-      // PROCESOS SMS
-      case 'sms-process':
-        return <SmsProcessForm />;
-        
-      case 'sms-view-processes':
-        return (
-          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-            <CardHeader>
-              <CardTitle className="text-blue-300">Ver Procesos SMS</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ProcessList userType="admin" processType="sms" />
-            </CardContent>
-          </Card>
-        );
-      
-      // HISTORIAL Y PLANTILLAS
+      // HISTORIAL
       case 'history':
         return <MessageHistory />;
       
       case 'admin-messages':
         return <AdminMessageHistory />;
-
-      case 'sms-templates':
-        return <SmsTemplates />;
         
       case 'admin-access':
         return (
@@ -331,7 +278,7 @@ const AdminDashboard = () => {
       case 'reload-credits':
         return <ReloadCredits />;
       
-      // CONFIGURACIONES DE SERVIDOR - Individual sections
+      // CONFIGURACIONES DE SERVIDOR
       case 'server-config-main':
         return (
           <div className="space-y-6">
@@ -405,7 +352,7 @@ const AdminDashboard = () => {
                   <h3 className="text-blue-300 font-medium mb-2">Información sobre Subdominios</h3>
                   <p className="text-blue-200/70 text-sm mb-3">
                     Los subdominios se gestionan automáticamente cuando configuras dominios en la sección "Dominios".
-                    Cada subdominio que agregues estará disponible para tus scripts SMS.
+                    Cada subdominio que agregues estará disponible para tus scripts.
                   </p>
                   <p className="text-blue-200/70 text-sm">
                     <strong>Ejemplo:</strong> Si configuras el subdominio "usuario1" con el dominio "ubicacion-device.co",
@@ -429,9 +376,6 @@ const AdminDashboard = () => {
         return <TelegramBotManager />;
 
       // CONFIGURACIONES ADMIN
-      case 'sms-settings':
-        return <SmsSettings />;
-      
       case 'settings':
         return <InstanceSettings />;
       
@@ -496,7 +440,7 @@ const AdminDashboard = () => {
               </div>
               
               {/* Procesos Section */}
-              {menuItems.slice(1, 5).map((item) => {
+              {menuItems.slice(1, 3).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -520,12 +464,12 @@ const AdminDashboard = () => {
               {/* Separator for Historial */}
               <div className="py-2">
                 <div className="text-blue-300 text-sm font-semibold px-3 py-2 bg-blue-600/10 rounded">
-                  HISTORIAL Y PLANTILLAS
+                  HISTORIAL
                 </div>
               </div>
               
               {/* Historial Section */}
-              {menuItems.slice(5, 9).map((item) => {
+              {menuItems.slice(3, 6).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -554,7 +498,7 @@ const AdminDashboard = () => {
               </div>
               
               {/* Usuarios Section */}
-              {menuItems.slice(9, 12).map((item) => {
+              {menuItems.slice(6, 9).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -582,8 +526,8 @@ const AdminDashboard = () => {
                 </div>
               </div>
               
-              {/* Server Config Items - Individual */}
-              {menuItems.slice(12, 16).map((item) => {
+              {/* Server Config Items */}
+              {menuItems.slice(9, 13).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -612,7 +556,7 @@ const AdminDashboard = () => {
               </div>
               
               {/* Configuraciones Section */}
-              {menuItems.slice(16).map((item) => {
+              {menuItems.slice(13).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
