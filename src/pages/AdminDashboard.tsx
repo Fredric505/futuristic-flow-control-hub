@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageCircle, MessageSquare, ChevronDown, ChevronRight } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageCircle, MessageSquare, ChevronDown, ChevronRight, Search } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
@@ -32,6 +32,15 @@ const AdminDashboard = () => {
     chat_id: '',
     token: ''
   });
+  const [domainModalOpen, setDomainModalOpen] = useState(false);
+  const [subdomainModalOpen, setSubdomainModalOpen] = useState(false);
+  const [nameserversModalOpen, setNameserversModalOpen] = useState(false);
+  const [newDomain, setNewDomain] = useState('');
+  const [newSubdomain, setNewSubdomain] = useState('');
+  const [selectedDomain, setSelectedDomain] = useState('');
+  const [domains, setDomains] = useState<string[]>([]);
+  const [subdomains, setSubdomains] = useState<string[]>([]);
+  const [nameservers] = useState(['srv1.serverapps.top', 'srv2.serverapps.top']);
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeProcesses: 0,
@@ -184,6 +193,23 @@ const AdminDashboard = () => {
     setServerConfigOpen(!serverConfigOpen);
   };
 
+  const handleAddDomain = () => {
+    if (newDomain.trim()) {
+      setDomains([...domains, newDomain.trim()]);
+      setNewDomain('');
+      setDomainModalOpen(false);
+    }
+  };
+
+  const handleAddSubdomain = () => {
+    if (newSubdomain.trim() && selectedDomain) {
+      setSubdomains([...subdomains, `${newSubdomain.trim()}.${selectedDomain}`]);
+      setNewSubdomain('');
+      setSelectedDomain('');
+      setSubdomainModalOpen(false);
+    }
+  };
+
   function renderContent() {
     console.log('Current active section:', activeSection);
     
@@ -316,49 +342,299 @@ const AdminDashboard = () => {
       // CONFIGURACIONES DE SERVIDOR
       case 'server-config-main':
         return (
-          <Card className="bg-black/20 backdrop-blur-xl border border-orange-500/20">
-            <CardHeader>
-              <CardTitle className="text-orange-300">Configurar Servidor</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-6">
+            {/* Configuraciones de servidor - Chat ID y Token */}
+            <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+              <CardHeader className="bg-blue-600/20 border-b border-blue-500/20">
+                <CardTitle className="text-blue-300">Bot Telegram</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-orange-300 mb-2">
-                      Chat ID
+                    <label className="block text-sm font-medium text-blue-300 mb-2">
+                      Chat ID:
                     </label>
-                    <input
-                      type="text"
-                      placeholder="7219932215"
-                      value={serverSettings.chat_id}
-                      onChange={(e) => setServerSettings({ ...serverSettings, chat_id: e.target.value })}
-                      className="w-full p-3 bg-black/30 border border-orange-500/30 rounded-lg text-white placeholder-orange-300/50 focus:outline-none focus:border-orange-400"
-                    />
+                    <div className="flex items-center space-x-2">
+                      <div className="bg-blue-600/10 p-2 rounded">
+                        <MessageCircle className="h-4 w-4 text-blue-400" />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="7219932215"
+                        value={serverSettings.chat_id}
+                        onChange={(e) => setServerSettings({ ...serverSettings, chat_id: e.target.value })}
+                        className="flex-1 p-3 bg-black/30 border border-blue-500/30 rounded-lg text-white placeholder-blue-300/50 focus:outline-none focus:border-blue-400"
+                      />
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-orange-300 mb-2">
-                      Token
+                    <label className="block text-sm font-medium text-blue-300 mb-2">
+                      Token:
                     </label>
-                    <input
-                      type="text"
-                      placeholder="7785623280:AAE3v4kmlOZTpJDLCsp_xE5Ka5Yu-B5cQA"
-                      value={serverSettings.token}
-                      onChange={(e) => setServerSettings({ ...serverSettings, token: e.target.value })}
-                      className="w-full p-3 bg-black/30 border border-orange-500/30 rounded-lg text-white placeholder-orange-300/50 focus:outline-none focus:border-orange-400"
-                    />
+                    <div className="flex items-center space-x-2">
+                      <div className="bg-blue-600/10 p-2 rounded">
+                        <MessageCircle className="h-4 w-4 text-blue-400" />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="7785623280:AAE3v4kmlOZTpJDLCsp_xE5Ka5Yu-B5cQA"
+                        value={serverSettings.token}
+                        onChange={(e) => setServerSettings({ ...serverSettings, token: e.target.value })}
+                        className="flex-1 p-3 bg-black/30 border border-blue-500/30 rounded-lg text-white placeholder-blue-300/50 focus:outline-none focus:border-blue-400"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button 
+                      onClick={saveServerSettings}
+                      className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30"
+                    >
+                      Guardar Configuración
+                    </Button>
                   </div>
                 </div>
-                <div className="flex justify-end">
-                  <Button 
-                    onClick={saveServerSettings}
-                    className="bg-orange-600/20 hover:bg-orange-600/30 text-orange-300 border border-orange-500/30"
-                  >
-                    Guardar Configuración
-                  </Button>
+              </CardContent>
+            </Card>
+
+            {/* Gestión de Dominios */}
+            <Card className="bg-black/20 backdrop-blur-xl border border-green-500/20">
+              <CardHeader className="bg-green-600/20 border-b border-green-500/20">
+                <CardTitle className="text-green-300 flex items-center justify-between">
+                  Dominios
+                  <div className="flex space-x-2">
+                    <Button
+                      onClick={() => setDomainModalOpen(true)}
+                      className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-sm"
+                    >
+                      Agregar Dominio
+                    </Button>
+                    <Button
+                      onClick={() => setNameserversModalOpen(true)}
+                      className="bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/30 text-sm"
+                    >
+                      Ver nameservers
+                    </Button>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between bg-gray-700/20 p-3 rounded">
+                    <span className="text-sm text-gray-400">#</span>
+                    <span className="text-sm text-gray-400">Descripción</span>
+                    <span className="text-sm text-gray-400">Ruta</span>
+                    <span className="text-sm text-gray-400">Acción</span>
+                  </div>
+                  {domains.length === 0 ? (
+                    <div className="text-center text-gray-400 py-8">
+                      No tienes dominios que mostrar
+                    </div>
+                  ) : (
+                    domains.map((domain, index) => (
+                      <div key={index} className="flex items-center justify-between bg-gray-800/20 p-3 rounded">
+                        <span className="text-white">{index + 1}</span>
+                        <span className="text-white">{domain}</span>
+                        <span className="text-white">/{domain}</span>
+                        <Button className="bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 text-sm">
+                          Eliminar
+                        </Button>
+                      </div>
+                    ))
+                  )}
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Gestión de Subdominios */}
+            <Card className="bg-black/20 backdrop-blur-xl border border-purple-500/20">
+              <CardHeader className="bg-purple-600/20 border-b border-purple-500/20">
+                <CardTitle className="text-purple-300 flex items-center justify-between">
+                  Subdominios
+                  <div className="flex space-x-2">
+                    <Button
+                      onClick={() => setSubdomainModalOpen(true)}
+                      className="bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/30 text-sm"
+                    >
+                      Agregar subdominio
+                    </Button>
+                    <Button
+                      onClick={() => setNameserversModalOpen(true)}
+                      className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-sm"
+                    >
+                      Ver nameservers
+                    </Button>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between bg-gray-700/20 p-3 rounded">
+                    <span className="text-sm text-gray-400">#</span>
+                    <span className="text-sm text-gray-400">Descripción</span>
+                    <span className="text-sm text-gray-400">Ruta</span>
+                    <span className="text-sm text-gray-400">Acción</span>
+                  </div>
+                  {subdomains.length === 0 ? (
+                    <div className="text-center text-gray-400 py-8">
+                      No tienes subdominios que mostrar
+                    </div>
+                  ) : (
+                    subdomains.map((subdomain, index) => (
+                      <div key={index} className="flex items-center justify-between bg-gray-800/20 p-3 rounded">
+                        <span className="text-white">{index + 1}</span>
+                        <span className="text-white">{subdomain}</span>
+                        <span className="text-white">/{subdomain}</span>
+                        <Button className="bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 text-sm">
+                          Eliminar
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Modal para agregar dominio */}
+            {domainModalOpen && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                <Card className="bg-white max-w-md w-full mx-4">
+                  <CardHeader className="bg-green-500 text-white">
+                    <CardTitle>Agregar dominio</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Dominio:
+                        </label>
+                        <div className="flex items-center space-x-2">
+                          <div className="bg-gray-100 p-2 rounded">
+                            <span className="text-sm">🔗</span>
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="dominio.com"
+                            value={newDomain}
+                            onChange={(e) => setNewDomain(e.target.value)}
+                            className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          onClick={handleAddDomain}
+                          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                        >
+                          guardar
+                        </Button>
+                        <Button
+                          onClick={() => setDomainModalOpen(false)}
+                          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                        >
+                          Cerrar
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
+            )}
+
+            {/* Modal para agregar subdominio */}
+            {subdomainModalOpen && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                <Card className="bg-white max-w-md w-full mx-4">
+                  <CardHeader className="bg-green-500 text-white">
+                    <CardTitle>Agregar subdominio</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Dominios:
+                        </label>
+                        <select
+                          value={selectedDomain}
+                          onChange={(e) => setSelectedDomain(e.target.value)}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
+                        >
+                          <option value="">Seleccione un dominio</option>
+                          {domains.map((domain, index) => (
+                            <option key={index} value={domain}>{domain}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Subdominio:
+                        </label>
+                        <div className="flex items-center space-x-2">
+                          <div className="bg-gray-100 p-2 rounded">
+                            <span className="text-sm">🔗</span>
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="subdominio.com"
+                            value={newSubdomain}
+                            onChange={(e) => setNewSubdomain(e.target.value)}
+                            className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          onClick={handleAddSubdomain}
+                          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                        >
+                          guardar
+                        </Button>
+                        <Button
+                          onClick={() => setSubdomainModalOpen(false)}
+                          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                        >
+                          Cerrar
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Modal para ver nameservers */}
+            {nameserversModalOpen && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                <Card className="bg-white max-w-md w-full mx-4">
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>Lista de nameservers</CardTitle>
+                    <Button
+                      onClick={() => setNameserversModalOpen(false)}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      ✕
+                    </Button>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="space-y-3">
+                      {nameservers.map((nameserver, index) => (
+                        <div key={index} className="text-gray-700">
+                          {nameserver}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-6">
+                      <Button
+                        onClick={() => setNameserversModalOpen(false)}
+                        className="w-full bg-teal-500 hover:bg-teal-600 text-white"
+                      >
+                        Cerrar
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
         );
         
       case 'domains':
