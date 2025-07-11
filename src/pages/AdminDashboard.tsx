@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -81,22 +80,14 @@ const AdminDashboard = () => {
 
   const menuItems = [
     { id: 'dashboard', icon: Home, label: 'Dashboard', description: 'Pantalla de inicio' },
-    
-    // PROCESOS SECTION
-    { id: 'add-process', icon: Plus, label: 'Agregar Proceso', description: 'Crear formulario para WhatsApp' },
-    { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Mis procesos guardados' },
-    
-    // HISTORIAL SECTION
-    { id: 'history', icon: History, label: 'Mi Historial', description: 'Mi historial de mensajes enviados' },
+    { id: 'add-process', icon: Plus, label: 'Agregar Proceso', description: 'Agregar formulario para luego guardar' },
+    { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Mis procesos guardados y listos para enviar' },
+    { id: 'history', icon: History, label: 'Historial', description: 'Mi historial de mensajes enviados' },
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
-    { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Configuraciones administrativas' },
-    
-    // USUARIOS SECTION
+    { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Solo es texto' },
     { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },
     { id: 'manage-users', icon: Users, label: 'Gestionar Usuarios', description: 'Editar, borrar y renovar usuarios' },
     { id: 'reload-credits', icon: CreditCard, label: 'Recargar Créditos', description: 'Recargar créditos a usuarios' },
-    
-    // CONFIGURACIONES ADMIN
     { id: 'settings', icon: Settings, label: 'Configuraciones', description: 'Configurar instancia y token' },
   ];
 
@@ -105,9 +96,7 @@ const AdminDashboard = () => {
     navigate('/login');
   };
 
-  function renderContent() {
-    console.log('Current active section:', activeSection);
-    
+  const renderContent = () => {
     switch (activeSection) {
       case 'dashboard':
         return (
@@ -175,20 +164,18 @@ const AdminDashboard = () => {
           </div>
         );
       
-      // PROCESOS WHATSAPP
       case 'add-process':
         return <ProcessForm userType="admin" />;
       
       case 'view-processes':
         return <ProcessList userType="admin" />;
       
-      // HISTORIAL
       case 'history':
         return <MessageHistory />;
       
       case 'admin-messages':
         return <AdminMessageHistory />;
-        
+      
       case 'admin-access':
         return (
           <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
@@ -205,7 +192,6 @@ const AdminDashboard = () => {
           </Card>
         );
       
-      // USUARIOS
       case 'add-user':
         return <AddUserForm />;
       
@@ -214,8 +200,7 @@ const AdminDashboard = () => {
       
       case 'reload-credits':
         return <ReloadCredits />;
-
-      // CONFIGURACIONES ADMIN
+      
       case 'settings':
         return <InstanceSettings />;
       
@@ -231,7 +216,7 @@ const AdminDashboard = () => {
           </Card>
         );
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
@@ -250,8 +235,7 @@ const AdminDashboard = () => {
           
           <ScrollArea className="flex-1 px-6">
             <nav className="space-y-2 pb-4">
-              {/* Dashboard */}
-              {menuItems.slice(0, 1).map((item) => {
+              {menuItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -261,122 +245,6 @@ const AdminDashboard = () => {
                       activeSection === item.id
                         ? 'bg-blue-600/20 border border-blue-500/30 text-blue-300'
                         : 'text-blue-200/70 hover:bg-blue-600/10 hover:text-blue-300'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <div className="text-left">
-                      <div className="font-medium">{item.label}</div>
-                      <div className="text-xs opacity-70">{item.description}</div>
-                    </div>
-                  </button>
-                );
-              })}
-              
-              {/* Separator for Procesos */}
-              <div className="py-2">
-                <div className="text-blue-300 text-sm font-semibold px-3 py-2 bg-blue-600/10 rounded">
-                  GESTIÓN DE PROCESOS
-                </div>
-              </div>
-              
-              {/* Procesos Section */}
-              {menuItems.slice(1, 3).map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveSection(item.id)}
-                    className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
-                      activeSection === item.id
-                        ? 'bg-blue-600/20 border border-blue-500/30 text-blue-300'
-                        : 'text-blue-200/70 hover:bg-blue-600/10 hover:text-blue-300'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <div className="text-left">
-                      <div className="font-medium">{item.label}</div>
-                      <div className="text-xs opacity-70">{item.description}</div>
-                    </div>
-                  </button>
-                );
-              })}
-              
-              {/* Separator for Historial */}
-              <div className="py-2">
-                <div className="text-blue-300 text-sm font-semibold px-3 py-2 bg-blue-600/10 rounded">
-                  HISTORIAL
-                </div>
-              </div>
-              
-              {/* Historial Section */}
-              {menuItems.slice(3, 6).map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveSection(item.id)}
-                    className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
-                      activeSection === item.id
-                        ? 'bg-blue-600/20 border border-blue-500/30 text-blue-300'
-                        : 'text-blue-200/70 hover:bg-blue-600/10 hover:text-blue-300'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <div className="text-left">
-                      <div className="font-medium">{item.label}</div>
-                      <div className="text-xs opacity-70">{item.description}</div>
-                    </div>
-                  </button>
-                );
-              })}
-              
-              {/* Separator for Usuarios */}
-              <div className="py-2">
-                <div className="text-green-300 text-sm font-semibold px-3 py-2 bg-green-600/10 rounded">
-                  GESTIÓN DE USUARIOS
-                </div>
-              </div>
-              
-              {/* Usuarios Section */}
-              {menuItems.slice(6, 9).map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveSection(item.id)}
-                    className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
-                      activeSection === item.id
-                        ? 'bg-green-600/20 border border-green-500/30 text-green-300'
-                        : 'text-green-200/70 hover:bg-green-600/10 hover:text-green-300'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <div className="text-left">
-                      <div className="font-medium">{item.label}</div>
-                      <div className="text-xs opacity-70">{item.description}</div>
-                    </div>
-                  </button>
-                );
-              })}
-              
-              {/* Separator for Configuraciones Admin */}
-              <div className="py-2">
-                <div className="text-red-300 text-sm font-semibold px-3 py-2 bg-red-600/10 rounded">
-                  CONFIGURACIONES ADMIN
-                </div>
-              </div>
-              
-              {/* Configuraciones Section */}
-              {menuItems.slice(9).map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveSection(item.id)}
-                    className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
-                      activeSection === item.id
-                        ? 'bg-red-600/20 border border-red-500/30 text-red-300'
-                        : 'text-red-200/70 hover:bg-red-600/10 hover:text-red-300'
                     }`}
                   >
                     <Icon className="h-5 w-5" />
