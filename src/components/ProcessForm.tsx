@@ -25,6 +25,7 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
     storage: '',
     imei: '',
     serialNumber: '',
+    url: '',
     contactType: 'whatsapp',
     lostMode: false
   });
@@ -96,6 +97,7 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
         storage: formData.storage,
         imei: formData.imei,
         serial_number: formData.serialNumber,
+        url: formData.url || null,
         contact_type: 'whatsapp',
         lost_mode: formData.lostMode
       };
@@ -127,6 +129,7 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
         storage: '',
         imei: '',
         serialNumber: '',
+        url: '',
         contactType: 'whatsapp',
         lostMode: false
       });
@@ -163,6 +166,7 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
               storage: '',
               imei: '',
               serialNumber: '',
+              url: '',
               contactType: 'whatsapp',
               lostMode: false
             });
@@ -334,6 +338,22 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
                 required
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="url" className="text-blue-300">
+              URL Personalizada (Opcional)
+            </Label>
+            <Input
+              id="url"
+              value={formData.url}
+              onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
+              className="bg-black/30 border-blue-500/30 text-white"
+              placeholder="https://ejemplo.com"
+            />
+            <p className="text-xs text-blue-200/70">
+              Si no se especifica, se usará la URL por defecto del sistema
+            </p>
           </div>
 
           <div className="flex items-center space-x-2">

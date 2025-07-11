@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageCircle, Globe, Globe2 } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
@@ -16,18 +16,12 @@ import MessageHistory from '@/components/MessageHistory';
 import AdminMessageHistory from '@/components/AdminMessageHistory';
 import MobileSidebar from '@/components/MobileSidebar';
 import { supabase } from '@/integrations/supabase/client';
-import DomainManager from '@/components/DomainManager';
-import TelegramBotManager from '@/components/TelegramBotManager';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [activeSection, setActiveSection] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [serverSettings, setServerSettings] = useState({
-    chat_id: '',
-    token: ''
-  });
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeProcesses: 0,
@@ -38,9 +32,6 @@ const AdminDashboard = () => {
   useEffect(() => {
     checkAuth();
     loadStats();
-    if (activeSection === 'server-config-main') {
-      loadServerSettings();
-    }
   }, [activeSection]);
 
   const checkAuth = async () => {
@@ -88,54 +79,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const loadServerSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('*')
-        .in('setting_key', ['server_chat_id', 'server_token']);
-
-      if (error) throw error;
-
-      const settings = data?.reduce((acc: any, setting: any) => {
-        acc[setting.setting_key] = setting.setting_value;
-        return acc;
-      }, {});
-
-      setServerSettings({
-        chat_id: settings?.server_chat_id || '',
-        token: settings?.server_token || ''
-      });
-    } catch (error) {
-      console.error('Error loading server settings:', error);
-    }
-  };
-
-  const saveServerSettings = async () => {
-    try {
-      const settingsToUpdate = [
-        { key: 'server_chat_id', value: serverSettings.chat_id },
-        { key: 'server_token', value: serverSettings.token }
-      ];
-
-      for (const setting of settingsToUpdate) {
-        const { error } = await supabase
-          .from('system_settings')
-          .upsert({
-            setting_key: setting.key,
-            setting_value: setting.value,
-            updated_at: new Date().toISOString()
-          });
-
-        if (error) throw error;
-      }
-
-      console.log('Server settings saved successfully');
-    } catch (error) {
-      console.error('Error saving server settings:', error);
-    }
-  };
-
   const menuItems = [
     { id: 'dashboard', icon: Home, label: 'Dashboard', description: 'Pantalla de inicio' },
     
@@ -152,12 +95,6 @@ const AdminDashboard = () => {
     { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },
     { id: 'manage-users', icon: Users, label: 'Gestionar Usuarios', description: 'Editar, borrar y renovar usuarios' },
     { id: 'reload-credits', icon: CreditCard, label: 'Recargar Créditos', description: 'Recargar créditos a usuarios' },
-    
-    // CONFIGURACIONES DE SERVIDOR
-    { id: 'server-config-main', icon: MessageCircle, label: 'Configurar Bot Telegram', description: 'Chat ID y Token del bot' },
-    { id: 'domains', icon: Globe, label: 'Gestionar Dominios', description: 'Administrar dominios del sistema' },
-    { id: 'subdomains', icon: Globe2, label: 'Gestionar Subdominios', description: 'Administrar subdominios del sistema' },
-    { id: 'telegram-bots', icon: MessageCircle, label: 'Bots de Telegram', description: 'Configurar bots para captura de datos' },
     
     // CONFIGURACIONES ADMIN
     { id: 'settings', icon: Settings, label: 'Configuraciones', description: 'Configurar instancia y token' },
@@ -277,103 +214,6 @@ const AdminDashboard = () => {
       
       case 'reload-credits':
         return <ReloadCredits />;
-      
-      // CONFIGURACIONES DE SERVIDOR
-      case 'server-config-main':
-        return (
-          <div className="space-y-6">
-            {/* Bot Telegram Configuration */}
-            <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-              <CardHeader className="bg-blue-600/20 border-b border-blue-500/20">
-                <CardTitle className="text-blue-300">Bot Telegram</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-blue-300 mb-2">
-                      Chat ID:
-                    </label>
-                    <div className="flex items-center space-x-2">
-                      <div className="bg-blue-600/10 p-2 rounded">
-                        <MessageCircle className="h-4 w-4 text-blue-400" />
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="7219932215"
-                        value={serverSettings.chat_id}
-                        onChange={(e) => setServerSettings({ ...serverSettings, chat_id: e.target.value })}
-                        className="flex-1 p-3 bg-black/30 border border-blue-500/30 rounded-lg text-white placeholder-blue-300/50 focus:outline-none focus:border-blue-400"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-blue-300 mb-2">
-                      Token:
-                    </label>
-                    <div className="flex items-center space-x-2">
-                      <div className="bg-blue-600/10 p-2 rounded">
-                        <MessageCircle className="h-4 w-4 text-blue-400" />
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="7785623280:AAE3v4kmlOZTpJDLCsp_xE5Ka5Yu-B5cQA"
-                        value={serverSettings.token}
-                        onChange={(e) => setServerSettings({ ...serverSettings, token: e.target.value })}
-                        className="flex-1 p-3 bg-black/30 border border-blue-500/30 rounded-lg text-white placeholder-blue-300/50 focus:outline-none focus:border-blue-400"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button 
-                      onClick={saveServerSettings}
-                      className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30"
-                    >
-                      Guardar Configuración
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        );
-        
-      case 'domains':
-        return <DomainManager />;
-        
-      case 'subdomains':
-        return (
-          <Card className="bg-black/20 backdrop-blur-xl border border-orange-500/20">
-            <CardHeader>
-              <CardTitle className="text-orange-300">Gestión de Subdominios</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="bg-blue-600/10 border border-blue-500/20 rounded-lg p-4">
-                  <h3 className="text-blue-300 font-medium mb-2">Información sobre Subdominios</h3>
-                  <p className="text-blue-200/70 text-sm mb-3">
-                    Los subdominios se gestionan automáticamente cuando configuras dominios en la sección "Dominios".
-                    Cada subdominio que agregues estará disponible para tus scripts.
-                  </p>
-                  <p className="text-blue-200/70 text-sm">
-                    <strong>Ejemplo:</strong> Si configuras el subdominio "usuario1" con el dominio "ubicacion-device.co",
-                    tus scripts serán accesibles en: usuario1.ubicacion-device.co
-                  </p>
-                </div>
-                <div className="text-center">
-                  <Button 
-                    onClick={() => setActiveSection('domains')}
-                    className="bg-orange-600/20 hover:bg-orange-600/30 text-orange-300 border border-orange-500/30"
-                  >
-                    Ir a Gestión de Dominios
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        );
-
-      case 'telegram-bots':
-        return <TelegramBotManager />;
 
       // CONFIGURACIONES ADMIN
       case 'settings':
@@ -519,35 +359,6 @@ const AdminDashboard = () => {
                 );
               })}
               
-              {/* Separator for Configuraciones de Servidor */}
-              <div className="py-2">
-                <div className="text-orange-300 text-sm font-semibold px-3 py-2 bg-orange-600/10 rounded">
-                  CONFIGURACIONES DE SERVIDOR
-                </div>
-              </div>
-              
-              {/* Server Config Items */}
-              {menuItems.slice(9, 13).map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveSection(item.id)}
-                    className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
-                      activeSection === item.id
-                        ? 'bg-orange-600/20 border border-orange-500/30 text-orange-300'
-                        : 'text-orange-200/70 hover:bg-orange-600/10 hover:text-orange-300'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <div className="text-left">
-                      <div className="font-medium">{item.label}</div>
-                      <div className="text-xs opacity-70">{item.description}</div>
-                    </div>
-                  </button>
-                );
-              })}
-              
               {/* Separator for Configuraciones Admin */}
               <div className="py-2">
                 <div className="text-red-300 text-sm font-semibold px-3 py-2 bg-red-600/10 rounded">
@@ -556,7 +367,7 @@ const AdminDashboard = () => {
               </div>
               
               {/* Configuraciones Section */}
-              {menuItems.slice(13).map((item) => {
+              {menuItems.slice(9).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
