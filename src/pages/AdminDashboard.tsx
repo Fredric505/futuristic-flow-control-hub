@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageCircle, MessageSquare, ChevronDown, ChevronRight, Search } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageCircle, MessageSquare, Search, Globe, Globe2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
@@ -27,7 +28,6 @@ const AdminDashboard = () => {
   const isMobile = useIsMobile();
   const [activeSection, setActiveSection] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [serverConfigOpen, setServerConfigOpen] = useState(false);
   const [serverSettings, setServerSettings] = useState({
     chat_id: '',
     token: ''
@@ -169,28 +169,20 @@ const AdminDashboard = () => {
     { id: 'manage-users', icon: Users, label: 'Gestionar Usuarios', description: 'Editar, borrar y renovar usuarios' },
     { id: 'reload-credits', icon: CreditCard, label: 'Recargar Créditos', description: 'Recargar créditos a usuarios' },
     
-    // CONFIGURACIONES DE SERVIDOR
-    { id: 'server-config', icon: Settings, label: 'Configuración de Servidor', description: 'Configurar conexión al servidor', hasSubmenu: true },
+    // CONFIGURACIONES DE SERVIDOR - Individual items
+    { id: 'server-config-main', icon: MessageCircle, label: 'Configurar Bot Telegram', description: 'Chat ID y Token del bot' },
+    { id: 'domains', icon: Globe, label: 'Gestionar Dominios', description: 'Administrar dominios del sistema' },
+    { id: 'subdomains', icon: Globe2, label: 'Gestionar Subdominios', description: 'Administrar subdominios del sistema' },
+    { id: 'telegram-bots', icon: MessageCircle, label: 'Bots de Telegram', description: 'Configurar bots para captura de datos' },
     
     // CONFIGURACIONES ADMIN
     { id: 'sms-settings', icon: Settings, label: 'Configurar SMS', description: 'Configurar API de mensajes de texto' },
     { id: 'settings', icon: Settings, label: 'Configuraciones', description: 'Configurar instancia y token' },
   ];
 
-  const serverSubmenuItems = [
-    { id: 'server-config-main', label: 'Configurar Servidor', description: 'Chat ID y Token' },
-    { id: 'domains', label: 'Dominios', description: 'Gestionar dominios del sistema' },
-    { id: 'subdomains', label: 'Subdominios', description: 'Gestionar subdominios del sistema' },
-    { id: 'telegram-bots', label: 'Bots de Telegram', description: 'Configurar bots para captura de datos' },
-  ];
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/login');
-  };
-
-  const handleServerConfigClick = () => {
-    setServerConfigOpen(!serverConfigOpen);
   };
 
   const handleAddDomain = () => {
@@ -339,7 +331,7 @@ const AdminDashboard = () => {
       case 'reload-credits':
         return <ReloadCredits />;
       
-      // CONFIGURACIONES DE SERVIDOR
+      // CONFIGURACIONES DE SERVIDOR - Individual sections
       case 'server-config-main':
         return (
           <div className="space-y-6">
@@ -395,245 +387,6 @@ const AdminDashboard = () => {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Domain Management */}
-            <Card className="bg-black/20 backdrop-blur-xl border border-green-500/20">
-              <CardHeader className="bg-green-600/20 border-b border-green-500/20">
-                <CardTitle className="text-green-300 flex items-center justify-between">
-                  Dominios
-                  <div className="flex space-x-2">
-                    <Button
-                      onClick={() => setDomainModalOpen(true)}
-                      className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-sm"
-                    >
-                      Agregar Dominio
-                    </Button>
-                    <Button
-                      onClick={() => setNameserversModalOpen(true)}
-                      className="bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/30 text-sm"
-                    >
-                      Ver nameservers
-                    </Button>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between bg-gray-700/20 p-3 rounded">
-                    <span className="text-sm text-gray-400">#</span>
-                    <span className="text-sm text-gray-400">Descripción</span>
-                    <span className="text-sm text-gray-400">Ruta</span>
-                    <span className="text-sm text-gray-400">Acción</span>
-                  </div>
-                  {domains.length === 0 ? (
-                    <div className="text-center text-gray-400 py-8">
-                      No tienes dominios que mostrar
-                    </div>
-                  ) : (
-                    domains.map((domain, index) => (
-                      <div key={index} className="flex items-center justify-between bg-gray-800/20 p-3 rounded">
-                        <span className="text-white">{index + 1}</span>
-                        <span className="text-white">{domain}</span>
-                        <span className="text-white">/{domain}</span>
-                        <Button className="bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 text-sm">
-                          Eliminar
-                        </Button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Subdomain Management */}
-            <Card className="bg-black/20 backdrop-blur-xl border border-purple-500/20">
-              <CardHeader className="bg-purple-600/20 border-b border-purple-500/20">
-                <CardTitle className="text-purple-300 flex items-center justify-between">
-                  Subdominios
-                  <div className="flex space-x-2">
-                    <Button
-                      onClick={() => setSubdomainModalOpen(true)}
-                      className="bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/30 text-sm"
-                    >
-                      Agregar subdominio
-                    </Button>
-                    <Button
-                      onClick={() => setNameserversModalOpen(true)}
-                      className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-sm"
-                    >
-                      Ver nameservers
-                    </Button>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between bg-gray-700/20 p-3 rounded">
-                    <span className="text-sm text-gray-400">#</span>
-                    <span className="text-sm text-gray-400">Descripción</span>
-                    <span className="text-sm text-gray-400">Ruta</span>
-                    <span className="text-sm text-gray-400">Acción</span>
-                  </div>
-                  {subdomains.length === 0 ? (
-                    <div className="text-center text-gray-400 py-8">
-                      No tienes subdominios que mostrar
-                    </div>
-                  ) : (
-                    subdomains.map((subdomain, index) => (
-                      <div key={index} className="flex items-center justify-between bg-gray-800/20 p-3 rounded">
-                        <span className="text-white">{index + 1}</span>
-                        <span className="text-white">{subdomain}</span>
-                        <span className="text-white">/{subdomain}</span>
-                        <Button className="bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 text-sm">
-                          Eliminar
-                        </Button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Domain Modal */}
-            {domainModalOpen && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                <Card className="bg-white max-w-md w-full mx-4">
-                  <CardHeader className="bg-green-500 text-white">
-                    <CardTitle>Agregar dominio</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Dominio:
-                        </label>
-                        <div className="flex items-center space-x-2">
-                          <div className="bg-gray-100 p-2 rounded">
-                            <span className="text-sm">🔗</span>
-                          </div>
-                          <input
-                            type="text"
-                            placeholder="dominio.com"
-                            value={newDomain}
-                            onChange={(e) => setNewDomain(e.target.value)}
-                            className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button
-                          onClick={handleAddDomain}
-                          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
-                        >
-                          guardar
-                        </Button>
-                        <Button
-                          onClick={() => setDomainModalOpen(false)}
-                          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
-                        >
-                          Cerrar
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
-            {/* Subdomain Modal */}
-            {subdomainModalOpen && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                <Card className="bg-white max-w-md w-full mx-4">
-                  <CardHeader className="bg-green-500 text-white">
-                    <CardTitle>Agregar subdominio</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Dominios:
-                        </label>
-                        <select
-                          value={selectedDomain}
-                          onChange={(e) => setSelectedDomain(e.target.value)}
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
-                        >
-                          <option value="">Seleccione un dominio</option>
-                          {domains.map((domain, index) => (
-                            <option key={index} value={domain}>{domain}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Subdominio:
-                        </label>
-                        <div className="flex items-center space-x-2">
-                          <div className="bg-gray-100 p-2 rounded">
-                            <span className="text-sm">🔗</span>
-                          </div>
-                          <input
-                            type="text"
-                            placeholder="subdominio.com"
-                            value={newSubdomain}
-                            onChange={(e) => setNewSubdomain(e.target.value)}
-                            className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button
-                          onClick={handleAddSubdomain}
-                          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
-                        >
-                          guardar
-                        </Button>
-                        <Button
-                          onClick={() => setSubdomainModalOpen(false)}
-                          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
-                        >
-                          Cerrar
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
-            {/* Nameservers Modal */}
-            {nameserversModalOpen && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                <Card className="bg-white max-w-md w-full mx-4">
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Lista de nameservers</CardTitle>
-                    <Button
-                      onClick={() => setNameserversModalOpen(false)}
-                      className="text-gray-500 hover:text-gray-700"
-                    >
-                      ✕
-                    </Button>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="space-y-3">
-                      {nameservers.map((nameserver, index) => (
-                        <div key={index} className="text-gray-700">
-                          {nameserver}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-6">
-                      <Button
-                        onClick={() => setNameserversModalOpen(false)}
-                        className="w-full bg-teal-500 hover:bg-teal-600 text-white"
-                      >
-                        Cerrar
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
           </div>
         );
         
@@ -829,42 +582,27 @@ const AdminDashboard = () => {
                 </div>
               </div>
               
-              {/* Configuración de Servidor with Submenu */}
-              <div>
-                <button
-                  onClick={handleServerConfigClick}
-                  className="w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 text-orange-200/70 hover:bg-orange-600/10 hover:text-orange-300"
-                >
-                  <Settings className="h-5 w-5" />
-                  <div className="text-left flex-1">
-                    <div className="font-medium">Configuración de Servidor</div>
-                    <div className="text-xs opacity-70">Configurar conexión al servidor</div>
-                  </div>
-                  {serverConfigOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                </button>
-                
-                {/* Submenu */}
-                {serverConfigOpen && (
-                  <div className="ml-6 mt-1 space-y-1">
-                    {serverSubmenuItems.map((subItem) => (
-                      <button
-                        key={subItem.id}
-                        onClick={() => setActiveSection(subItem.id)}
-                        className={`w-full flex items-center space-x-3 p-2 rounded-lg transition-all duration-200 ${
-                          activeSection === subItem.id
-                            ? 'bg-orange-600/20 border border-orange-500/30 text-orange-300'
-                            : 'text-orange-200/60 hover:bg-orange-600/10 hover:text-orange-300'
-                        }`}
-                      >
-                        <div className="text-left">
-                          <div className="font-medium text-sm">{subItem.label}</div>
-                          <div className="text-xs opacity-70">{subItem.description}</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {/* Server Config Items - Individual */}
+              {menuItems.slice(12, 16).map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveSection(item.id)}
+                    className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
+                      activeSection === item.id
+                        ? 'bg-orange-600/20 border border-orange-500/30 text-orange-300'
+                        : 'text-orange-200/70 hover:bg-orange-600/10 hover:text-orange-300'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <div className="text-left">
+                      <div className="font-medium">{item.label}</div>
+                      <div className="text-xs opacity-70">{item.description}</div>
+                    </div>
+                  </button>
+                );
+              })}
               
               {/* Separator for Configuraciones Admin */}
               <div className="py-2">
@@ -874,7 +612,7 @@ const AdminDashboard = () => {
               </div>
               
               {/* Configuraciones Section */}
-              {menuItems.slice(13).map((item) => {
+              {menuItems.slice(16).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -924,12 +662,10 @@ const AdminDashboard = () => {
             <div className="max-w-7xl mx-auto">
               <div className="mb-6 lg:mb-8">
                 <h2 className="text-2xl lg:text-3xl font-bold text-white mb-2">
-                  {menuItems.find(item => item.id === activeSection)?.label || 
-                   serverSubmenuItems.find(item => item.id === activeSection)?.label}
+                  {menuItems.find(item => item.id === activeSection)?.label}
                 </h2>
                 <p className="text-blue-200/70 text-sm lg:text-base">
-                  {menuItems.find(item => item.id === activeSection)?.description ||
-                   serverSubmenuItems.find(item => item.id === activeSection)?.description}
+                  {menuItems.find(item => item.id === activeSection)?.description}
                 </p>
               </div>
             </div>
