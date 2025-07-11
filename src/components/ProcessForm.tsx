@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import CustomSelect from './CustomSelect';
+import CustomSelect, { CustomSelectItem } from './CustomSelect';
 import { countryCodes } from '@/utils/countryCodes';
 import ProcessUrlDisplay from './ProcessUrlDisplay';
 
@@ -233,12 +232,14 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
               <CustomSelect
                 value={formData.countryCode}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, countryCode: value }))}
-                options={countryCodes.map(country => ({
-                  value: country.code,
-                  label: `${country.code} ${country.country}`
-                }))}
                 placeholder="Seleccionar código"
-              />
+              >
+                {countryCodes.map((country) => (
+                  <CustomSelectItem key={country.code} value={country.code}>
+                    {country.code} {country.country}
+                  </CustomSelectItem>
+                ))}
+              </CustomSelect>
             </div>
 
             <div className="md:col-span-2">
@@ -262,9 +263,14 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
               <CustomSelect
                 value={formData.iphoneModel}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, iphoneModel: value }))}
-                options={iphoneModels.map(model => ({ value: model, label: model }))}
                 placeholder="Seleccionar modelo"
-              />
+              >
+                {iphoneModels.map((model) => (
+                  <CustomSelectItem key={model} value={model}>
+                    {model}
+                  </CustomSelectItem>
+                ))}
+              </CustomSelect>
             </div>
 
             <div>
@@ -272,9 +278,14 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
               <CustomSelect
                 value={formData.color}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, color: value }))}
-                options={colors.map(color => ({ value: color, label: color }))}
                 placeholder="Seleccionar color"
-              />
+              >
+                {colors.map((color) => (
+                  <CustomSelectItem key={color} value={color}>
+                    {color}
+                  </CustomSelectItem>
+                ))}
+              </CustomSelect>
             </div>
           </div>
 
@@ -284,9 +295,14 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
               <CustomSelect
                 value={formData.storage}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, storage: value }))}
-                options={storageOptions.map(storage => ({ value: storage, label: storage }))}
                 placeholder="Seleccionar almacenamiento"
-              />
+              >
+                {storageOptions.map((storage) => (
+                  <CustomSelectItem key={storage} value={storage}>
+                    {storage}
+                  </CustomSelectItem>
+                ))}
+              </CustomSelect>
             </div>
 
             <div>
@@ -294,9 +310,14 @@ const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
               <CustomSelect
                 value={formData.contactType}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, contactType: value }))}
-                options={contactTypes}
                 placeholder="Seleccionar tipo"
-              />
+              >
+                {contactTypes.map((type) => (
+                  <CustomSelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </CustomSelectItem>
+                ))}
+              </CustomSelect>
             </div>
           </div>
 
