@@ -343,7 +343,7 @@ const AdminDashboard = () => {
       case 'server-config-main':
         return (
           <div className="space-y-6">
-            {/* Configuraciones de servidor - Chat ID y Token */}
+            {/* Bot Telegram Configuration */}
             <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
               <CardHeader className="bg-blue-600/20 border-b border-blue-500/20">
                 <CardTitle className="text-blue-300">Bot Telegram</CardTitle>
@@ -396,7 +396,7 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Gestión de Dominios */}
+            {/* Domain Management */}
             <Card className="bg-black/20 backdrop-blur-xl border border-green-500/20">
               <CardHeader className="bg-green-600/20 border-b border-green-500/20">
                 <CardTitle className="text-green-300 flex items-center justify-between">
@@ -445,7 +445,7 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Gestión de Subdominios */}
+            {/* Subdomain Management */}
             <Card className="bg-black/20 backdrop-blur-xl border border-purple-500/20">
               <CardHeader className="bg-purple-600/20 border-b border-purple-500/20">
                 <CardTitle className="text-purple-300 flex items-center justify-between">
@@ -494,7 +494,7 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Modal para agregar dominio */}
+            {/* Domain Modal */}
             {domainModalOpen && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                 <Card className="bg-white max-w-md w-full mx-4">
@@ -540,7 +540,7 @@ const AdminDashboard = () => {
               </div>
             )}
 
-            {/* Modal para agregar subdominio */}
+            {/* Subdomain Modal */}
             {subdomainModalOpen && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                 <Card className="bg-white max-w-md w-full mx-4">
@@ -601,7 +601,7 @@ const AdminDashboard = () => {
               </div>
             )}
 
-            {/* Modal para ver nameservers */}
+            {/* Nameservers Modal */}
             {nameserversModalOpen && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                 <Card className="bg-white max-w-md w-full mx-4">
