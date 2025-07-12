@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      imei_checks: {
+        Row: {
+          activation_lock: boolean | null
+          blacklist_status: string | null
+          carrier: string | null
+          color: string | null
+          created_at: string
+          credits_deducted: number
+          device_name: string | null
+          error_message: string | null
+          find_my_iphone: boolean | null
+          id: string
+          model: string | null
+          search_type: string
+          search_value: string
+          serial_number: string | null
+          status: string
+          storage: string | null
+          user_id: string
+          warranty: string | null
+        }
+        Insert: {
+          activation_lock?: boolean | null
+          blacklist_status?: string | null
+          carrier?: string | null
+          color?: string | null
+          created_at?: string
+          credits_deducted?: number
+          device_name?: string | null
+          error_message?: string | null
+          find_my_iphone?: boolean | null
+          id?: string
+          model?: string | null
+          search_type: string
+          search_value: string
+          serial_number?: string | null
+          status?: string
+          storage?: string | null
+          user_id: string
+          warranty?: string | null
+        }
+        Update: {
+          activation_lock?: boolean | null
+          blacklist_status?: string | null
+          carrier?: string | null
+          color?: string | null
+          created_at?: string
+          credits_deducted?: number
+          device_name?: string | null
+          error_message?: string | null
+          find_my_iphone?: boolean | null
+          id?: string
+          model?: string | null
+          search_type?: string
+          search_value?: string
+          serial_number?: string | null
+          status?: string
+          storage?: string | null
+          user_id?: string
+          warranty?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           id: string

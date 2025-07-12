@@ -61,53 +61,96 @@ serve(async (req) => {
     const searchParam = imei ? imei : serial
     const searchType = imei ? 'imei' : 'serial'
 
-    // Call iFreeCloud API
-    const response = await fetch(`${apiUrl}/api/check`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        username: username,
-        [searchType]: searchParam
+    let result;
+    let apiSuccess = false;
+
+    try {
+      // Call iFreeCloud API
+      const response = await fetch(`${apiUrl}/api/check`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          username: username,
+          [searchType]: searchParam
+        })
       })
-    })
 
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`)
-    }
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`)
+      }
 
-    const data = await response.json()
+      const data = await response.json()
+      apiSuccess = true
 
-    // Deduct credits after successful API call
-    const { error: creditError } = await supabase
-      .from('profiles')
-      .update({ 
-        credits: profile.credits - 0.25,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', user.id)
+      // Format the response data
+      result = {
+        device_name: data.device_name || 'N/A',
+        model: data.model || 'N/A',
+        color: data.color || 'N/A',
+        storage: data.storage || 'N/A',
+        carrier: data.carrier || 'N/A',
+        warranty: data.warranty || 'N/A',
+        find_my_iphone: data.find_my_iphone || false,
+        activation_lock: data.activation_lock || false,
+        blacklist_status: data.blacklist_status || 'Unknown',
+        serial_number: data.serial_number || 'N/A',
+        credits_deducted: 0.25,
+        remaining_credits: profile.credits - 0.25
+      }
 
-    if (creditError) {
-      console.error('Error deducting credits:', creditError)
-      // Note: We don't throw here to avoid failing the response after successful API call
-    }
+      // Deduct credits after successful API call
+      const { error: creditError } = await supabase
+        .from('profiles')
+        .update({ 
+          credits: profile.credits - 0.25,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id)
 
-    // Format the response data
-    const result = {
-      device_name: data.device_name || 'N/A',
-      model: data.model || 'N/A',
-      color: data.color || 'N/A',
-      storage: data.storage || 'N/A',
-      carrier: data.carrier || 'N/A',
-      warranty: data.warranty || 'N/A',
-      find_my_iphone: data.find_my_iphone || false,
-      activation_lock: data.activation_lock || false,
-      blacklist_status: data.blacklist_status || 'Unknown',
-      serial_number: data.serial_number || 'N/A',
-      credits_deducted: 0.25,
-      remaining_credits: profile.credits - 0.25
+      if (creditError) {
+        console.error('Error deducting credits:', creditError)
+      }
+
+      // Save successful check to history
+      await supabase
+        .from('imei_checks')
+        .insert({
+          user_id: user.id,
+          search_type: searchType,
+          search_value: searchParam,
+          device_name: result.device_name,
+          model: result.model,
+          color: result.color,
+          storage: result.storage,
+          carrier: result.carrier,
+          warranty: result.warranty,
+          find_my_iphone: result.find_my_iphone,
+          activation_lock: result.activation_lock,
+          blacklist_status: result.blacklist_status,
+          serial_number: result.serial_number,
+          credits_deducted: 0.25,
+          status: 'success'
+        })
+
+    } catch (apiError) {
+      console.error('API Error:', apiError)
+      
+      // Save failed check to history
+      await supabase
+        .from('imei_checks')
+        .insert({
+          user_id: user.id,
+          search_type: searchType,
+          search_value: searchParam,
+          credits_deducted: 0,
+          status: 'failed',
+          error_message: apiError.message
+        })
+
+      throw apiError
     }
 
     return new Response(
