@@ -16,7 +16,6 @@ import AdminMessageHistory from '@/components/AdminMessageHistory';
 import IMEIChecker from '@/components/IMEIChecker';
 import IFreeCloudSettings from '@/components/IFreeCloudSettings';
 import MobileSidebar from '@/components/MobileSidebar';
-import IMEICheckHistory from '@/components/IMEICheckHistory';
 import { supabase } from '@/integrations/supabase/client';
 
 const AdminDashboard = () => {
@@ -88,7 +87,6 @@ const AdminDashboard = () => {
     { id: 'history', icon: History, label: 'Historial', description: 'Mi historial de mensajes enviados' },
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
     { id: 'imei-checker', icon: Smartphone, label: 'Verificador IMEI', description: 'Verificar estado de dispositivos Apple' },
-    { id: 'imei-history', icon: History, label: 'Historial IMEI', description: 'Ver historial de verificaciones IMEI' },
     { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Solo es texto' },
     { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },
     { id: 'manage-users', icon: Users, label: 'Gestionar Usuarios', description: 'Editar, borrar y renovar usuarios' },
@@ -184,9 +182,6 @@ const AdminDashboard = () => {
       
       case 'imei-checker':
         return <IMEIChecker />;
-      
-      case 'imei-history':
-        return <IMEICheckHistory />;
       
       case 'admin-access':
         return (
