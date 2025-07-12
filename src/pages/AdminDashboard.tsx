@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, Smartphone, Wifi } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
@@ -13,8 +13,6 @@ import ReloadCredits from '@/components/ReloadCredits';
 import InstanceSettings from '@/components/InstanceSettings';
 import MessageHistory from '@/components/MessageHistory';
 import AdminMessageHistory from '@/components/AdminMessageHistory';
-import IMEIChecker from '@/components/IMEIChecker';
-import IFreeCloudSettings from '@/components/IFreeCloudSettings';
 import MobileSidebar from '@/components/MobileSidebar';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -86,13 +84,11 @@ const AdminDashboard = () => {
     { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Mis procesos guardados y listos para enviar' },
     { id: 'history', icon: History, label: 'Historial', description: 'Mi historial de mensajes enviados' },
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
-    { id: 'imei-checker', icon: Smartphone, label: 'Verificador IMEI', description: 'Verificar estado de dispositivos Apple' },
     { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Solo es texto' },
     { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },
     { id: 'manage-users', icon: Users, label: 'Gestionar Usuarios', description: 'Editar, borrar y renovar usuarios' },
     { id: 'reload-credits', icon: CreditCard, label: 'Recargar Créditos', description: 'Recargar créditos a usuarios' },
     { id: 'settings', icon: Settings, label: 'Configuraciones', description: 'Configurar instancia y token' },
-    { id: 'ifreicloud-settings', icon: Wifi, label: 'API iFreeCloud', description: 'Configurar API de iFreeCloud' },
   ];
 
   const handleLogout = async () => {
@@ -180,9 +176,6 @@ const AdminDashboard = () => {
       case 'admin-messages':
         return <AdminMessageHistory />;
       
-      case 'imei-checker':
-        return <IMEIChecker />;
-      
       case 'admin-access':
         return (
           <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
@@ -210,9 +203,6 @@ const AdminDashboard = () => {
       
       case 'settings':
         return <InstanceSettings />;
-      
-      case 'ifreicloud-settings':
-        return <IFreeCloudSettings />;
       
       default:
         return (
