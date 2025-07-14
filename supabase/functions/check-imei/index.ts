@@ -78,40 +78,53 @@ serve(async (req) => {
 
     let checkResult: any = {}
     let success = false
+    let errorMessage = ''
 
     try {
       // Call iFreeCloud API
-      const serviceId = searchType === 'imei' ? '205' : '205' // All-in-one service
+      const serviceId = '205' // All-in-one service
       const apiUrl = `https://ifreecloud.com/api/v2/imei-check/${searchValue}?username=${username}&key=${apiKey}&service=${serviceId}`
       
       console.log('Calling iFreeCloud API:', apiUrl)
       
-      const response = await fetch(apiUrl)
-      const data = await response.json()
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Astro505-API/1.0'
+        }
+      })
       
-      console.log('iFreeCloud API response:', data)
+      const data = await response.json()
+      console.log('iFreeCloud API response:', { status: response.status, data })
 
-      if (response.ok && (data.success || data.result)) {
+      if (response.ok && (data.success === true || data.result === true || data.status === 'success')) {
         success = true
+        
+        // Extract data from various possible response formats
+        const resultData = data.data || data.result || data
+        
         checkResult = {
-          device_name: data.data?.device_name || data.device_name || null,
-          model: data.data?.model || data.model || null,
-          color: data.data?.color || data.color || null,
-          storage: data.data?.storage || data.storage || null,
-          carrier: data.data?.carrier || data.carrier || null,
-          warranty: data.data?.warranty || data.warranty || null,
-          find_my_iphone: data.data?.find_my_iphone || data.find_my_iphone || false,
-          activation_lock: data.data?.activation_lock || data.activation_lock || false,
-          blacklist_status: data.data?.blacklist_status || data.blacklist_status || null,
-          serial_number: data.data?.serial_number || data.serial_number || null
+          device_name: resultData?.device_name || resultData?.deviceName || null,
+          model: resultData?.model || null,
+          color: resultData?.color || null,
+          storage: resultData?.storage || null,
+          carrier: resultData?.carrier || resultData?.network || null,
+          warranty: resultData?.warranty || resultData?.warrantyStatus || null,
+          find_my_iphone: resultData?.find_my_iphone || resultData?.findMyIphone || false,
+          activation_lock: resultData?.activation_lock || resultData?.activationLock || false,
+          blacklist_status: resultData?.blacklist_status || resultData?.blacklistStatus || null,
+          serial_number: resultData?.serial_number || resultData?.serialNumber || null
         }
       } else {
-        throw new Error(data.message || data.error || 'API request failed')
+        errorMessage = data.message || data.error || `HTTP ${response.status}: ${response.statusText}`
+        throw new Error(errorMessage)
       }
     } catch (apiError: any) {
       console.error('iFreeCloud API Error:', apiError)
+      errorMessage = apiError.message || 'Failed to connect to iFreeCloud API'
       
-      // Record failed check
+      // Record failed check in database
       await supabase
         .from('imei_checks')
         .insert({
@@ -119,11 +132,11 @@ serve(async (req) => {
           search_type: searchType,
           search_value: searchValue,
           status: 'error',
-          error_message: apiError.message || 'API connection failed',
+          error_message: errorMessage,
           credits_deducted: 0 // Don't charge for failed requests
         })
 
-      throw new Error(`API Error: ${apiError.message || 'Failed to connect to iFreeCloud API'}`)
+      throw new Error(`API Error: ${errorMessage}`)
     }
 
     if (success) {

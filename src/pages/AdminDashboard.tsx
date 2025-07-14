@@ -11,6 +11,8 @@ import AddUserForm from '@/components/AddUserForm';
 import ManageUsers from '@/components/ManageUsers';
 import ReloadCredits from '@/components/ReloadCredits';
 import InstanceSettings from '@/components/InstanceSettings';
+import WhatsAppSettings from '@/components/WhatsAppSettings';
+import IFreeCloudSettings from '@/components/IFreeCloudSettings';
 import MessageHistory from '@/components/MessageHistory';
 import AdminMessageHistory from '@/components/AdminMessageHistory';
 import IMEIChecker from '@/components/IMEIChecker';
@@ -92,7 +94,8 @@ const AdminDashboard = () => {
     { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },
     { id: 'manage-users', icon: Users, label: 'Gestionar Usuarios', description: 'Editar, borrar y renovar usuarios' },
     { id: 'reload-credits', icon: CreditCard, label: 'Recargar Créditos', description: 'Recargar créditos a usuarios' },
-    { id: 'settings', icon: Settings, label: 'Configuraciones', description: 'Configurar instancia, token y API iFreeCloud' },
+    { id: 'settings', icon: Settings, label: 'Config. WhatsApp', description: 'Configurar instancia y token de WhatsApp' },
+    { id: 'ifree-settings', icon: Settings, label: 'Config. iFreeCloud', description: 'Configurar API de iFreeCloud para verificaciones IMEI' },
   ];
 
   const handleLogout = async () => {
@@ -212,7 +215,10 @@ const AdminDashboard = () => {
         return <ReloadCredits />;
       
       case 'settings':
-        return <InstanceSettings />;
+        return <WhatsAppSettings />;
+      
+      case 'ifree-settings':
+        return <IFreeCloudSettings />;
       
       default:
         return (
