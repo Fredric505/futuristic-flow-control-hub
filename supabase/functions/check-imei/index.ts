@@ -81,47 +81,76 @@ serve(async (req) => {
     let errorMessage = ''
 
     try {
-      // Call iFreeCloud API
+      // Call iFreeCloud API with proper CORS handling
       const serviceId = '205' // All-in-one service
-      const apiUrl = `https://ifreecloud.com/api/v2/imei-check/${searchValue}?username=${username}&key=${apiKey}&service=${serviceId}`
       
-      console.log('Calling iFreeCloud API:', apiUrl)
+      // Use the correct iFreeCloud API endpoint and format
+      const apiUrl = `https://api.ifreeicloud.co.uk/api/v2/imei-check`
+      
+      console.log('Calling iFreeCloud API with:', { username, serviceId, searchValue, searchType })
+      
+      const requestBody = {
+        username: username,
+        key: apiKey,
+        service: serviceId,
+        imei: searchValue
+      }
       
       const response = await fetch(apiUrl, {
-        method: 'GET',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'User-Agent': 'Astro505-API/1.0'
-        }
+        },
+        body: JSON.stringify(requestBody)
       })
       
       const data = await response.json()
-      console.log('iFreeCloud API response:', { status: response.status, data })
+      console.log('iFreeCloud API response:', { 
+        status: response.status, 
+        statusText: response.statusText,
+        data: data
+      })
 
-      if (response.ok && (data.success === true || data.result === true || data.status === 'success')) {
-        success = true
-        
-        // Extract data from various possible response formats
-        const resultData = data.data || data.result || data
-        
-        checkResult = {
-          device_name: resultData?.device_name || resultData?.deviceName || null,
-          model: resultData?.model || null,
-          color: resultData?.color || null,
-          storage: resultData?.storage || null,
-          carrier: resultData?.carrier || resultData?.network || null,
-          warranty: resultData?.warranty || resultData?.warrantyStatus || null,
-          find_my_iphone: resultData?.find_my_iphone || resultData?.findMyIphone || false,
-          activation_lock: resultData?.activation_lock || resultData?.activationLock || false,
-          blacklist_status: resultData?.blacklist_status || resultData?.blacklistStatus || null,
-          serial_number: resultData?.serial_number || resultData?.serialNumber || null
+      // Check for successful response
+      if (response.ok && data) {
+        // Handle different response structures from iFreeCloud
+        if (data.success === true || data.status === 'success' || data.result) {
+          success = true
+          
+          // Extract data from response
+          const resultData = data.data || data.result || data.response || data
+          
+          checkResult = {
+            device_name: resultData?.device_name || resultData?.deviceName || resultData?.model || null,
+            model: resultData?.model || resultData?.device_model || null,
+            color: resultData?.color || resultData?.device_color || null,
+            storage: resultData?.storage || resultData?.device_storage || null,
+            carrier: resultData?.carrier || resultData?.network || resultData?.sim_lock || null,
+            warranty: resultData?.warranty || resultData?.warranty_status || null,
+            find_my_iphone: resultData?.find_my_iphone || resultData?.findMyIphone || resultData?.fmi_status === 'ON',
+            activation_lock: resultData?.activation_lock || resultData?.activationLock || resultData?.icloud_status === 'ON',
+            blacklist_status: resultData?.blacklist_status || resultData?.blacklistStatus || resultData?.blacklist || null,
+            serial_number: resultData?.serial_number || resultData?.serialNumber || resultData?.serial || null
+          }
+        } else {
+          // API returned error
+          errorMessage = data.message || data.error || data.msg || 'Error en la verificación'
+          throw new Error(errorMessage)
         }
       } else {
-        errorMessage = data.message || data.error || `HTTP ${response.status}: ${response.statusText}`
+        // HTTP error
+        errorMessage = data?.message || data?.error || `HTTP Error: ${response.status} ${response.statusText}`
         throw new Error(errorMessage)
       }
     } catch (apiError: any) {
-      console.error('iFreeCloud API Error:', apiError)
+      console.error('iFreeCloud API Error details:', {
+        error: apiError,
+        message: apiError.message,
+        stack: apiError.stack
+      })
+      
       errorMessage = apiError.message || 'Failed to connect to iFreeCloud API'
       
       // Record failed check in database
