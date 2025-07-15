@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -21,7 +22,17 @@ serve(async (req) => {
     // Get user from authorization header
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      throw new Error('No authorization header')
+      console.log('No authorization header provided')
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'No authorization header'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401,
+        }
+      )
     }
 
     const { data: { user }, error: authError } = await supabase.auth.getUser(
@@ -29,15 +40,37 @@ serve(async (req) => {
     )
 
     if (authError || !user) {
-      throw new Error('Unauthorized')
+      console.log('Auth error:', authError)
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Unauthorized'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401,
+        }
+      )
     }
 
     // Get request body
     const { searchValue, searchType } = await req.json()
 
     if (!searchValue || !searchType) {
-      throw new Error('Missing required fields: searchValue and searchType')
+      console.log('Missing required fields')
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Missing required fields: searchValue and searchType'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      )
     }
+
+    console.log('Processing IMEI check for user:', user.id, 'IMEI:', searchValue)
 
     // Check user credits
     const { data: profile, error: profileError } = await supabase
@@ -47,11 +80,31 @@ serve(async (req) => {
       .single()
 
     if (profileError) {
-      throw new Error('Error checking user credits')
+      console.log('Profile error:', profileError)
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Error checking user credits'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      )
     }
 
     if ((profile?.credits || 0) < 0.25) {
-      throw new Error('Insufficient credits')
+      console.log('Insufficient credits:', profile?.credits)
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Insufficient credits'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      )
     }
 
     // Get iFreeCloud credentials
@@ -61,7 +114,17 @@ serve(async (req) => {
       .in('setting_key', ['ifree_username', 'ifree_key'])
 
     if (settingsError) {
-      throw new Error('Error loading API settings')
+      console.log('Settings error:', settingsError)
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Error loading API settings'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      )
     }
 
     const config = settings?.reduce((acc: any, setting: any) => {
@@ -73,7 +136,17 @@ serve(async (req) => {
     const apiKey = config?.ifree_key
 
     if (!username || !apiKey) {
-      throw new Error('iFreeCloud API credentials not configured')
+      console.log('Missing iFreeCloud credentials')
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'iFreeCloud API credentials not configured'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      )
     }
 
     let checkResult: any = {}
@@ -81,13 +154,11 @@ serve(async (req) => {
     let errorMessage = ''
 
     try {
-      // Call iFreeCloud API with proper CORS handling
+      // Call iFreeCloud API
       const serviceId = '205' // All-in-one service
-      
-      // Use the correct iFreeCloud API endpoint and format
       const apiUrl = `https://api.ifreeicloud.co.uk/api/v2/imei-check`
       
-      console.log('Calling iFreeCloud API with:', { username, serviceId, searchValue, searchType })
+      console.log('Calling iFreeCloud API with username:', username, 'service:', serviceId, 'imei:', searchValue)
       
       const requestBody = {
         username: username,
@@ -107,15 +178,11 @@ serve(async (req) => {
       })
       
       const data = await response.json()
-      console.log('iFreeCloud API response:', { 
-        status: response.status, 
-        statusText: response.statusText,
-        data: data
-      })
+      console.log('iFreeCloud API response status:', response.status)
+      console.log('iFreeCloud API response data:', JSON.stringify(data, null, 2))
 
-      // Check for successful response
+      // Handle different response structures from iFreeCloud
       if (response.ok && data) {
-        // Handle different response structures from iFreeCloud
         if (data.success === true || data.status === 'success' || data.result) {
           success = true
           
@@ -134,22 +201,44 @@ serve(async (req) => {
             blacklist_status: resultData?.blacklist_status || resultData?.blacklistStatus || resultData?.blacklist || null,
             serial_number: resultData?.serial_number || resultData?.serialNumber || resultData?.serial || null
           }
+          
+          console.log('Processed result:', checkResult)
         } else {
-          // API returned error
+          // API returned error but with 200 status
           errorMessage = data.message || data.error || data.msg || 'Error en la verificación'
-          throw new Error(errorMessage)
+          console.log('API error with 200 status:', errorMessage)
+          
+          // Don't throw error, just record failed check without charging
+          await supabase
+            .from('imei_checks')
+            .insert({
+              user_id: user.id,
+              search_type: searchType,
+              search_value: searchValue,
+              status: 'error',
+              error_message: errorMessage,
+              credits_deducted: 0
+            })
+
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: errorMessage
+            }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 400,
+            }
+          )
         }
       } else {
         // HTTP error
         errorMessage = data?.message || data?.error || `HTTP Error: ${response.status} ${response.statusText}`
+        console.log('HTTP error:', errorMessage)
         throw new Error(errorMessage)
       }
     } catch (apiError: any) {
-      console.error('iFreeCloud API Error details:', {
-        error: apiError,
-        message: apiError.message,
-        stack: apiError.stack
-      })
+      console.error('iFreeCloud API Error:', apiError.message)
       
       errorMessage = apiError.message || 'Failed to connect to iFreeCloud API'
       
@@ -162,10 +251,19 @@ serve(async (req) => {
           search_value: searchValue,
           status: 'error',
           error_message: errorMessage,
-          credits_deducted: 0 // Don't charge for failed requests
+          credits_deducted: 0
         })
 
-      throw new Error(`API Error: ${errorMessage}`)
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `API Error: ${errorMessage}`
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      )
     }
 
     if (success) {
@@ -180,7 +278,16 @@ serve(async (req) => {
 
       if (creditError) {
         console.error('Error updating credits:', creditError)
-        throw new Error('Error deducting credits')
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Error deducting credits'
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500,
+          }
+        )
       }
 
       // Record successful check
@@ -204,6 +311,8 @@ serve(async (req) => {
           credits_deducted: 0.25
         })
 
+      console.log('IMEI check completed successfully')
+
       return new Response(
         JSON.stringify({
           success: true,
@@ -226,7 +335,7 @@ serve(async (req) => {
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 500,
       }
     )
   }
