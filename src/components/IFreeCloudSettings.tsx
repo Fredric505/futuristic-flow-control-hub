@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -93,45 +94,51 @@ const IFreeCloudSettings = () => {
       setTestingApi(true);
       setLastTestResult(null);
       
-      // Test con un IMEI de ejemplo válido
+      // Usar un IMEI de prueba para verificar la conexión
       const testImei = "353869224422213";
-      const serviceId = "205"; // All-in-one service
       
-      console.log('Testing iFreeCloud API...');
-      console.log('URL:', `https://ifreecloud.com/api/v2/imei-check/${testImei}?username=${username}&key=${apiKey}&service=${serviceId}`);
+      console.log('Testing iFreeCloud API connection...');
       
-      const response = await fetch(`https://ifreecloud.com/api/v2/imei-check/${testImei}?username=${username}&key=${apiKey}&service=${serviceId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      // Usar la función Edge de Supabase en lugar de llamar directamente a la API
+      const { data, error } = await supabase.functions.invoke('check-imei', {
+        body: {
+          searchValue: testImei,
+          searchType: 'imei'
         }
       });
       
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
+      if (error) {
+        throw error;
+      }
       
-      const data = await response.json();
-      console.log('Response data:', data);
+      console.log('Test response:', data);
       
-      if (response.ok) {
-        if (data.success === true || data.result === true || data.status === 'success') {
-          setLastTestResult({success: true, message: 'Conexión exitosa con iFreeCloud API'});
-          toast({
-            title: "✅ Conexión exitosa",
-            description: "Las credenciales de iFreeCloud son válidas y funcionan correctamente",
-          });
-        } else if (data.message && data.message.includes('Insufficient')) {
+      if (data.success) {
+        setLastTestResult({success: true, message: 'Conexión exitosa con iFreeCloud API'});
+        toast({
+          title: "✅ Conexión exitosa",
+          description: "Las credenciales de iFreeCloud son válidas y funcionan correctamente",
+        });
+      } else {
+        // Manejar diferentes tipos de errores
+        const errorMsg = data.error || 'Error desconocido';
+        
+        if (errorMsg.includes('Insufficient') || errorMsg.includes('credits')) {
           setLastTestResult({success: true, message: 'Credenciales válidas (sin créditos suficientes)'});
           toast({
             title: "✅ Credenciales válidas",
             description: "Las credenciales son correctas pero no tienes créditos suficientes en iFreeCloud",
           });
+        } else if (errorMsg.includes('Invalid') || errorMsg.includes('authentication')) {
+          setLastTestResult({success: false, message: 'Credenciales inválidas'});
+          toast({
+            title: "❌ Credenciales inválidas",
+            description: "Usuario o clave API incorrectos",
+            variant: "destructive",
+          });
         } else {
-          throw new Error(data.message || data.error || 'Respuesta inválida de la API');
+          throw new Error(errorMsg);
         }
-      } else {
-        const errorMsg = data.message || data.error || `Error HTTP ${response.status}`;
-        throw new Error(errorMsg);
       }
     } catch (error: any) {
       console.error('Error testing iFreeCloud API:', error);
@@ -193,8 +200,8 @@ const IFreeCloudSettings = () => {
         <div className="space-y-4">
           <div className="p-3 bg-blue-950/30 rounded-lg border border-blue-500/20">
             <p className="text-blue-200/70 text-sm">
-              <strong>Instrucciones:</strong> Ve a tu panel Dhru/GSM Fusion, agrega una nueva API usando estos datos, 
-              asegúrate de sincronizar la API y hacer "Verificar conexión" en tu panel.
+              <strong>Instrucciones:</strong> Ingresa tus credenciales de iFreeCloud API. 
+              Puedes obtenerlas desde tu panel de iFreeCloud.
             </p>
           </div>
 
