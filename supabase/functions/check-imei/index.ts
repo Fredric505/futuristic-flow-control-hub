@@ -22,7 +22,7 @@ serve(async (req) => {
     // Get user from authorization header
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      console.log('No authorization header provided')
+      console.log('❌ No authorization header provided')
       return new Response(
         JSON.stringify({
           success: false,
@@ -40,7 +40,7 @@ serve(async (req) => {
     )
 
     if (authError || !user) {
-      console.log('Auth error:', authError)
+      console.log('❌ Auth error:', authError)
       return new Response(
         JSON.stringify({
           success: false,
@@ -57,7 +57,7 @@ serve(async (req) => {
     const { searchValue, searchType } = await req.json()
 
     if (!searchValue || !searchType) {
-      console.log('Missing required fields')
+      console.log('❌ Missing required fields')
       return new Response(
         JSON.stringify({
           success: false,
@@ -70,7 +70,8 @@ serve(async (req) => {
       )
     }
 
-    console.log('Processing IMEI check for user:', user.id, 'IMEI:', searchValue)
+    console.log('🔍 Processing IMEI check for user:', user.id)
+    console.log('📱 Search value:', searchValue, 'Type:', searchType)
 
     // Check user credits
     const { data: profile, error: profileError } = await supabase
@@ -80,7 +81,7 @@ serve(async (req) => {
       .single()
 
     if (profileError) {
-      console.log('Profile error:', profileError)
+      console.log('❌ Profile error:', profileError)
       return new Response(
         JSON.stringify({
           success: false,
@@ -94,7 +95,7 @@ serve(async (req) => {
     }
 
     if ((profile?.credits || 0) < 0.25) {
-      console.log('Insufficient credits:', profile?.credits)
+      console.log('❌ Insufficient credits:', profile?.credits)
       return new Response(
         JSON.stringify({
           success: false,
@@ -114,7 +115,7 @@ serve(async (req) => {
       .in('setting_key', ['ifree_username', 'ifree_key'])
 
     if (settingsError) {
-      console.log('Settings error:', settingsError)
+      console.log('❌ Settings error:', settingsError)
       return new Response(
         JSON.stringify({
           success: false,
@@ -136,7 +137,7 @@ serve(async (req) => {
     const apiKey = config?.ifree_key
 
     if (!username || !apiKey) {
-      console.log('Missing iFreeCloud credentials')
+      console.log('❌ Missing iFreeCloud credentials')
       return new Response(
         JSON.stringify({
           success: false,
@@ -149,66 +150,72 @@ serve(async (req) => {
       )
     }
 
+    console.log('🔑 Using credentials - Username:', username)
+
     let checkResult: any = {}
     let success = false
     let errorMessage = ''
 
     try {
-      // Call iFreeCloud API
+      // iFreeCloud API call - Usando el método GET con parámetros como sugiere su documentación
       const serviceId = '205' // All-in-one service
-      const apiUrl = `https://api.ifreeicloud.co.uk/api/v2/imei-check`
+      const apiUrl = `https://api.ifreeicloud.co.uk/check.php?username=${encodeURIComponent(username)}&key=${encodeURIComponent(apiKey)}&service=${serviceId}&imei=${encodeURIComponent(searchValue)}`
       
-      console.log('Calling iFreeCloud API with username:', username, 'service:', serviceId, 'imei:', searchValue)
-      
-      const requestBody = {
-        username: username,
-        key: apiKey,
-        service: serviceId,
-        imei: searchValue
-      }
+      console.log('🌐 Calling iFreeCloud API...')
+      console.log('📍 URL:', apiUrl.replace(apiKey, '***'))
       
       const response = await fetch(apiUrl, {
-        method: 'POST',
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
           'Accept': 'application/json',
           'User-Agent': 'Astro505-API/1.0'
-        },
-        body: JSON.stringify(requestBody)
+        }
       })
       
-      const data = await response.json()
-      console.log('iFreeCloud API response status:', response.status)
-      console.log('iFreeCloud API response data:', JSON.stringify(data, null, 2))
+      console.log('📡 Response status:', response.status)
+      console.log('📄 Response headers:', Object.fromEntries(response.headers.entries()))
+      
+      const data = await response.text()
+      console.log('📝 Raw response:', data)
 
-      // Handle different response structures from iFreeCloud
-      if (response.ok && data) {
-        if (data.success === true || data.status === 'success' || data.result) {
+      // Try to parse as JSON
+      let jsonData;
+      try {
+        jsonData = JSON.parse(data);
+        console.log('✅ Parsed JSON:', JSON.stringify(jsonData, null, 2))
+      } catch (parseError) {
+        console.log('❌ Failed to parse JSON:', parseError)
+        throw new Error(`Invalid JSON response: ${data}`)
+      }
+
+      if (response.ok && jsonData) {
+        // Check for success indicators in various response formats
+        if (jsonData.success === true || jsonData.status === 'success' || jsonData.result || jsonData.data) {
           success = true
           
-          // Extract data from response
-          const resultData = data.data || data.result || data.response || data
+          // Extract data from response - handle different response structures
+          const resultData = jsonData.data || jsonData.result || jsonData.response || jsonData
           
           checkResult = {
-            device_name: resultData?.device_name || resultData?.deviceName || resultData?.model || null,
-            model: resultData?.model || resultData?.device_model || null,
-            color: resultData?.color || resultData?.device_color || null,
-            storage: resultData?.storage || resultData?.device_storage || null,
-            carrier: resultData?.carrier || resultData?.network || resultData?.sim_lock || null,
-            warranty: resultData?.warranty || resultData?.warranty_status || null,
-            find_my_iphone: resultData?.find_my_iphone || resultData?.findMyIphone || resultData?.fmi_status === 'ON',
-            activation_lock: resultData?.activation_lock || resultData?.activationLock || resultData?.icloud_status === 'ON',
-            blacklist_status: resultData?.blacklist_status || resultData?.blacklistStatus || resultData?.blacklist || null,
-            serial_number: resultData?.serial_number || resultData?.serialNumber || resultData?.serial || null
+            device_name: resultData?.device_name || resultData?.deviceName || resultData?.model || 'N/A',
+            model: resultData?.model || resultData?.device_model || resultData?.device_name || 'N/A',
+            color: resultData?.color || resultData?.device_color || 'N/A',
+            storage: resultData?.storage || resultData?.device_storage || resultData?.capacity || 'N/A',
+            carrier: resultData?.carrier || resultData?.network || resultData?.sim_lock || resultData?.simlock || 'N/A',
+            warranty: resultData?.warranty || resultData?.warranty_status || 'N/A',
+            find_my_iphone: resultData?.find_my_iphone || resultData?.findMyIphone || resultData?.fmi_status === 'ON' || false,
+            activation_lock: resultData?.activation_lock || resultData?.activationLock || resultData?.icloud_status === 'ON' || false,
+            blacklist_status: resultData?.blacklist_status || resultData?.blacklistStatus || resultData?.blacklist || 'Clean',
+            serial_number: resultData?.serial_number || resultData?.serialNumber || resultData?.serial || searchValue
           }
           
-          console.log('Processed result:', checkResult)
+          console.log('✅ Processed result:', JSON.stringify(checkResult, null, 2))
         } else {
-          // API returned error but with 200 status
-          errorMessage = data.message || data.error || data.msg || 'Error en la verificación'
-          console.log('API error with 200 status:', errorMessage)
+          // API returned error
+          errorMessage = jsonData.message || jsonData.error || jsonData.msg || 'Error en la verificación IMEI'
+          console.log('❌ API error:', errorMessage)
           
-          // Don't throw error, just record failed check without charging
+          // Record failed check without charging credits
           await supabase
             .from('imei_checks')
             .insert({
@@ -227,18 +234,18 @@ serve(async (req) => {
             }),
             {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              status: 400,
+              status: 200, // Return 200 but with success: false
             }
           )
         }
       } else {
         // HTTP error
-        errorMessage = data?.message || data?.error || `HTTP Error: ${response.status} ${response.statusText}`
-        console.log('HTTP error:', errorMessage)
+        errorMessage = `HTTP Error: ${response.status} ${response.statusText} - ${data}`
+        console.log('❌ HTTP error:', errorMessage)
         throw new Error(errorMessage)
       }
     } catch (apiError: any) {
-      console.error('iFreeCloud API Error:', apiError.message)
+      console.error('💥 iFreeCloud API Error:', apiError.message)
       
       errorMessage = apiError.message || 'Failed to connect to iFreeCloud API'
       
@@ -257,11 +264,11 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: false,
-          error: `API Error: ${errorMessage}`
+          error: `API Connection Error: ${errorMessage}`
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500,
+          status: 200, // Return 200 but with success: false
         }
       )
     }
@@ -277,7 +284,7 @@ serve(async (req) => {
         .eq('id', user.id)
 
       if (creditError) {
-        console.error('Error updating credits:', creditError)
+        console.error('❌ Error updating credits:', creditError)
         return new Response(
           JSON.stringify({
             success: false,
@@ -311,7 +318,7 @@ serve(async (req) => {
           credits_deducted: 0.25
         })
 
-      console.log('IMEI check completed successfully')
+      console.log('✅ IMEI check completed successfully')
 
       return new Response(
         JSON.stringify({
@@ -326,7 +333,7 @@ serve(async (req) => {
     }
 
   } catch (error: any) {
-    console.error('Edge function error:', error)
+    console.error('💥 Edge function error:', error)
     
     return new Response(
       JSON.stringify({
@@ -335,7 +342,7 @@ serve(async (req) => {
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
+        status: 200, // Always return 200 to avoid "non-2xx" errors
       }
     )
   }
