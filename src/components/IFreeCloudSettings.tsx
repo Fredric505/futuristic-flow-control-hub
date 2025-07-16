@@ -2,10 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const IFreeCloudSettings = () => {
@@ -19,7 +17,6 @@ const IFreeCloudSettings = () => {
 
   const loadSettings = async () => {
     try {
-      // No need to load settings since we're using fixed configuration
       setLoading(false);
     } catch (error) {
       console.error('Error loading iFreeCloud settings:', error);
@@ -68,10 +65,17 @@ const IFreeCloudSettings = () => {
         const errorMsg = data.error || 'Error desconocido';
         
         if (errorMsg.includes('Insufficient') || errorMsg.includes('credits')) {
-          setLastTestResult({success: true, message: 'Conexión válida (sin créditos suficientes en tu cuenta)'});
+          setLastTestResult({success: true, message: 'Conexión válida (sin créditos suficientes)'});
           toast({
             title: "✅ Conexión válida",
-            description: "La API funciona pero no tienes créditos suficientes en tu cuenta personal",
+            description: "La API funciona pero no tienes créditos suficientes",
+          });
+        } else if (errorMsg.includes('Connection failed') || errorMsg.includes('Network error')) {
+          setLastTestResult({success: false, message: 'Error de conectividad - Verificando múltiples endpoints'});
+          toast({
+            title: "⚠️ Problema de conectividad",
+            description: "Se están probando múltiples endpoints. Esto puede ser temporal.",
+            variant: "destructive",
           });
         } else if (errorMsg.includes('Invalid') || errorMsg.includes('authentication')) {
           setLastTestResult({success: false, message: 'Error de autenticación con la API'});
@@ -81,7 +85,12 @@ const IFreeCloudSettings = () => {
             variant: "destructive",
           });
         } else {
-          throw new Error(errorMsg);
+          setLastTestResult({success: false, message: errorMsg});
+          toast({
+            title: "❌ Error de conexión",
+            description: errorMsg,
+            variant: "destructive",
+          });
         }
       }
     } catch (error: any) {
@@ -116,8 +125,8 @@ const IFreeCloudSettings = () => {
         <div className="space-y-4">
           <div className="p-3 bg-blue-950/30 rounded-lg border border-blue-500/20">
             <p className="text-blue-200/70 text-sm">
-              <strong>Configuración automática:</strong> La API está configurada automáticamente con las 
-              credenciales correctas de iFreeCloud según la documentación oficial.
+              <strong>Configuración mejorada:</strong> La API ahora prueba múltiples endpoints 
+              y métodos de conexión para asegurar la máxima disponibilidad del servicio.
             </p>
           </div>
 
@@ -130,7 +139,7 @@ const IFreeCloudSettings = () => {
               {testingApi ? (
                 <>
                   <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Probando conexión...
+                  Probando múltiples endpoints...
                 </>
               ) : (
                 'Probar Conexión API'
@@ -147,11 +156,14 @@ const IFreeCloudSettings = () => {
               <div className="flex items-center gap-2">
                 {lastTestResult.success ? (
                   <CheckCircle className="h-4 w-4 text-green-400" />
+                ) : lastTestResult.message.includes('conectividad') ? (
+                  <AlertTriangle className="h-4 w-4 text-yellow-400" />
                 ) : (
                   <XCircle className="h-4 w-4 text-red-400" />
                 )}
                 <p className={`text-sm ${
-                  lastTestResult.success ? 'text-green-300' : 'text-red-300'
+                  lastTestResult.success ? 'text-green-300' : 
+                  lastTestResult.message.includes('conectividad') ? 'text-yellow-300' : 'text-red-300'
                 }`}>
                   {lastTestResult.message}
                 </p>
@@ -161,12 +173,28 @@ const IFreeCloudSettings = () => {
           
           <div className="p-4 bg-green-950/30 rounded-lg border border-green-500/20">
             <h4 className="text-green-300 font-semibold mb-2">Configuración Actual iFreeCloud</h4>
-            <div className="space-y-1">
-              <p className="text-blue-200/70 text-sm">URL: https://api.ifreicloud.co.uk</p>
-              <p className="text-blue-200/70 text-sm">Método: POST</p>
-              <p className="text-blue-200/70 text-sm">Servicio: All-in-one (ID: 205)</p>
-              <p className="text-blue-200/70 text-sm">Clave API: FSV-NW9-V4F-ZJC-QQM-H34-5N6-KR1</p>
-              <p className="text-blue-200/70 text-sm">Costo: $0.25 por verificación</p>
+            <div className="space-y-1 text-sm">
+              <p className="text-blue-200/70">Endpoints principales: api.ifreicloud.co.uk</p>
+              <p className="text-blue-200/70">Métodos: POST y GET (fallback)</p>
+              <p className="text-blue-200/70">Servicio: All-in-one (ID: 205)</p>
+              <p className="text-blue-200/70">Clave API: FSV-NW9-V4F-ZJC-QQM-H34-5N6-KR1</p>
+              <p className="text-blue-200/70">Timeout: 30 segundos por endpoint</p>
+              <p className="text-blue-200/70">Costo: $0.25 por verificación exitosa</p>
+            </div>
+          </div>
+
+          <div className="p-3 bg-yellow-950/30 rounded-lg border border-yellow-500/20">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-yellow-400 mt-0.5" />
+              <div className="text-sm text-yellow-200/70">
+                <p className="font-medium">Mejoras implementadas:</p>
+                <ul className="mt-1 space-y-1 text-xs">
+                  <li>• Prueba múltiples endpoints automáticamente</li>
+                  <li>• Timeout extendido de 30 segundos</li>
+                  <li>• Fallback POST → GET si es necesario</li>
+                  <li>• Mejor manejo de respuestas JSON y texto plano</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>

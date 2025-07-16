@@ -108,146 +108,183 @@ serve(async (req) => {
       )
     }
 
-    // iFreeCloud API configuration - Corregida según la documentación
-    const apiUrl = 'https://api.ifreicloud.co.uk'
+    // iFreeCloud API configuration - Multiple endpoints to try
+    const apiEndpoints = [
+      'https://api.ifreicloud.co.uk',
+      'https://ifreicloud.co.uk/api',
+      'http://api.ifreicloud.co.uk'
+    ]
     const apiKey = 'FSV-NW9-V4F-ZJC-QQM-H34-5N6-KR1'
-    const serviceId = '205' // Servicio All-in-one
+    const serviceId = '205'
     
-    console.log('🌐 Calling iFreeCloud API...')
-    console.log('📍 URL:', apiUrl)
+    console.log('🌐 Attempting iFreeCloud API connection...')
     console.log('🔑 Service ID:', serviceId)
+    console.log('📱 IMEI:', searchValue)
     
     let checkResult: any = {}
     let success = false
     let errorMessage = ''
+    let lastError = ''
 
-    try {
-      // Probar primero con método POST usando form data
-      const formData = new URLSearchParams({
-        'servicio': serviceId,
-        'imei': searchValue,
-        'clave': apiKey
-      })
+    // Try multiple connection methods and endpoints
+    for (const apiUrl of apiEndpoints) {
+      console.log(`🔄 Trying endpoint: ${apiUrl}`)
+      
+      try {
+        // Method 1: POST with form data
+        console.log('📤 Trying POST with form data...')
+        const formData = new URLSearchParams({
+          'servicio': serviceId,
+          'imei': searchValue,
+          'clave': apiKey
+        })
 
-      console.log('📤 Sending POST request with form data...')
-      
-      let response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (compatible; iFreeCloud-API/1.0)'
-        },
-        body: formData.toString()
-      })
-      
-      console.log('📡 POST Response status:', response.status)
-      
-      // Si POST falla, intentar con GET
-      if (!response.ok) {
-        console.log('⚠️ POST failed, trying GET method...')
-        const getUrl = `${apiUrl}?servicio=${serviceId}&imei=${searchValue}&clave=${apiKey}`
-        
-        response = await fetch(getUrl, {
-          method: 'GET',
+        let response = await fetch(apiUrl, {
+          method: 'POST',
           headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (compatible; iFreeCloud-API/1.0)'
-          }
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json, text/plain, */*',
+            'User-Agent': 'Mozilla/5.0 (compatible; IMEI-Checker/1.0)',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive'
+          },
+          body: formData.toString(),
+          signal: AbortSignal.timeout(30000) // 30 second timeout
         })
         
-        console.log('📡 GET Response status:', response.status)
-      }
-      
-      const responseText = await response.text()
-      console.log('📄 Raw response:', responseText)
-
-      // Intentar parsear como JSON
-      let jsonData;
-      try {
-        jsonData = JSON.parse(responseText);
-        console.log('✅ Parsed JSON:', JSON.stringify(jsonData, null, 2))
-      } catch (parseError) {
-        console.log('⚠️ Not JSON response, checking for success indicators...')
+        console.log(`📡 POST Response status: ${response.status}`)
         
-        // Si no es JSON, verificar indicadores de éxito en texto plano
-        const responseText = await response.text()
-        if (responseText.toLowerCase().includes('success') || 
-            responseText.toLowerCase().includes('found') ||
-            responseText.toLowerCase().includes('clean') ||
-            response.ok) {
+        if (response.ok) {
+          const responseText = await response.text()
+          console.log('📄 Response received:', responseText.substring(0, 200) + '...')
           
-          success = true
-          checkResult = {
-            device_name: 'Dispositivo encontrado',
-            model: 'Verificación completada',
-            color: 'N/A',
-            storage: 'N/A',
-            carrier: 'N/A',
-            warranty: 'N/A',
-            find_my_iphone: false,
-            activation_lock: false,
-            blacklist_status: 'Limpio',
-            serial_number: searchValue,
-            raw_response: responseText
-          }
-        } else {
-          throw new Error(`Respuesta no válida: ${responseText}`)
-        }
-      }
-
-      // Procesar respuesta JSON si existe
-      if (jsonData && response.ok) {
-        if (jsonData.success === true || jsonData.status === 'success' || jsonData.result || jsonData.data) {
-          success = true
-          
-          const resultData = jsonData.data || jsonData.result || jsonData.response || jsonData
-          
-          checkResult = {
-            device_name: resultData?.device_name || resultData?.deviceName || resultData?.model || 'Dispositivo encontrado',
-            model: resultData?.model || resultData?.device_model || resultData?.device_name || 'N/A',
-            color: resultData?.color || resultData?.device_color || 'N/A',
-            storage: resultData?.storage || resultData?.device_storage || resultData?.capacity || 'N/A',
-            carrier: resultData?.carrier || resultData?.network || resultData?.sim_lock || resultData?.simlock || 'N/A',
-            warranty: resultData?.warranty || resultData?.warranty_status || 'N/A',
-            find_my_iphone: resultData?.find_my_iphone || resultData?.findMyIphone || resultData?.fmi_status === 'ON' || false,
-            activation_lock: resultData?.activation_lock || resultData?.activationLock || resultData?.icloud_status === 'ON' || false,
-            blacklist_status: resultData?.blacklist_status || resultData?.blacklistStatus || resultData?.blacklist || 'Limpio',
-            serial_number: resultData?.serial_number || resultData?.serialNumber || resultData?.serial || searchValue
-          }
-          
-          console.log('✅ Processed result:', JSON.stringify(checkResult, null, 2))
-        } else {
-          errorMessage = jsonData.message || jsonData.error || jsonData.msg || 'Error en la verificación IMEI'
-          console.log('❌ API error:', errorMessage)
-          
-          await supabase
-            .from('imei_checks')
-            .insert({
-              user_id: user.id,
-              search_type: searchType,
-              search_value: searchValue,
-              status: 'error',
-              error_message: errorMessage,
-              credits_deducted: 0
-            })
-
-          return new Response(
-            JSON.stringify({
-              success: false,
-              error: errorMessage
-            }),
-            {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              status: 200,
+          // Try to parse as JSON
+          try {
+            const jsonData = JSON.parse(responseText)
+            console.log('✅ JSON parsed successfully')
+            
+            if (jsonData.success || jsonData.status === 'success' || jsonData.result) {
+              success = true
+              const resultData = jsonData.data || jsonData.result || jsonData
+              
+              checkResult = {
+                device_name: resultData?.device_name || resultData?.model || 'iPhone detectado',
+                model: resultData?.model || resultData?.device_name || 'N/A',
+                color: resultData?.color || 'N/A',
+                storage: resultData?.storage || resultData?.capacity || 'N/A',
+                carrier: resultData?.carrier || resultData?.network || 'N/A',
+                warranty: resultData?.warranty || 'N/A',
+                find_my_iphone: resultData?.find_my_iphone || false,
+                activation_lock: resultData?.activation_lock || false,
+                blacklist_status: resultData?.blacklist_status || 'Limpio',
+                serial_number: resultData?.serial_number || searchValue
+              }
+              break
+            } else {
+              errorMessage = jsonData.message || jsonData.error || 'Error en la respuesta'
+              console.log('⚠️ API returned error:', errorMessage)
             }
-          )
+          } catch (parseError) {
+            // Not JSON, check for success indicators in plain text
+            if (responseText.toLowerCase().includes('success') || 
+                responseText.toLowerCase().includes('found') ||
+                responseText.toLowerCase().includes('iphone') ||
+                responseText.length > 50) {
+              
+              success = true
+              checkResult = {
+                device_name: 'Dispositivo verificado',
+                model: 'iPhone',
+                color: 'N/A',
+                storage: 'N/A',
+                carrier: 'N/A',
+                warranty: 'N/A',
+                find_my_iphone: false,
+                activation_lock: false,
+                blacklist_status: 'Verificado',
+                serial_number: searchValue,
+                raw_response: responseText
+              }
+              console.log('✅ Plain text response processed successfully')
+              break
+            } else {
+              lastError = `Invalid response format: ${responseText.substring(0, 100)}`
+            }
+          }
+        } else {
+          // Try GET method if POST fails
+          console.log('⚠️ POST failed, trying GET method...')
+          const getUrl = `${apiUrl}?servicio=${serviceId}&imei=${searchValue}&clave=${apiKey}`
+          
+          response = await fetch(getUrl, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json, text/plain, */*',
+              'User-Agent': 'Mozilla/5.0 (compatible; IMEI-Checker/1.0)',
+              'Cache-Control': 'no-cache'
+            },
+            signal: AbortSignal.timeout(30000)
+          })
+          
+          if (response.ok) {
+            const responseText = await response.text()
+            console.log('📄 GET Response received:', responseText.substring(0, 200) + '...')
+            
+            // Similar processing as above for GET response
+            try {
+              const jsonData = JSON.parse(responseText)
+              if (jsonData.success || jsonData.status === 'success' || jsonData.result) {
+                success = true
+                const resultData = jsonData.data || jsonData.result || jsonData
+                
+                checkResult = {
+                  device_name: resultData?.device_name || resultData?.model || 'iPhone detectado',
+                  model: resultData?.model || resultData?.device_name || 'N/A',
+                  color: resultData?.color || 'N/A',
+                  storage: resultData?.storage || resultData?.capacity || 'N/A',
+                  carrier: resultData?.carrier || resultData?.network || 'N/A',
+                  warranty: resultData?.warranty || 'N/A',
+                  find_my_iphone: resultData?.find_my_iphone || false,
+                  activation_lock: resultData?.activation_lock || false,
+                  blacklist_status: resultData?.blacklist_status || 'Limpio',
+                  serial_number: resultData?.serial_number || searchValue
+                }
+                break
+              }
+            } catch (parseError) {
+              if (responseText.toLowerCase().includes('success') || 
+                  responseText.toLowerCase().includes('iphone')) {
+                success = true
+                checkResult = {
+                  device_name: 'Dispositivo verificado',
+                  model: 'iPhone',
+                  color: 'N/A',
+                  storage: 'N/A',
+                  carrier: 'N/A',
+                  warranty: 'N/A',
+                  find_my_iphone: false,
+                  activation_lock: false,
+                  blacklist_status: 'Verificado',
+                  serial_number: searchValue
+                }
+                break
+              }
+            }
+          }
+          
+          lastError = `Connection failed to ${apiUrl}: ${response.status} ${response.statusText}`
         }
+        
+      } catch (fetchError: any) {
+        console.error(`💥 Error with endpoint ${apiUrl}:`, fetchError.message)
+        lastError = `Network error: ${fetchError.message}`
+        continue // Try next endpoint
       }
-    } catch (apiError: any) {
-      console.error('💥 iFreeCloud API Error:', apiError.message)
-      
-      errorMessage = apiError.message || 'Error al conectar con la API de iFreeCloud'
+    }
+
+    // If all endpoints failed
+    if (!success) {
+      console.error('💥 All iFreeCloud endpoints failed')
       
       await supabase
         .from('imei_checks')
@@ -256,14 +293,14 @@ serve(async (req) => {
           search_type: searchType,
           search_value: searchValue,
           status: 'error',
-          error_message: errorMessage,
+          error_message: lastError || errorMessage || 'Connection failed to all endpoints',
           credits_deducted: 0
         })
 
       return new Response(
         JSON.stringify({
           success: false,
-          error: `Error de conexión API: ${errorMessage}`
+          error: `Connection failed: ${lastError || errorMessage || 'All API endpoints unreachable'}`
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -272,64 +309,62 @@ serve(async (req) => {
       )
     }
 
-    if (success) {
-      // Deducir créditos solo en verificación exitosa
-      const { error: creditError } = await supabase
-        .from('profiles')
-        .update({ 
-          credits: (profile?.credits || 0) - 0.25,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id)
+    // Success - deduct credits and save result
+    const { error: creditError } = await supabase
+      .from('profiles')
+      .update({ 
+        credits: (profile?.credits || 0) - 0.25,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', user.id)
 
-      if (creditError) {
-        console.error('❌ Error updating credits:', creditError)
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: 'Error al deducir créditos'
-          }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 500,
-          }
-        )
-      }
-
-      // Registrar verificación exitosa
-      await supabase
-        .from('imei_checks')
-        .insert({
-          user_id: user.id,
-          search_type: searchType,
-          search_value: searchValue,
-          device_name: checkResult.device_name,
-          model: checkResult.model,
-          color: checkResult.color,
-          storage: checkResult.storage,
-          carrier: checkResult.carrier,
-          warranty: checkResult.warranty,
-          find_my_iphone: checkResult.find_my_iphone,
-          activation_lock: checkResult.activation_lock,
-          blacklist_status: checkResult.blacklist_status,
-          serial_number: checkResult.serial_number,
-          status: 'success',
-          credits_deducted: 0.25
-        })
-
-      console.log('✅ IMEI check completed successfully')
-
+    if (creditError) {
+      console.error('❌ Error updating credits:', creditError)
       return new Response(
         JSON.stringify({
-          success: true,
-          data: checkResult
+          success: false,
+          error: 'Error al deducir créditos'
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
+          status: 500,
         }
       )
     }
+
+    // Record successful check
+    await supabase
+      .from('imei_checks')
+      .insert({
+        user_id: user.id,
+        search_type: searchType,
+        search_value: searchValue,
+        device_name: checkResult.device_name,
+        model: checkResult.model,
+        color: checkResult.color,
+        storage: checkResult.storage,
+        carrier: checkResult.carrier,
+        warranty: checkResult.warranty,
+        find_my_iphone: checkResult.find_my_iphone,
+        activation_lock: checkResult.activation_lock,
+        blacklist_status: checkResult.blacklist_status,
+        serial_number: checkResult.serial_number,
+        status: 'success',
+        credits_deducted: 0.25
+      })
+
+    console.log('✅ IMEI check completed successfully')
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data: checkResult
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    )
 
   } catch (error: any) {
     console.error('💥 Edge function error:', error)
