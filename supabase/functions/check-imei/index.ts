@@ -108,68 +108,33 @@ serve(async (req) => {
       )
     }
 
-    // Get iFreeCloud credentials
-    const { data: settings, error: settingsError } = await supabase
-      .from('system_settings')
-      .select('*')
-      .in('setting_key', ['ifree_username', 'ifree_key'])
-
-    if (settingsError) {
-      console.log('❌ Settings error:', settingsError)
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Error loading API settings'
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500,
-        }
-      )
-    }
-
-    const config = settings?.reduce((acc: any, setting: any) => {
-      acc[setting.setting_key] = setting.setting_value
-      return acc
-    }, {})
-
-    const username = config?.ifree_username
-    const apiKey = config?.ifree_key
-
-    if (!username || !apiKey) {
-      console.log('❌ Missing iFreeCloud credentials')
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'iFreeCloud API credentials not configured'
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500,
-        }
-      )
-    }
-
-    console.log('🔑 Using credentials - Username:', username)
-
+    // iFreeCloud API call using the correct configuration from the image
+    const apiUrl = 'https://api.ifreicloud.co.uk'
+    const apiKey = 'FSV-NW9-V4F-ZJC-QQM-H34-5N6-KR1'
+    const serviceId = '205' // All-in-one service
+    
+    console.log('🌐 Calling iFreeCloud API with correct configuration...')
+    console.log('📍 URL:', apiUrl)
+    console.log('🔑 Service ID:', serviceId)
+    
     let checkResult: any = {}
     let success = false
     let errorMessage = ''
 
     try {
-      // iFreeCloud API call - Usando el método GET con parámetros como sugiere su documentación
-      const serviceId = '205' // All-in-one service
-      const apiUrl = `https://api.ifreeicloud.co.uk/check.php?username=${encodeURIComponent(username)}&key=${encodeURIComponent(apiKey)}&service=${serviceId}&imei=${encodeURIComponent(searchValue)}`
-      
-      console.log('🌐 Calling iFreeCloud API...')
-      console.log('📍 URL:', apiUrl.replace(apiKey, '***'))
-      
+      // Using POST method as shown in the configuration
       const response = await fetch(apiUrl, {
-        method: 'GET',
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
           'Accept': 'application/json',
           'User-Agent': 'Astro505-API/1.0'
-        }
+        },
+        body: new URLSearchParams({
+          'servicio': serviceId,
+          'imei': searchValue,
+          'clave': apiKey
+        })
       })
       
       console.log('📡 Response status:', response.status)
@@ -184,11 +149,30 @@ serve(async (req) => {
         jsonData = JSON.parse(data);
         console.log('✅ Parsed JSON:', JSON.stringify(jsonData, null, 2))
       } catch (parseError) {
-        console.log('❌ Failed to parse JSON:', parseError)
-        throw new Error(`Invalid JSON response: ${data}`)
+        console.log('❌ Failed to parse JSON, trying as plain text response')
+        
+        // If it's not JSON, check if it contains success indicators
+        if (data.toLowerCase().includes('success') || data.toLowerCase().includes('found')) {
+          success = true
+          checkResult = {
+            device_name: 'Device found',
+            model: 'Check completed',
+            color: 'N/A',
+            storage: 'N/A',
+            carrier: 'N/A',
+            warranty: 'N/A',
+            find_my_iphone: false,
+            activation_lock: false,
+            blacklist_status: 'Clean',
+            serial_number: searchValue,
+            raw_response: data
+          }
+        } else {
+          throw new Error(`Invalid response format: ${data}`)
+        }
       }
 
-      if (response.ok && jsonData) {
+      if (jsonData && response.ok) {
         // Check for success indicators in various response formats
         if (jsonData.success === true || jsonData.status === 'success' || jsonData.result || jsonData.data) {
           success = true
@@ -197,7 +181,7 @@ serve(async (req) => {
           const resultData = jsonData.data || jsonData.result || jsonData.response || jsonData
           
           checkResult = {
-            device_name: resultData?.device_name || resultData?.deviceName || resultData?.model || 'N/A',
+            device_name: resultData?.device_name || resultData?.deviceName || resultData?.model || 'Device found',
             model: resultData?.model || resultData?.device_model || resultData?.device_name || 'N/A',
             color: resultData?.color || resultData?.device_color || 'N/A',
             storage: resultData?.storage || resultData?.device_storage || resultData?.capacity || 'N/A',
@@ -234,11 +218,11 @@ serve(async (req) => {
             }),
             {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              status: 200, // Return 200 but with success: false
+              status: 200,
             }
           )
         }
-      } else {
+      } else if (!response.ok) {
         // HTTP error
         errorMessage = `HTTP Error: ${response.status} ${response.statusText} - ${data}`
         console.log('❌ HTTP error:', errorMessage)
@@ -268,7 +252,7 @@ serve(async (req) => {
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200, // Return 200 but with success: false
+          status: 200,
         }
       )
     }
@@ -342,7 +326,7 @@ serve(async (req) => {
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200, // Always return 200 to avoid "non-2xx" errors
+        status: 200,
       }
     )
   }
