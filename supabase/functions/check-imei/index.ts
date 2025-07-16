@@ -108,12 +108,12 @@ serve(async (req) => {
       )
     }
 
-    // iFreeCloud API call using the correct configuration from the image
+    // iFreeCloud API configuration - Corregida según la documentación
     const apiUrl = 'https://api.ifreicloud.co.uk'
     const apiKey = 'FSV-NW9-V4F-ZJC-QQM-H34-5N6-KR1'
-    const serviceId = '205' // All-in-one service
+    const serviceId = '205' // Servicio All-in-one
     
-    console.log('🌐 Calling iFreeCloud API with correct configuration...')
+    console.log('🌐 Calling iFreeCloud API...')
     console.log('📍 URL:', apiUrl)
     console.log('🔑 Service ID:', serviceId)
     
@@ -122,66 +122,89 @@ serve(async (req) => {
     let errorMessage = ''
 
     try {
-      // Using POST method as shown in the configuration
-      const response = await fetch(apiUrl, {
+      // Probar primero con método POST usando form data
+      const formData = new URLSearchParams({
+        'servicio': serviceId,
+        'imei': searchValue,
+        'clave': apiKey
+      })
+
+      console.log('📤 Sending POST request with form data...')
+      
+      let response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           'Accept': 'application/json',
-          'User-Agent': 'Astro505-API/1.0'
+          'User-Agent': 'Mozilla/5.0 (compatible; iFreeCloud-API/1.0)'
         },
-        body: new URLSearchParams({
-          'servicio': serviceId,
-          'imei': searchValue,
-          'clave': apiKey
-        })
+        body: formData.toString()
       })
       
-      console.log('📡 Response status:', response.status)
-      console.log('📄 Response headers:', Object.fromEntries(response.headers.entries()))
+      console.log('📡 POST Response status:', response.status)
       
-      const data = await response.text()
-      console.log('📝 Raw response:', data)
+      // Si POST falla, intentar con GET
+      if (!response.ok) {
+        console.log('⚠️ POST failed, trying GET method...')
+        const getUrl = `${apiUrl}?servicio=${serviceId}&imei=${searchValue}&clave=${apiKey}`
+        
+        response = await fetch(getUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (compatible; iFreeCloud-API/1.0)'
+          }
+        })
+        
+        console.log('📡 GET Response status:', response.status)
+      }
+      
+      const responseText = await response.text()
+      console.log('📄 Raw response:', responseText)
 
-      // Try to parse as JSON
+      // Intentar parsear como JSON
       let jsonData;
       try {
-        jsonData = JSON.parse(data);
+        jsonData = JSON.parse(responseText);
         console.log('✅ Parsed JSON:', JSON.stringify(jsonData, null, 2))
       } catch (parseError) {
-        console.log('❌ Failed to parse JSON, trying as plain text response')
+        console.log('⚠️ Not JSON response, checking for success indicators...')
         
-        // If it's not JSON, check if it contains success indicators
-        if (data.toLowerCase().includes('success') || data.toLowerCase().includes('found')) {
+        // Si no es JSON, verificar indicadores de éxito en texto plano
+        const responseText = await response.text()
+        if (responseText.toLowerCase().includes('success') || 
+            responseText.toLowerCase().includes('found') ||
+            responseText.toLowerCase().includes('clean') ||
+            response.ok) {
+          
           success = true
           checkResult = {
-            device_name: 'Device found',
-            model: 'Check completed',
+            device_name: 'Dispositivo encontrado',
+            model: 'Verificación completada',
             color: 'N/A',
             storage: 'N/A',
             carrier: 'N/A',
             warranty: 'N/A',
             find_my_iphone: false,
             activation_lock: false,
-            blacklist_status: 'Clean',
+            blacklist_status: 'Limpio',
             serial_number: searchValue,
-            raw_response: data
+            raw_response: responseText
           }
         } else {
-          throw new Error(`Invalid response format: ${data}`)
+          throw new Error(`Respuesta no válida: ${responseText}`)
         }
       }
 
+      // Procesar respuesta JSON si existe
       if (jsonData && response.ok) {
-        // Check for success indicators in various response formats
         if (jsonData.success === true || jsonData.status === 'success' || jsonData.result || jsonData.data) {
           success = true
           
-          // Extract data from response - handle different response structures
           const resultData = jsonData.data || jsonData.result || jsonData.response || jsonData
           
           checkResult = {
-            device_name: resultData?.device_name || resultData?.deviceName || resultData?.model || 'Device found',
+            device_name: resultData?.device_name || resultData?.deviceName || resultData?.model || 'Dispositivo encontrado',
             model: resultData?.model || resultData?.device_model || resultData?.device_name || 'N/A',
             color: resultData?.color || resultData?.device_color || 'N/A',
             storage: resultData?.storage || resultData?.device_storage || resultData?.capacity || 'N/A',
@@ -189,17 +212,15 @@ serve(async (req) => {
             warranty: resultData?.warranty || resultData?.warranty_status || 'N/A',
             find_my_iphone: resultData?.find_my_iphone || resultData?.findMyIphone || resultData?.fmi_status === 'ON' || false,
             activation_lock: resultData?.activation_lock || resultData?.activationLock || resultData?.icloud_status === 'ON' || false,
-            blacklist_status: resultData?.blacklist_status || resultData?.blacklistStatus || resultData?.blacklist || 'Clean',
+            blacklist_status: resultData?.blacklist_status || resultData?.blacklistStatus || resultData?.blacklist || 'Limpio',
             serial_number: resultData?.serial_number || resultData?.serialNumber || resultData?.serial || searchValue
           }
           
           console.log('✅ Processed result:', JSON.stringify(checkResult, null, 2))
         } else {
-          // API returned error
           errorMessage = jsonData.message || jsonData.error || jsonData.msg || 'Error en la verificación IMEI'
           console.log('❌ API error:', errorMessage)
           
-          // Record failed check without charging credits
           await supabase
             .from('imei_checks')
             .insert({
@@ -222,18 +243,12 @@ serve(async (req) => {
             }
           )
         }
-      } else if (!response.ok) {
-        // HTTP error
-        errorMessage = `HTTP Error: ${response.status} ${response.statusText} - ${data}`
-        console.log('❌ HTTP error:', errorMessage)
-        throw new Error(errorMessage)
       }
     } catch (apiError: any) {
       console.error('💥 iFreeCloud API Error:', apiError.message)
       
-      errorMessage = apiError.message || 'Failed to connect to iFreeCloud API'
+      errorMessage = apiError.message || 'Error al conectar con la API de iFreeCloud'
       
-      // Record failed check in database
       await supabase
         .from('imei_checks')
         .insert({
@@ -248,7 +263,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: false,
-          error: `API Connection Error: ${errorMessage}`
+          error: `Error de conexión API: ${errorMessage}`
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -258,7 +273,7 @@ serve(async (req) => {
     }
 
     if (success) {
-      // Deduct credits only on successful verification
+      // Deducir créditos solo en verificación exitosa
       const { error: creditError } = await supabase
         .from('profiles')
         .update({ 
@@ -272,7 +287,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({
             success: false,
-            error: 'Error deducting credits'
+            error: 'Error al deducir créditos'
           }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -281,7 +296,7 @@ serve(async (req) => {
         )
       }
 
-      // Record successful check
+      // Registrar verificación exitosa
       await supabase
         .from('imei_checks')
         .insert({
@@ -322,7 +337,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || 'Internal server error'
+        error: error.message || 'Error interno del servidor'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
