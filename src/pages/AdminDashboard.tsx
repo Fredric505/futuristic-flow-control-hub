@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, Bot } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
@@ -13,6 +13,7 @@ import ReloadCredits from '@/components/ReloadCredits';
 import InstanceSettings from '@/components/InstanceSettings';
 import MessageHistory from '@/components/MessageHistory';
 import AdminMessageHistory from '@/components/AdminMessageHistory';
+import TelegramBotSettings from '@/components/TelegramBotSettings';
 import MobileSidebar from '@/components/MobileSidebar';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -83,6 +84,7 @@ const AdminDashboard = () => {
     { id: 'add-process', icon: Plus, label: 'Agregar Proceso', description: 'Agregar formulario para luego guardar' },
     { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Mis procesos guardados y listos para enviar' },
     { id: 'history', icon: History, label: 'Historial', description: 'Mi historial de mensajes enviados' },
+    { id: 'telegram-bot', icon: Bot, label: 'Bot Personal', description: 'Configurar mi bot de Telegram personal' },
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
     { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Solo es texto' },
     { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },
@@ -172,6 +174,9 @@ const AdminDashboard = () => {
       
       case 'history':
         return <MessageHistory />;
+      
+      case 'telegram-bot':
+        return <TelegramBotSettings />;
       
       case 'admin-messages':
         return <AdminMessageHistory />;

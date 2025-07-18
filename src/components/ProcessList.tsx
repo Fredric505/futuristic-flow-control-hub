@@ -20,7 +20,7 @@ interface Process {
   imei: string;
   serial_number: string;
   url: string | null;
-  lost_mode: boolean; // Nuevo campo para modo perdido
+  lost_mode: boolean | null;
   status: string;
   created_at: string;
   updated_at: string;
@@ -106,7 +106,12 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       }
 
       console.log('Processes loaded:', data?.length || 0);
-      setProcesses(data || []);
+      // Mapear los datos para asegurar que lost_mode tenga un valor por defecto
+      const processesWithDefaults = (data || []).map(process => ({
+        ...process,
+        lost_mode: process.lost_mode ?? false // Usar false como valor por defecto si es null
+      }));
+      setProcesses(processesWithDefaults);
     } catch (error: any) {
       console.error('Error loading processes:', error);
       toast({
@@ -154,7 +159,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     }
   };
 
-  // Función para verificar si una imagen existe
   const checkImageExists = async (url: string): Promise<boolean> => {
     try {
       const response = await fetch(url, { method: 'HEAD' });
@@ -349,10 +353,12 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         // Actualizar el estado local de créditos
         setUserCredits(prev => prev - 1);
 
-        // Guardar mensaje en la base de datos
+        // Guardar mensaje en la base de datos con ID único para tracking
+        const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const { error: messageError } = await supabase
           .from('messages')
           .insert({
+            id: messageId, // ID único para tracking
             user_id: user.id,
             process_id: process.id,
             message_content: message,
