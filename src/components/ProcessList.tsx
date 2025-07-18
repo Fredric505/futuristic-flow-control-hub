@@ -56,12 +56,20 @@ const ProcessList = ({ userType = 'user' }: ProcessListProps) => {
         return;
       }
 
+      console.log('Usuario actual:', session.user.email);
+
+      // Forzar filtrado por user_id para asegurar que solo se vean procesos propios
       let query = supabase
         .from('processes')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (userType === 'user') {
+      // Para admin, puede ver todos los procesos
+      if (userType === 'admin' && session.user.email === 'fredric@gmail.com') {
+        console.log('Cargando todos los procesos (admin)');
+      } else {
+        // Para usuarios normales, SIEMPRE filtrar por user_id
+        console.log('Filtrando procesos por user_id:', session.user.id);
         query = query.eq('user_id', session.user.id);
       }
 
@@ -72,7 +80,9 @@ const ProcessList = ({ userType = 'user' }: ProcessListProps) => {
         throw error;
       }
 
-      console.log('Procesos cargados:', data);
+      console.log('Procesos cargados:', data?.length || 0);
+      console.log('Detalles de procesos:', data);
+      
       setProcesses(data || []);
     } catch (error: any) {
       console.error('Error completo al cargar procesos:', error);
@@ -212,16 +222,14 @@ ${process.url ? `\n🔗 Información adicional: ${process.url}` : ''}
         console.error('Error al guardar mensaje:', messageError);
       }
 
-      // Crear mensaje mejorado para Telegram con más información del proceso
-      const telegramMessage = `🔔 *PROCESO WHATSAPP ENVIADO*
+      // Crear mensaje mejorado para Telegram con información específica del proceso
+      const telegramMessage = `🔔 *Alerta de proceso de whatsapp...*
 
 👩🏽‍💻 *Server Astro*
 
 📊 *INFORMACIÓN DEL PROCESO:*
 👤 *Cliente:* ${process.client_name}
 📱 *Modelo:* ${process.iphone_model}
-💾 *Almacenamiento:* ${process.storage}
-🎨 *Color:* ${process.color}
 📞 *IMEI:* ${process.imei}
 🔢 *Serie:* ${process.serial_number}
 ${process.owner_name ? `👥 *Propietario:* ${process.owner_name}` : ''}
