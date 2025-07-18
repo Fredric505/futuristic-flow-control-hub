@@ -1,14 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Bot } from 'lucide-react';
+import { Home, Plus, FileText, History } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
 import MessageHistory from '@/components/MessageHistory';
-import TelegramBotSettings from '@/components/TelegramBotSettings';
 import MobileSidebar from '@/components/MobileSidebar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -146,7 +146,6 @@ const UserDashboard = () => {
     { id: 'add-process', icon: Plus, label: 'Agregar Proceso', description: 'Agregar formulario para luego guardar' },
     { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Procesos guardados y listos para enviar' },
     { id: 'history', icon: History, label: 'Historial', description: 'Historial de mensajes enviados' },
-    { id: 'telegram-bot', icon: Bot, label: 'Bot Personal', description: 'Configurar bot de Telegram personal' },
   ];
 
   const handleLogout = async () => {
@@ -246,9 +245,6 @@ const UserDashboard = () => {
       
       case 'history':
         return <MessageHistory />;
-      
-      case 'telegram-bot':
-        return <TelegramBotSettings />;
       
       default:
         return (
