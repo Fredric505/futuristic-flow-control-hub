@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Send, Trash2, Eye, EyeOff, MessageSquare, Smartphone } from 'lucide-react';
-import { getIphoneImage } from '@/utils/iphoneImages';
+import { getIphoneImageUrl } from '@/utils/iphoneImages';
 
 interface Process {
   id: string;
@@ -358,7 +357,7 @@ ${process.lost_mode ? '🔒 *Modo perdido:* Activado' : ''}
         <div className="space-y-4 pr-4">
           {processes.map((process) => {
             const isExpanded = expandedCard === process.id;
-            const iphoneImage = getIphoneImage(process.iphone_model, process.color);
+            const iphoneImage = getIphoneImageUrl(process.iphone_model, process.color);
             
             return (
               <Card key={process.id} className="bg-black/20 backdrop-blur-xl border border-blue-500/20 hover:border-blue-400/30 transition-all duration-200">
