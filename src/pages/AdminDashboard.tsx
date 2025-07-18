@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, Search } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
@@ -11,12 +11,8 @@ import AddUserForm from '@/components/AddUserForm';
 import ManageUsers from '@/components/ManageUsers';
 import ReloadCredits from '@/components/ReloadCredits';
 import InstanceSettings from '@/components/InstanceSettings';
-import WhatsAppSettings from '@/components/WhatsAppSettings';
-import IFreeCloudSettings from '@/components/IFreeCloudSettings';
 import MessageHistory from '@/components/MessageHistory';
 import AdminMessageHistory from '@/components/AdminMessageHistory';
-import IMEIChecker from '@/components/IMEIChecker';
-import IMEICheckHistory from '@/components/IMEICheckHistory';
 import MobileSidebar from '@/components/MobileSidebar';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -86,16 +82,13 @@ const AdminDashboard = () => {
     { id: 'dashboard', icon: Home, label: 'Dashboard', description: 'Pantalla de inicio' },
     { id: 'add-process', icon: Plus, label: 'Agregar Proceso', description: 'Agregar formulario para luego guardar' },
     { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Mis procesos guardados y listos para enviar' },
-    { id: 'imei-checker', icon: Search, label: 'Verificar IMEI', description: 'Verificar IMEI y números de serie' },
-    { id: 'imei-history', icon: History, label: 'Historial IMEI', description: 'Historial de verificaciones IMEI' },
     { id: 'history', icon: History, label: 'Historial', description: 'Mi historial de mensajes enviados' },
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
     { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Solo es texto' },
     { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },
     { id: 'manage-users', icon: Users, label: 'Gestionar Usuarios', description: 'Editar, borrar y renovar usuarios' },
     { id: 'reload-credits', icon: CreditCard, label: 'Recargar Créditos', description: 'Recargar créditos a usuarios' },
-    { id: 'settings', icon: Settings, label: 'Config. WhatsApp', description: 'Configurar instancia y token de WhatsApp' },
-    { id: 'ifree-settings', icon: Settings, label: 'Config. iFreeCloud', description: 'Configurar API de iFreeCloud para verificaciones IMEI' },
+    { id: 'settings', icon: Settings, label: 'Configuraciones', description: 'Configurar instancia y token' },
   ];
 
   const handleLogout = async () => {
@@ -177,12 +170,6 @@ const AdminDashboard = () => {
       case 'view-processes':
         return <ProcessList userType="admin" />;
       
-      case 'imei-checker':
-        return <IMEIChecker />;
-      
-      case 'imei-history':
-        return <IMEICheckHistory />;
-      
       case 'history':
         return <MessageHistory />;
       
@@ -215,10 +202,7 @@ const AdminDashboard = () => {
         return <ReloadCredits />;
       
       case 'settings':
-        return <WhatsAppSettings />;
-      
-      case 'ifree-settings':
-        return <IFreeCloudSettings />;
+        return <InstanceSettings />;
       
       default:
         return (

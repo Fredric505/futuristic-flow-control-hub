@@ -106,12 +106,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       }
 
       console.log('Processes loaded:', data?.length || 0);
-      // Ensure all processes have the lost_mode field
-      const processesWithLostMode = (data || []).map(process => ({
-        ...process,
-        lost_mode: process.lost_mode ?? false
-      }));
-      setProcesses(processesWithLostMode);
+      setProcesses(data || []);
     } catch (error: any) {
       console.error('Error loading processes:', error);
       toast({
