@@ -24,41 +24,28 @@ const TelegramBotConfig = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      // Use raw query to avoid TypeScript issues
-      const { data, error } = await supabase
-        .rpc('exec_sql', {
-          sql: 'SELECT bot_token, chat_id FROM telegram_bots WHERE user_id = $1 AND is_active = true LIMIT 1',
-          params: [session.user.id]
-        });
-
-      if (data && data.length > 0) {
-        setBotToken(data[0].bot_token || '');
-        setChatId(data[0].chat_id || '');
-        setHasExistingConfig(true);
+      // Use direct HTTP call to avoid TypeScript issues with telegram_bots table
+      const supabaseUrl = 'https://jclbkyyujtrpfqgrmdhl.supabase.co';
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjbGJreXl1anRycGZxZ3JtZGhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA5MTUyNjEsImV4cCI6MjA2NjQ5MTI2MX0.4HnhQrgyKBtmNQYO5ON4XnCzL_zeqB6IKRALd975GpY';
+      
+      const response = await fetch(`${supabaseUrl}/rest/v1/telegram_bots?user_id=eq.${session.user.id}&is_active=eq.true&select=bot_token,chat_id`, {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.length > 0) {
+          setBotToken(data[0].bot_token || '');
+          setChatId(data[0].chat_id || '');
+          setHasExistingConfig(true);
+        }
       }
     } catch (error) {
       console.log('No existing config found or error loading:', error);
-      // Fallback: try direct query without RPC
-      try {
-        const response = await fetch(`${supabase.supabaseUrl}/rest/v1/telegram_bots?user_id=eq.${session?.user.id}&is_active=eq.true&select=bot_token,chat_id`, {
-          headers: {
-            'apikey': supabase.supabaseKey,
-            'Authorization': `Bearer ${session?.access_token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data && data.length > 0) {
-            setBotToken(data[0].bot_token || '');
-            setChatId(data[0].chat_id || '');
-            setHasExistingConfig(true);
-          }
-        }
-      } catch (fallbackError) {
-        console.log('Fallback query also failed:', fallbackError);
-      }
     }
   };
 
@@ -131,7 +118,9 @@ const TelegramBotConfig = () => {
       }
 
       // Use direct HTTP call to avoid TypeScript issues
-      const url = `${supabase.supabaseUrl}/rest/v1/telegram_bots`;
+      const supabaseUrl = 'https://jclbkyyujtrpfqgrmdhl.supabase.co';
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjbGJreXl1anRycGZxZ3JtZGhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA5MTUyNjEsImV4cCI6MjA2NjQ5MTI2MX0.4HnhQrgyKBtmNQYO5ON4XnCzL_zeqB6IKRALd975GpY';
+      
       const method = hasExistingConfig ? 'PATCH' : 'POST';
       
       const body = hasExistingConfig ? {
@@ -145,19 +134,18 @@ const TelegramBotConfig = () => {
       };
 
       const headers = {
-        'apikey': supabase.supabaseKey,
+        'apikey': supabaseKey,
         'Authorization': `Bearer ${session.access_token}`,
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal'
       };
 
+      let requestUrl = `${supabaseUrl}/rest/v1/telegram_bots`;
       if (hasExistingConfig) {
-        headers['Prefer'] = 'return=minimal';
-        // Add filter for PATCH
-        url += `?user_id=eq.${session.user.id}&is_active=eq.true`;
+        requestUrl += `?user_id=eq.${session.user.id}&is_active=eq.true`;
       }
 
-      const response = await fetch(url, {
+      const response = await fetch(requestUrl, {
         method,
         headers,
         body: JSON.stringify(body)
