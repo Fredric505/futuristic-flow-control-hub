@@ -1,14 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Bot } from 'lucide-react';
+import { Home, Plus, FileText, History } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
 import MessageHistory from '@/components/MessageHistory';
-import TelegramBotConfig from '@/components/TelegramBotConfig';
 import MobileSidebar from '@/components/MobileSidebar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -145,7 +145,6 @@ const UserDashboard = () => {
     { id: 'dashboard', icon: Home, label: 'Dashboard', description: 'Pantalla de inicio' },
     { id: 'add-process', icon: Plus, label: 'Agregar Proceso', description: 'Agregar formulario para luego guardar' },
     { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Procesos guardados y listos para enviar' },
-    { id: 'telegram-config', icon: Bot, label: 'Config Telegram', description: 'Configurar tu bot de Telegram' },
     { id: 'history', icon: History, label: 'Historial', description: 'Historial de mensajes enviados' },
   ];
 
@@ -243,9 +242,6 @@ const UserDashboard = () => {
       
       case 'view-processes':
         return <ProcessList userType="user" />;
-      
-      case 'telegram-config':
-        return <TelegramBotConfig />;
       
       case 'history':
         return <MessageHistory />;

@@ -20,7 +20,7 @@ interface Process {
   imei: string;
   serial_number: string;
   url: string | null;
-  lost_mode?: boolean; // Hacer este campo opcional
+  lost_mode: boolean; // Nuevo campo para modo perdido
   status: string;
   created_at: string;
   updated_at: string;
@@ -106,13 +106,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       }
 
       console.log('Processes loaded:', data?.length || 0);
-      // Mapear los datos para asegurar que lost_mode tenga un valor por defecto
-      const mappedData = data?.map(process => ({
-        ...process,
-        lost_mode: process.lost_mode || false // Valor por defecto si no existe
-      })) || [];
-      
-      setProcesses(mappedData);
+      setProcesses(data || []);
     } catch (error: any) {
       console.error('Error loading processes:', error);
       toast({

@@ -3,31 +3,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Home, 
-  Plus, 
-  FileText, 
-  History, 
-  Users, 
-  CreditCard, 
-  Settings,
-  Bot,
-  MessageSquare
-} from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
-import MessageHistory from '@/components/MessageHistory';
-import AdminMessageHistory from '@/components/AdminMessageHistory';
+import AddUserForm from '@/components/AddUserForm';
 import ManageUsers from '@/components/ManageUsers';
 import ReloadCredits from '@/components/ReloadCredits';
-import AddUserForm from '@/components/AddUserForm';
 import InstanceSettings from '@/components/InstanceSettings';
-import TelegramBotConfig from '@/components/TelegramBotConfig';
-import WhatsAppResponseHandler from '@/components/WhatsAppResponseHandler';
+import MessageHistory from '@/components/MessageHistory';
+import AdminMessageHistory from '@/components/AdminMessageHistory';
 import MobileSidebar from '@/components/MobileSidebar';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -94,15 +81,14 @@ const AdminDashboard = () => {
   const menuItems = [
     { id: 'dashboard', icon: Home, label: 'Dashboard', description: 'Pantalla de inicio' },
     { id: 'add-process', icon: Plus, label: 'Agregar Proceso', description: 'Agregar formulario para luego guardar' },
-    { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Procesos guardados y listos para enviar' },
-    { id: 'history', icon: History, label: 'Historial', description: 'Historial de mensajes enviados' },
-    { id: 'admin-history', icon: MessageSquare, label: 'Historial Admin', description: 'Ver historial de todos los usuarios' },
-    { id: 'manage-users', icon: Users, label: 'Gestionar Usuarios', description: 'Administrar usuarios del sistema' },
-    { id: 'add-user', icon: Plus, label: 'Agregar Usuario', description: 'Crear nuevo usuario' },
-    { id: 'reload-credits', icon: CreditCard, label: 'Recargar Créditos', description: 'Gestionar créditos de usuarios' },
-    { id: 'telegram-config', icon: Bot, label: 'Config Telegram', description: 'Configurar bot de Telegram' },
-    { id: 'whatsapp-responses', icon: MessageSquare, label: 'Respuestas WhatsApp', description: 'Gestionar respuestas de WhatsApp' },
-    { id: 'instance-settings', icon: Settings, label: 'Configuraciones', description: 'Configurar instancia de WhatsApp' },
+    { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Mis procesos guardados y listos para enviar' },
+    { id: 'history', icon: History, label: 'Historial', description: 'Mi historial de mensajes enviados' },
+    { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
+    { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Solo es texto' },
+    { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },
+    { id: 'manage-users', icon: Users, label: 'Gestionar Usuarios', description: 'Editar, borrar y renovar usuarios' },
+    { id: 'reload-credits', icon: CreditCard, label: 'Recargar Créditos', description: 'Recargar créditos a usuarios' },
+    { id: 'settings', icon: Settings, label: 'Configuraciones', description: 'Configurar instancia y token' },
   ];
 
   const handleLogout = async () => {
@@ -187,25 +173,35 @@ const AdminDashboard = () => {
       case 'history':
         return <MessageHistory />;
       
-      case 'admin-history':
+      case 'admin-messages':
         return <AdminMessageHistory />;
       
-      case 'manage-users':
-        return <ManageUsers />;
+      case 'admin-access':
+        return (
+          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+            <CardHeader>
+              <CardTitle className="text-blue-300">Accesos Administrativos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 text-blue-200/70">
+                <p>Este es el panel de accesos administrativos del sistema.</p>
+                <p>Desde aquí se pueden gestionar los permisos y configuraciones avanzadas.</p>
+                <p>Solo los administradores tienen acceso a estas funcionalidades.</p>
+              </div>
+            </CardContent>
+          </Card>
+        );
       
       case 'add-user':
         return <AddUserForm />;
       
+      case 'manage-users':
+        return <ManageUsers />;
+      
       case 'reload-credits':
         return <ReloadCredits />;
       
-      case 'telegram-config':
-        return <TelegramBotConfig />;
-      
-      case 'whatsapp-responses':
-        return <WhatsAppResponseHandler />;
-      
-      case 'instance-settings':
+      case 'settings':
         return <InstanceSettings />;
       
       default:

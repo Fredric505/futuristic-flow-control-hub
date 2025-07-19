@@ -30,7 +30,6 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [userSubdomain, setUserSubdomain] = useState<string>('');
 
   // Solo países de habla hispana
   const countryCodes = [
@@ -88,30 +87,6 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
     'Gris Espacial', 'Oro Rosa'
   ];
 
-  // Cargar subdominio del usuario al montar el componente
-  React.useEffect(() => {
-    loadUserSubdomain();
-  }, []);
-
-  const loadUserSubdomain = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: domainData } = await supabase
-        .from('user_domains')
-        .select('subdomain_prefix')
-        .eq('user_id', user.id)
-        .single();
-
-      if (domainData) {
-        setUserSubdomain(domainData.subdomain_prefix);
-      }
-    } catch (error) {
-      console.error('Error loading user subdomain:', error);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -153,7 +128,6 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
           serial_number: formData.serialNumber,
           url: formData.url || null,
           lost_mode: formData.lostMode,
-          client_subdomain: userSubdomain || null,
           status: 'guardado'
         });
 
