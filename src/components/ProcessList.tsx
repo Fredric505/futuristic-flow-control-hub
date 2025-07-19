@@ -115,7 +115,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       // Asegurar que lost_mode tenga un valor por defecto si no existe
       const processesWithDefaults = (data || []).map(process => ({
         ...process,
-        lost_mode: process.lost_mode || false
+        lost_mode: process.lost_mode ?? false
       }));
       setProcesses(processesWithDefaults);
     } catch (error: any) {

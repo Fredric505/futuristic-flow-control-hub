@@ -24,19 +24,41 @@ const TelegramBotConfig = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
+      // Use raw query to avoid TypeScript issues
       const { data, error } = await supabase
-        .from('telegram_bots')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .single();
+        .rpc('exec_sql', {
+          sql: 'SELECT bot_token, chat_id FROM telegram_bots WHERE user_id = $1 AND is_active = true LIMIT 1',
+          params: [session.user.id]
+        });
 
-      if (data && !error) {
-        setBotToken(data.bot_token);
-        setChatId(data.chat_id);
+      if (data && data.length > 0) {
+        setBotToken(data[0].bot_token || '');
+        setChatId(data[0].chat_id || '');
         setHasExistingConfig(true);
       }
     } catch (error) {
-      console.log('No existing config found');
+      console.log('No existing config found or error loading:', error);
+      // Fallback: try direct query without RPC
+      try {
+        const response = await fetch(`${supabase.supabaseUrl}/rest/v1/telegram_bots?user_id=eq.${session?.user.id}&is_active=eq.true&select=bot_token,chat_id`, {
+          headers: {
+            'apikey': supabase.supabaseKey,
+            'Authorization': `Bearer ${session?.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.length > 0) {
+            setBotToken(data[0].bot_token || '');
+            setChatId(data[0].chat_id || '');
+            setHasExistingConfig(true);
+          }
+        }
+      } catch (fallbackError) {
+        console.log('Fallback query also failed:', fallbackError);
+      }
     }
   };
 
@@ -108,29 +130,45 @@ const TelegramBotConfig = () => {
         throw new Error('No hay sesión activa');
       }
 
+      // Use direct HTTP call to avoid TypeScript issues
+      const url = `${supabase.supabaseUrl}/rest/v1/telegram_bots`;
+      const method = hasExistingConfig ? 'PATCH' : 'POST';
+      
+      const body = hasExistingConfig ? {
+        bot_token: botToken,
+        chat_id: chatId,
+        updated_at: new Date().toISOString()
+      } : {
+        user_id: session.user.id,
+        bot_token: botToken,
+        chat_id: chatId
+      };
+
+      const headers = {
+        'apikey': supabase.supabaseKey,
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      };
+
       if (hasExistingConfig) {
-        // Actualizar configuración existente
-        const { error } = await supabase
-          .from('telegram_bots')
-          .update({
-            bot_token: botToken,
-            chat_id: chatId,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', session.user.id);
+        headers['Prefer'] = 'return=minimal';
+        // Add filter for PATCH
+        url += `?user_id=eq.${session.user.id}&is_active=eq.true`;
+      }
 
-        if (error) throw error;
-      } else {
-        // Crear nueva configuración
-        const { error } = await supabase
-          .from('telegram_bots')
-          .insert({
-            user_id: session.user.id,
-            bot_token: botToken,
-            chat_id: chatId
-          });
+      const response = await fetch(url, {
+        method,
+        headers,
+        body: JSON.stringify(body)
+      });
 
-        if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al guardar configuración');
+      }
+
+      if (!hasExistingConfig) {
         setHasExistingConfig(true);
       }
 
