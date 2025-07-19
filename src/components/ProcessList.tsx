@@ -20,7 +20,7 @@ interface Process {
   imei: string;
   serial_number: string;
   url: string | null;
-  lost_mode: boolean; // Nuevo campo para modo perdido
+  lost_mode: boolean;
   status: string;
   created_at: string;
   updated_at: string;
@@ -90,13 +90,19 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         return;
       }
 
-      // Todos los usuarios (incluido admin) solo ven sus propios procesos
-      console.log('Loading processes for user:', session.user.id);
-      const { data, error } = await supabase
-        .from('processes')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false });
+      let query = supabase.from('processes').select('*');
+
+      // Si es admin (fredric@gmail.com), mostrar todos los procesos
+      // Si es usuario normal, solo mostrar sus propios procesos
+      if (session.user.email === 'fredric@gmail.com') {
+        console.log('Loading all processes for admin');
+        // Admin ve todos los procesos
+      } else {
+        console.log('Loading processes for user:', session.user.id);
+        query = query.eq('user_id', session.user.id);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
       
       console.log('Processes query result:', { data, error, userType });
 
@@ -106,7 +112,12 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       }
 
       console.log('Processes loaded:', data?.length || 0);
-      setProcesses(data || []);
+      // Asegurar que lost_mode tenga un valor por defecto si no existe
+      const processesWithDefaults = (data || []).map(process => ({
+        ...process,
+        lost_mode: process.lost_mode || false
+      }));
+      setProcesses(processesWithDefaults);
     } catch (error: any) {
       console.error('Error loading processes:', error);
       toast({
@@ -218,8 +229,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *👤 Propietario: ${process.owner_name}*
 
 *📱 Modelo:* ${process.iphone_model}
-*💾 Almacenamiento:* ${process.storage}
-*🎨 Color:* ${process.color}
 *📟 IMEI:* ${process.imei}
 *🔑 Serie:* ${process.serial_number}
 
@@ -234,8 +243,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *${statusText}*
 
 *📱 Modelo:* ${process.iphone_model}
-*💾 Almacenamiento:* ${process.storage}
-*🎨 Color:* ${process.color}
 *📟 IMEI:* ${process.imei}
 *🔑 Serie:* ${process.serial_number}
 
@@ -254,8 +261,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *${statusText}*
 
 *📱 Modelo:* ${process.iphone_model}
-*💾 Almacenamiento:* ${process.storage}
-*🎨 Color:* ${process.color}
 *📟 IMEI:* ${process.imei}
 *🔑 Serie:* ${process.serial_number}
 
@@ -272,8 +277,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *${statusText}*
 
 *📱 Modelo:* ${process.iphone_model}
-*💾 Almacenamiento:* ${process.storage}
-*🎨 Color:* ${process.color}
 *📟 IMEI:* ${process.imei}
 *🔑 Serie:* ${process.serial_number}
 
@@ -416,7 +419,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-blue-300">
-          Mis Procesos ({processes.length})
+          {userType === 'admin' ? `Todos los Procesos (${processes.length})` : `Mis Procesos (${processes.length})`}
         </h2>
         <div className="flex items-center space-x-4">
           <div className="bg-gradient-to-r from-purple-600 to-purple-800 text-white px-4 py-2 rounded-lg">
@@ -508,14 +511,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
                   <div>
                     <p className="text-blue-200/50">Modelo:</p>
                     <p className="text-blue-200">{process.iphone_model}</p>
-                  </div>
-                  <div>
-                    <p className="text-blue-200/50">Almacenamiento:</p>
-                    <p className="text-blue-200">{process.storage}</p>
-                  </div>
-                  <div>
-                    <p className="text-blue-200/50">Color:</p>
-                    <p className="text-blue-200">{process.color}</p>
                   </div>
                   <div>
                     <p className="text-blue-200/50">IMEI:</p>
