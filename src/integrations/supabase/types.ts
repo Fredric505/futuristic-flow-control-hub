@@ -14,69 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      imei_checks: {
-        Row: {
-          activation_lock: boolean | null
-          blacklist_status: string | null
-          carrier: string | null
-          color: string | null
-          created_at: string
-          credits_deducted: number
-          device_name: string | null
-          error_message: string | null
-          find_my_iphone: boolean | null
-          id: string
-          model: string | null
-          search_type: string
-          search_value: string
-          serial_number: string | null
-          status: string
-          storage: string | null
-          user_id: string
-          warranty: string | null
-        }
-        Insert: {
-          activation_lock?: boolean | null
-          blacklist_status?: string | null
-          carrier?: string | null
-          color?: string | null
-          created_at?: string
-          credits_deducted?: number
-          device_name?: string | null
-          error_message?: string | null
-          find_my_iphone?: boolean | null
-          id?: string
-          model?: string | null
-          search_type: string
-          search_value: string
-          serial_number?: string | null
-          status?: string
-          storage?: string | null
-          user_id: string
-          warranty?: string | null
-        }
-        Update: {
-          activation_lock?: boolean | null
-          blacklist_status?: string | null
-          carrier?: string | null
-          color?: string | null
-          created_at?: string
-          credits_deducted?: number
-          device_name?: string | null
-          error_message?: string | null
-          find_my_iphone?: boolean | null
-          id?: string
-          model?: string | null
-          search_type?: string
-          search_value?: string
-          serial_number?: string | null
-          status?: string
-          storage?: string | null
-          user_id?: string
-          warranty?: string | null
-        }
-        Relationships: []
-      }
       messages: {
         Row: {
           id: string
@@ -125,6 +62,7 @@ export type Database = {
       processes: {
         Row: {
           client_name: string
+          client_subdomain: string | null
           color: string
           contact_type: string
           country_code: string
@@ -144,6 +82,7 @@ export type Database = {
         }
         Insert: {
           client_name: string
+          client_subdomain?: string | null
           color: string
           contact_type: string
           country_code: string
@@ -163,6 +102,7 @@ export type Database = {
         }
         Update: {
           client_name?: string
+          client_subdomain?: string | null
           color?: string
           contact_type?: string
           country_code?: string
@@ -217,47 +157,6 @@ export type Database = {
         }
         Relationships: []
       }
-      script_captures: {
-        Row: {
-          captured_data: Json
-          created_at: string
-          id: string
-          process_id: string | null
-          script_type: string
-          subdomain: string
-          telegram_sent: boolean | null
-          user_id: string
-        }
-        Insert: {
-          captured_data: Json
-          created_at?: string
-          id?: string
-          process_id?: string | null
-          script_type: string
-          subdomain: string
-          telegram_sent?: boolean | null
-          user_id: string
-        }
-        Update: {
-          captured_data?: Json
-          created_at?: string
-          id?: string
-          process_id?: string | null
-          script_type?: string
-          subdomain?: string
-          telegram_sent?: boolean | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "script_captures_process_id_fkey"
-            columns: ["process_id"]
-            isOneToOne: false
-            referencedRelation: "processes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       system_settings: {
         Row: {
           created_at: string | null
@@ -284,63 +183,110 @@ export type Database = {
       }
       telegram_bots: {
         Row: {
+          bot_name: string | null
           bot_token: string
           chat_id: string
-          created_at: string
+          created_at: string | null
           id: string
           is_active: boolean | null
-          updated_at: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
+          bot_name?: string | null
           bot_token: string
           chat_id: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           is_active?: boolean | null
-          updated_at?: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
+          bot_name?: string | null
           bot_token?: string
           chat_id?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           is_active?: boolean | null
-          updated_at?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
       }
       user_domains: {
         Row: {
-          created_at: string
+          created_at: string | null
           domain_name: string
           id: string
           is_active: boolean | null
           subdomain_prefix: string
-          updated_at: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           domain_name: string
           id?: string
           is_active?: boolean | null
           subdomain_prefix: string
-          updated_at?: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           domain_name?: string
           id?: string
           is_active?: boolean | null
           subdomain_prefix?: string
-          updated_at?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
+      }
+      whatsapp_responses: {
+        Row: {
+          created_at: string | null
+          id: string
+          imei: string | null
+          phone_number: string
+          process_id: string | null
+          response_content: string
+          serial_number: string | null
+          telegram_sent: boolean | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          imei?: string | null
+          phone_number: string
+          process_id?: string | null
+          response_content: string
+          serial_number?: string | null
+          telegram_sent?: boolean | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          imei?: string | null
+          phone_number?: string
+          process_id?: string | null
+          response_content?: string
+          serial_number?: string | null
+          telegram_sent?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_responses_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
