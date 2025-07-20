@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageSquare } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
@@ -13,6 +13,7 @@ import ReloadCredits from '@/components/ReloadCredits';
 import InstanceSettings from '@/components/InstanceSettings';
 import MessageHistory from '@/components/MessageHistory';
 import AdminMessageHistory from '@/components/AdminMessageHistory';
+import TelegramBotConfig from '@/components/TelegramBotConfig';
 import MobileSidebar from '@/components/MobileSidebar';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -84,6 +85,7 @@ const AdminDashboard = () => {
     { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Mis procesos guardados y listos para enviar' },
     { id: 'history', icon: History, label: 'Historial', description: 'Mi historial de mensajes enviados' },
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
+    { id: 'telegram-config', icon: MessageSquare, label: 'Config. Telegram', description: 'Configurar bot de notificaciones' },
     { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Solo es texto' },
     { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },
     { id: 'manage-users', icon: Users, label: 'Gestionar Usuarios', description: 'Editar, borrar y renovar usuarios' },
@@ -175,6 +177,50 @@ const AdminDashboard = () => {
       
       case 'admin-messages':
         return <AdminMessageHistory />;
+      
+      case 'telegram-config':
+        return (
+          <div className="space-y-6">
+            <TelegramBotConfig />
+            
+            <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+              <CardHeader>
+                <CardTitle className="text-blue-300">Configuración IFTTT</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4 text-blue-200/70">
+                  <h4 className="text-blue-300 font-semibold">📋 URL del Webhook para IFTTT:</h4>
+                  <div className="p-3 bg-blue-950/30 rounded-lg border border-blue-500/20">
+                    <code className="text-blue-200 text-sm break-all">
+                      https://jclbkyyujtrpfqgrmdhl.supabase.co/functions/v1/telegram-notification
+                    </code>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="text-blue-300 font-semibold">🔧 Instrucciones IFTTT:</h4>
+                    <ol className="space-y-1 text-sm">
+                      <li>1. Crea un nuevo applet en IFTTT</li>
+                      <li>2. Como trigger usa "Webhooks" → "Receive a web request"</li>
+                      <li>3. Como action usa "Webhooks" → "Make a web request"</li>
+                      <li>4. URL: La URL de arriba</li>
+                      <li>5. Method: POST</li>
+                      <li>6. Content Type: application/json</li>
+                      <li>7. Body: {`{"message": "<<<{{TextField}}>>>", "sender": "{{Value1}}", "response": "{{Value2}}"}`}</li>
+                    </ol>
+                  </div>
+                  
+                  <div className="p-4 bg-yellow-950/30 rounded-lg border border-yellow-500/20">
+                    <p className="text-yellow-200 font-semibold mb-2">⚠️ Importante:</p>
+                    <p className="text-yellow-200/80 text-sm">
+                      El sistema identificará automáticamente el proceso correcto usando el IMEI, número de serie o teléfono 
+                      contenido en el mensaje de WhatsApp y enviará la notificación al bot de Telegram correspondiente.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
       
       case 'admin-access':
         return (
