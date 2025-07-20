@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageSquare } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageSquare, Smartphone } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
@@ -86,6 +86,7 @@ const AdminDashboard = () => {
     { id: 'history', icon: History, label: 'Historial', description: 'Mi historial de mensajes enviados' },
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
     { id: 'telegram-config', icon: MessageSquare, label: 'Config. Telegram', description: 'Configurar bot de notificaciones' },
+    { id: 'ifttt-config', icon: Smartphone, label: 'Config. IFTTT', description: 'Configuración del dispositivo de reenvío' },
     { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Solo es texto' },
     { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },
     { id: 'manage-users', icon: Users, label: 'Gestionar Usuarios', description: 'Editar, borrar y renovar usuarios' },
@@ -179,47 +180,85 @@ const AdminDashboard = () => {
         return <AdminMessageHistory />;
       
       case 'telegram-config':
+        return <TelegramBotConfig />;
+      
+      case 'ifttt-config':
         return (
-          <div className="space-y-6">
-            <TelegramBotConfig />
-            
-            <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-              <CardHeader>
-                <CardTitle className="text-blue-300">Configuración IFTTT</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4 text-blue-200/70">
-                  <h4 className="text-blue-300 font-semibold">📋 URL del Webhook para IFTTT:</h4>
-                  <div className="p-3 bg-blue-950/30 rounded-lg border border-blue-500/20">
-                    <code className="text-blue-200 text-sm break-all">
-                      https://jclbkyyujtrpfqgrmdhl.supabase.co/functions/v1/telegram-notification
-                    </code>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h4 className="text-blue-300 font-semibold">🔧 Instrucciones IFTTT:</h4>
-                    <ol className="space-y-1 text-sm">
-                      <li>1. Crea un nuevo applet en IFTTT</li>
-                      <li>2. Como trigger usa "Webhooks" → "Receive a web request"</li>
-                      <li>3. Como action usa "Webhooks" → "Make a web request"</li>
-                      <li>4. URL: La URL de arriba</li>
-                      <li>5. Method: POST</li>
-                      <li>6. Content Type: application/json</li>
-                      <li>7. Body: {`{"message": "<<<{{TextField}}>>>", "sender": "{{Value1}}", "response": "{{Value2}}"}`}</li>
+          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+            <CardHeader>
+              <CardTitle className="text-blue-300">📱 Configuración IFTTT - Dispositivo de Reenvío</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6 text-blue-200/70">
+                <div className="p-4 bg-yellow-950/30 rounded-lg border border-yellow-500/20">
+                  <p className="text-yellow-200 font-semibold mb-2">⚠️ SOLO PARA ADMINISTRADOR:</p>
+                  <p className="text-yellow-200/80 text-sm">
+                    Esta configuración es únicamente para el dispositivo que manejará el reenvío de notificaciones. 
+                    Los usuarios solo necesitan configurar su bot de Telegram personal.
+                  </p>
+                </div>
+
+                <h4 className="text-blue-300 font-semibold text-lg">📋 URL del Webhook para IFTTT:</h4>
+                <div className="p-4 bg-blue-950/30 rounded-lg border border-blue-500/20">
+                  <code className="text-blue-200 text-sm break-all font-mono">
+                    https://jclbkyyujtrpfqgrmdhl.supabase.co/functions/v1/telegram-notification
+                  </code>
+                </div>
+                
+                <div className="space-y-4">
+                  <h4 className="text-blue-300 font-semibold text-lg">🔧 Instrucciones IFTTT:</h4>
+                  <div className="bg-slate-950/50 p-4 rounded-lg border border-blue-500/20">
+                    <ol className="space-y-3 text-sm">
+                      <li className="flex items-start space-x-2">
+                        <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
+                        <span>Crea un nuevo applet en IFTTT</span>
+                      </li>
+                      <li className="flex items-start space-x-2">
+                        <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>
+                        <span>Como trigger usa <strong>"Android SMS"</strong> → <strong>"Any new SMS received"</strong></span>
+                      </li>
+                      <li className="flex items-start space-x-2">
+                        <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">3</span>
+                        <span>Como action usa <strong>"Webhooks"</strong> → <strong>"Make a web request"</strong></span>
+                      </li>
+                      <li className="flex items-start space-x-2">
+                        <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">4</span>
+                        <div className="space-y-2">
+                          <div><strong>URL:</strong> La URL de arriba</div>
+                          <div><strong>Method:</strong> POST</div>
+                          <div><strong>Content Type:</strong> application/json</div>
+                          <div><strong>Body:</strong></div>
+                          <div className="bg-gray-900 p-3 rounded text-xs font-mono mt-2 border border-gray-600">
+                            {`{"message": "{{Text}}", "sender": "{{FromNumber}}", "response": "{{Text}}"}`}
+                          </div>
+                        </div>
+                      </li>
                     </ol>
                   </div>
-                  
-                  <div className="p-4 bg-yellow-950/30 rounded-lg border border-yellow-500/20">
-                    <p className="text-yellow-200 font-semibold mb-2">⚠️ Importante:</p>
-                    <p className="text-yellow-200/80 text-sm">
-                      El sistema identificará automáticamente el proceso correcto usando el IMEI, número de serie o teléfono 
-                      contenido en el mensaje de WhatsApp y enviará la notificación al bot de Telegram correspondiente.
-                    </p>
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+                
+                <div className="p-4 bg-green-950/30 rounded-lg border border-green-500/20">
+                  <p className="text-green-200 font-semibold mb-2">✅ Funcionamiento:</p>
+                  <ul className="text-green-200/80 text-sm space-y-1">
+                    <li>• El dispositivo admin recibe SMS con respuestas de WhatsApp</li>
+                    <li>• IFTTT detecta el SMS y envía la información al webhook</li>
+                    <li>• El sistema identifica automáticamente el proceso por IMEI/Serie/Teléfono</li>
+                    <li>• Se envía la notificación al bot de Telegram del usuario correspondiente</li>
+                  </ul>
+                </div>
+
+                <div className="p-4 bg-blue-950/30 rounded-lg border border-blue-500/20">
+                  <p className="text-blue-200 font-semibold mb-2">📱 Requisitos del dispositivo:</p>
+                  <ul className="text-blue-200/80 text-sm space-y-1">
+                    <li>• Debe tener la app IFTTT instalada</li>
+                    <li>• Debe estar conectado a internet</li>
+                    <li>• Debe recibir los SMS de respuesta de WhatsApp</li>
+                    <li>• Solo se necesita UN dispositivo para todo el sistema</li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         );
       
       case 'admin-access':

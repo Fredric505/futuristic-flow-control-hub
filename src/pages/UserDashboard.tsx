@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, MessageSquare } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, MessageSquare } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
@@ -11,142 +12,71 @@ import MessageHistory from '@/components/MessageHistory';
 import TelegramBotConfig from '@/components/TelegramBotConfig';
 import MobileSidebar from '@/components/MobileSidebar';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
 
 const UserDashboard = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [activeSection, setActiveSection] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userData, setUserData] = useState({
-    processes: 0,
+  const [stats, setStats] = useState({
+    activeProcesses: 0,
     messagesSent: 0,
-    credits: 0
+    creditsRemaining: 0
   });
-  const [instanceConfig, setInstanceConfig] = useState({
-    instance: '',
-    token: ''
-  });
-  const [userExpired, setUserExpired] = useState(false);
 
   useEffect(() => {
     checkAuth();
-    loadUserData();
-    loadInstanceConfig();
+    loadStats();
   }, [activeSection]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    console.log('User auth check:', session?.user?.email);
     if (!session) {
       navigate('/login');
-      return;
-    }
-
-    // Verificar si el usuario está expirado (solo si no es admin)
-    if (session.user.email !== 'fredric@gmail.com') {
-      await checkUserExpiration(session.user.id);
     }
   };
 
-  const checkUserExpiration = async (userId: string) => {
+  const loadStats = async () => {
     try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('expiration_date')
-        .eq('id', userId)
-        .single();
-
-      if (profile && profile.expiration_date) {
-        const expirationDate = new Date(profile.expiration_date);
-        const currentDate = new Date();
-        currentDate.setHours(0, 0, 0, 0);
-        expirationDate.setHours(0, 0, 0, 0);
-
-        if (currentDate > expirationDate) {
-          setUserExpired(true);
-          toast({
-            title: "Cuenta Expirada",
-            description: "Tu cuenta ha expirado. Contacta al administrador para renovar tu acceso.",
-            variant: "destructive",
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error checking user expiration:', error);
-    }
-  };
-
-  const loadUserData = async () => {
-    try {
-      console.log('Loading user data...');
-      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Load user profile
+      // Load user's processes
+      const { data: processes } = await supabase
+        .from('processes')
+        .select('id')
+        .eq('user_id', user.id);
+
+      // Load user's messages
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('id')
+        .eq('user_id', user.id);
+
+      // Load user's credits
       const { data: profile } = await supabase
         .from('profiles')
         .select('credits')
         .eq('id', user.id)
         .single();
 
-      // Load user processes
-      const { data: processes } = await supabase
-        .from('processes')
-        .select('id')
-        .eq('user_id', user.id);
-
-      // Load user messages
-      const { data: messages } = await supabase
-        .from('messages')
-        .select('id')
-        .eq('user_id', user.id);
-
-      console.log('User data loaded:', { profile, processes, messages });
-
-      setUserData({
-        processes: processes?.length || 0,
+      setStats({
+        activeProcesses: processes?.length || 0,
         messagesSent: messages?.length || 0,
-        credits: profile?.credits || 0
+        creditsRemaining: profile?.credits || 0
       });
     } catch (error) {
-      console.error('Error loading user data:', error);
-    }
-  };
-
-  const loadInstanceConfig = async () => {
-    try {
-      const { data } = await supabase
-        .from('system_settings')
-        .select('*')
-        .in('setting_key', ['whatsapp_instance', 'whatsapp_token']);
-
-      const settings = data?.reduce((acc: any, setting: any) => {
-        acc[setting.setting_key] = setting.setting_value;
-        return acc;
-      }, {});
-
-      setInstanceConfig({
-        instance: settings?.whatsapp_instance || 'instance126876',
-        token: settings?.whatsapp_token || '4ecj8581tubua7ry'
-      });
-    } catch (error) {
-      console.error('Error loading instance config:', error);
-      // Fallback to default values
-      setInstanceConfig({
-        instance: 'instance126876',
-        token: '4ecj8581tubua7ry'
-      });
+      console.error('Error loading stats:', error);
     }
   };
 
   const menuItems = [
-    { id: 'dashboard', icon: Home, label: 'Dashboard', description: 'Pantalla de inicio' },
-    { id: 'add-process', icon: Plus, label: 'Agregar Proceso', description: 'Agregar formulario para luego guardar' },
-    { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Procesos guardados y listos para enviar' },
-    { id: 'history', icon: History, label: 'Historial', description: 'Historial de mensajes enviados' },
-    { id: 'telegram-config', icon: MessageSquare, label: 'Config. Telegram', description: 'Configurar bot de notificaciones' },
+    { id: 'dashboard', icon: Home, label: 'Dashboard', description: 'Panel principal' },
+    { id: 'add-process', icon: Plus, label: 'Agregar Proceso', description: 'Crear nuevo proceso' },
+    { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Mis procesos guardados' },
+    { id: 'history', icon: History, label: 'Historial', description: 'Mensajes enviados' },
+    { id: 'telegram-config', icon: MessageSquare, label: 'Config. Bot Telegram', description: 'Configurar notificaciones' },
+    { id: 'settings', icon: Settings, label: 'Configuración', description: 'Ajustes de cuenta' },
   ];
 
   const handleLogout = async () => {
@@ -155,40 +85,17 @@ const UserDashboard = () => {
   };
 
   const renderContent = () => {
-    if (userExpired) {
-      return (
-        <Card className="bg-black/20 backdrop-blur-xl border border-red-500/20">
-          <CardHeader>
-            <CardTitle className="text-red-300">Cuenta Expirada</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center space-y-4">
-              <p className="text-red-200/70">
-                Tu cuenta ha expirado y no puedes acceder a las funcionalidades del sistema.
-              </p>
-              <p className="text-blue-200/70">
-                Contacta al administrador para renovar tu acceso: +50588897925
-              </p>
-              <p className="text-blue-200/50 text-sm">
-                Todos tus datos están seguros y serán restaurados cuando se renueve tu cuenta.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      );
-    }
-
     switch (activeSection) {
       case 'dashboard':
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
               <Card className="bg-gradient-to-br from-blue-600 to-blue-800 text-white border-none">
                 <CardContent className="p-4 lg:p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-blue-100 text-sm">Mis Procesos</p>
-                      <p className="text-2xl lg:text-3xl font-bold">{userData.processes}</p>
+                      <p className="text-blue-100 text-sm">Procesos</p>
+                      <p className="text-2xl lg:text-3xl font-bold">{stats.activeProcesses}</p>
                     </div>
                     <FileText className="h-6 w-6 lg:h-8 lg:w-8 text-blue-200" />
                   </div>
@@ -199,22 +106,22 @@ const UserDashboard = () => {
                 <CardContent className="p-4 lg:p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-green-100 text-sm">Mensajes Enviados</p>
-                      <p className="text-2xl lg:text-3xl font-bold">{userData.messagesSent}</p>
+                      <p className="text-green-100 text-sm">Mensajes</p>
+                      <p className="text-2xl lg:text-3xl font-bold">{stats.messagesSent}</p>
                     </div>
                     <History className="h-6 w-6 lg:h-8 lg:w-8 text-green-200" />
                   </div>
                 </CardContent>
               </Card>
               
-              <Card className="bg-gradient-to-br from-purple-600 to-purple-800 text-white border-none sm:col-span-2 lg:col-span-1">
+              <Card className="bg-gradient-to-br from-orange-600 to-orange-800 text-white border-none">
                 <CardContent className="p-4 lg:p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-purple-100 text-sm">Créditos Disponibles</p>
-                      <p className="text-2xl lg:text-3xl font-bold">{userData.credits}</p>
+                      <p className="text-orange-100 text-sm">Créditos</p>
+                      <p className="text-2xl lg:text-3xl font-bold">{stats.creditsRemaining}</p>
                     </div>
-                    <Plus className="h-6 w-6 lg:h-8 lg:w-8 text-purple-200" />
+                    <Settings className="h-6 w-6 lg:h-8 lg:w-8 text-orange-200" />
                   </div>
                 </CardContent>
               </Card>
@@ -225,14 +132,9 @@ const UserDashboard = () => {
                 <CardTitle className="text-blue-300">Panel de Usuario Astro505</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-blue-200/70 mb-4">
-                  Bienvenido a tu panel personal Astro505. Aquí puedes gestionar tus procesos y revisar tu historial.
+                <p className="text-blue-200/70">
+                  Bienvenido a tu panel de usuario. Desde aquí puedes gestionar tus procesos y configurar las notificaciones.
                 </p>
-                <div className="p-4 bg-blue-950/30 rounded-lg border border-blue-500/20">
-                  <h4 className="text-blue-300 font-semibold mb-2">Configuración Actual</h4>
-                  <p className="text-blue-200/70 text-sm break-all">Instancia: {instanceConfig.instance}</p>
-                  <p className="text-blue-200/70 text-sm break-all">Token: {instanceConfig.token}</p>
-                </div>
               </CardContent>
             </Card>
           </div>
@@ -248,7 +150,47 @@ const UserDashboard = () => {
         return <MessageHistory />;
       
       case 'telegram-config':
-        return <TelegramBotConfig />;
+        return (
+          <div className="space-y-6">
+            <TelegramBotConfig />
+            
+            <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+              <CardHeader>
+                <CardTitle className="text-blue-300">ℹ️ Información Importante</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4 text-blue-200/70">
+                  <p className="text-blue-300 font-semibold">
+                    🤖 Configura tu bot personal de Telegram para recibir notificaciones automáticas
+                  </p>
+                  <p>
+                    Una vez configurado tu bot, recibirás notificaciones automáticas cuando lleguen 
+                    respuestas o códigos relacionados con tus procesos de WhatsApp.
+                  </p>
+                  <p className="text-sm text-blue-200/60">
+                    El sistema identificará automáticamente tus procesos usando el IMEI, número de serie 
+                    o teléfono y te enviará las notificaciones correspondientes.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      
+      case 'settings':
+        return (
+          <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+            <CardHeader>
+              <CardTitle className="text-blue-300">Configuración de Cuenta</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 text-blue-200/70">
+                <p>Configuraciones de tu cuenta están disponibles aquí.</p>
+                <p>Próximamente más opciones de personalización.</p>
+              </div>
+            </CardContent>
+          </Card>
+        );
       
       default:
         return (
@@ -286,14 +228,11 @@ const UserDashboard = () => {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => !userExpired && setActiveSection(item.id)}
-                    disabled={userExpired}
+                    onClick={() => setActiveSection(item.id)}
                     className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
-                      userExpired 
-                        ? 'text-gray-500 cursor-not-allowed opacity-50'
-                        : activeSection === item.id
-                          ? 'bg-blue-600/20 border border-blue-500/30 text-blue-300'
-                          : 'text-blue-200/70 hover:bg-blue-600/10 hover:text-blue-300'
+                      activeSection === item.id
+                        ? 'bg-blue-600/20 border border-blue-500/30 text-blue-300'
+                        : 'text-blue-200/70 hover:bg-blue-600/10 hover:text-blue-300'
                     }`}
                   >
                     <Icon className="h-5 w-5" />
@@ -323,23 +262,21 @@ const UserDashboard = () => {
           onToggle={() => setSidebarOpen(!sidebarOpen)}
           menuItems={menuItems}
           activeSection={activeSection}
-          onSectionChange={(section) => {
-            if (!userExpired) setActiveSection(section);
-          }}
+          onSectionChange={setActiveSection}
           onLogout={handleLogout}
           title="ASTRO505 USER"
         />
         
-        {/* Main Content with ScrollArea */}
+        {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-shrink-0 p-4 lg:p-8 pt-16 lg:pt-8">
             <div className="max-w-7xl mx-auto">
               <div className="mb-6 lg:mb-8">
                 <h2 className="text-2xl lg:text-3xl font-bold text-white mb-2">
-                  {userExpired ? 'Cuenta Expirada' : menuItems.find(item => item.id === activeSection)?.label}
+                  {menuItems.find(item => item.id === activeSection)?.label}
                 </h2>
                 <p className="text-blue-200/70 text-sm lg:text-base">
-                  {userExpired ? 'Acceso restringido por expiración' : menuItems.find(item => item.id === activeSection)?.description}
+                  {menuItems.find(item => item.id === activeSection)?.description}
                 </p>
               </div>
             </div>
@@ -353,14 +290,6 @@ const UserDashboard = () => {
             </div>
           </ScrollArea>
         </div>
-      </div>
-      
-      <div className="fixed bottom-4 left-4 text-blue-200/50 text-xs">
-        <p>Contacto Admin: +50588897925</p>
-      </div>
-      
-      <div className="fixed bottom-4 right-4 text-blue-200/50 text-xs">
-        <p>Versión 1.0.0</p>
       </div>
     </div>
   );
