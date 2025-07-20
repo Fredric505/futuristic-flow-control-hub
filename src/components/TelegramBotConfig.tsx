@@ -30,8 +30,8 @@ const TelegramBotConfig = () => {
         .single();
 
       if (profile) {
-        setBotToken(profile.telegram_bot_token || '');
-        setChatId(profile.telegram_chat_id || '');
+        setBotToken((profile as any).telegram_bot_token || '');
+        setChatId((profile as any).telegram_chat_id || '');
       }
     } catch (error) {
       console.error('Error loading Telegram config:', error);
@@ -63,7 +63,7 @@ const TelegramBotConfig = () => {
         .update({
           telegram_bot_token: botToken.trim(),
           telegram_chat_id: chatId.trim()
-        })
+        } as any)
         .eq('id', user.id);
 
       if (error) throw error;
