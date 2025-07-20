@@ -106,10 +106,10 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       }
 
       console.log('Processes loaded:', data?.length || 0);
-      // Ensure lost_mode has a default value
+      // Ensure lost_mode has a default value and handle cases where it doesn't exist in the database
       const processesWithDefaults = data?.map(process => ({
         ...process,
-        lost_mode: process.lost_mode || false
+        lost_mode: Boolean(process.lost_mode) // Convert to boolean, defaults to false if undefined/null
       })) || [];
       
       setProcesses(processesWithDefaults);
