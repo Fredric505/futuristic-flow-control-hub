@@ -51,7 +51,10 @@ serve(async (req) => {
           error: 'No identifiers found',
           message: 'No se encontraron identificadores (IMEI, Serie, o Teléfono) en el mensaje'
         }), 
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400
+        }
       );
     }
 
@@ -97,7 +100,10 @@ serve(async (req) => {
           error: 'Database error',
           details: queryError.message 
         }), 
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500
+        }
       );
     }
 
@@ -111,7 +117,10 @@ serve(async (req) => {
           error: 'Process not found',
           message: 'No se encontró un proceso que coincida con los identificadores del mensaje'
         }), 
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404
+        }
       );
     }
 
@@ -128,7 +137,10 @@ serve(async (req) => {
           error: 'Telegram not configured',
           message: 'El usuario no ha configurado su bot de Telegram'
         }), 
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400
+        }
       );
     }
 
@@ -176,7 +188,10 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
           error: 'Failed to send Telegram message',
           details: telegramResult
         }), 
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500
+        }
       );
     }
 
@@ -189,7 +204,10 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
         process_id: process.id,
         user_id: process.user_id
       }), 
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      }
     );
 
   } catch (error) {
@@ -200,7 +218,10 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
         error: 'Internal server error',
         details: error.message
       }), 
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500
+      }
     );
   }
 });
