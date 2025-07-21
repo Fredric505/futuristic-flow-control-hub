@@ -13,17 +13,24 @@ interface NotificationData {
 }
 
 serve(async (req) => {
+  console.log(`[${new Date().toISOString()}] Received ${req.method} request to telegram-notification`);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('Received notification request');
+    console.log('Processing notification request...');
     
     const { message, sender, response }: NotificationData = await req.json();
     
-    console.log('Notification data:', { message, sender, response });
+    console.log('Notification data received:', { 
+      message: message?.substring(0, 100) + '...', 
+      sender, 
+      response: response?.substring(0, 100) + '...' 
+    });
 
     // Extract potential identifiers from the message
     const imeiMatch = message.match(/IMEI[:\s]*([0-9]{15})/i);
@@ -39,7 +46,11 @@ serve(async (req) => {
     if (!imei && !serialNumber && !phoneNumber) {
       console.log('No identifiers found in message, cannot route notification');
       return new Response(
-        JSON.stringify({ success: false, error: 'No identifiers found' }), 
+        JSON.stringify({ 
+          success: false, 
+          error: 'No identifiers found',
+          message: 'No se encontraron identificadores (IMEI, Serie, o Teléfono) en el mensaje'
+        }), 
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -48,10 +59,12 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
+    console.log('Connecting to Supabase...');
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Find the process owner by matching identifiers
+    console.log('Searching for matching process...');
     let query = supabase
       .from('processes')
       .select(`
@@ -79,15 +92,25 @@ serve(async (req) => {
     if (queryError) {
       console.error('Database query error:', queryError);
       return new Response(
-        JSON.stringify({ success: false, error: 'Database error' }), 
+        JSON.stringify({ 
+          success: false, 
+          error: 'Database error',
+          details: queryError.message 
+        }), 
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    console.log(`Found ${processes?.length || 0} matching processes`);
+
     if (!processes || processes.length === 0) {
       console.log('No matching process found');
       return new Response(
-        JSON.stringify({ success: false, error: 'Process not found' }), 
+        JSON.stringify({ 
+          success: false, 
+          error: 'Process not found',
+          message: 'No se encontró un proceso que coincida con los identificadores del mensaje'
+        }), 
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -100,13 +123,17 @@ serve(async (req) => {
     if (!profile.telegram_bot_token || !profile.telegram_chat_id) {
       console.log('User has not configured Telegram bot');
       return new Response(
-        JSON.stringify({ success: false, error: 'Telegram not configured' }), 
+        JSON.stringify({ 
+          success: false, 
+          error: 'Telegram not configured',
+          message: 'El usuario no ha configurado su bot de Telegram'
+        }), 
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Format the notification message
-    const notificationMessage = `🔔 Alerta de proceso de WhatsApp...
+    const notificationMessage = `🔔 Alerta de proceso de WhatsApp
 
 👩🏽‍💻 Servidor Astro
 
@@ -122,6 +149,8 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
 
 🤖 Bot Astro en línea 🟢`;
 
+    console.log('Sending notification to Telegram...');
+    
     // Send notification to user's Telegram bot
     const telegramUrl = `https://api.telegram.org/bot${profile.telegram_bot_token}/sendMessage`;
     
@@ -142,7 +171,11 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
     if (!telegramResponse.ok) {
       console.error('Telegram API error:', telegramResult);
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to send Telegram message' }), 
+        JSON.stringify({ 
+          success: false, 
+          error: 'Failed to send Telegram message',
+          details: telegramResult
+        }), 
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -150,14 +183,23 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
     console.log('Notification sent successfully to user:', process.user_id);
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Notification sent' }), 
+      JSON.stringify({ 
+        success: true, 
+        message: 'Notification sent successfully',
+        process_id: process.id,
+        user_id: process.user_id
+      }), 
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('Error processing notification:', error);
     return new Response(
-      JSON.stringify({ success: false, error: 'Internal server error' }), 
+      JSON.stringify({ 
+        success: false, 
+        error: 'Internal server error',
+        details: error.message
+      }), 
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
