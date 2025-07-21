@@ -12,6 +12,7 @@ const TelegramBotConfig = () => {
   const [chatId, setChatId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
 
   useEffect(() => {
     loadTelegramConfig();
@@ -84,6 +85,70 @@ const TelegramBotConfig = () => {
     }
   };
 
+  const handleTest = async () => {
+    if (!botToken.trim() || !chatId.trim()) {
+      toast({
+        title: "Error",
+        description: "Por favor completa y guarda la configuración antes de probar",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsTesting(true);
+
+    try {
+      const testMessage = `🤖 **Prueba de Bot de Telegram**
+
+✅ ¡Tu bot está funcionando correctamente!
+
+📅 Fecha: ${new Date().toLocaleString('es-ES')}
+🔧 Sistema: Astro505
+👤 Usuario: Admin
+
+Este es un mensaje de prueba para verificar que tu bot de Telegram está configurado correctamente y puede recibir notificaciones.`;
+
+      const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+      
+      const response = await fetch(telegramUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: testMessage,
+          parse_mode: 'Markdown'
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "¡Prueba exitosa!",
+          description: "El mensaje de prueba se envió correctamente a tu bot de Telegram",
+        });
+      } else {
+        console.error('Telegram API error:', result);
+        toast({
+          title: "Error en la prueba",
+          description: result.description || "Error al enviar el mensaje de prueba",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Error testing Telegram bot:', error);
+      toast({
+        title: "Error en la prueba",
+        description: "Error al conectar con el bot de Telegram",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
@@ -146,13 +211,24 @@ const TelegramBotConfig = () => {
             </ol>
           </div>
 
-          <Button 
-            type="submit"
-            className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
-            disabled={isSaving}
-          >
-            {isSaving ? 'Guardando...' : 'Guardar Configuración'}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              type="submit"
+              className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+              disabled={isSaving}
+            >
+              {isSaving ? 'Guardando...' : 'Guardar Configuración'}
+            </Button>
+            
+            <Button 
+              type="button"
+              onClick={handleTest}
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+              disabled={isTesting || !botToken || !chatId}
+            >
+              {isTesting ? 'Enviando...' : 'Probar Bot'}
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>
