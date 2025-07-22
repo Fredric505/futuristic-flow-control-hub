@@ -34,7 +34,7 @@ serve(async (req) => {
       if (!body || body.trim() === '') {
         console.log('Empty request body, using default test data');
         requestData = {
-          NotificationTitle: '+50588897925',
+          NotificationTitle: '+505 8889 7925',
           NotificationMessage: 'Este es un mensaje de prueba'
         };
       } else {
@@ -209,33 +209,50 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
     console.log('Checking all phone numbers in database...');
     const { data: allProcesses, error: allProcessesError } = await supabase
       .from('processes')
-      .select('phone_number, client_name, id')
-      .limit(10);
+      .select('phone_number, client_name, id, country_code')
+      .limit(20);
 
     if (allProcessesError) {
       console.error('Error fetching all processes:', allProcessesError);
     } else {
-      console.log('Sample phone numbers in database:', allProcesses?.map(p => ({ phone: p.phone_number, client: p.client_name, id: p.id })));
+      console.log('All phone numbers in database:', allProcesses?.map(p => ({ 
+        phone: p.phone_number, 
+        client: p.client_name, 
+        id: p.id,
+        country_code: p.country_code,
+        full_number: `${p.country_code}${p.phone_number}`
+      })));
     }
 
-    // Try multiple search patterns for the phone number
+    // Enhanced search patterns for Nicaraguan numbers (+505)
     const searchPatterns = [
-      cleanPhoneNumber,
-      phoneNumber,
-      cleanPhoneNumber.startsWith('+') ? cleanPhoneNumber : `+${cleanPhoneNumber}`,
-      cleanPhoneNumber.replace('+', ''),
-      cleanPhoneNumber.replace(/^(\+505)/, '505'),
-      cleanPhoneNumber.replace(/^505/, '+505')
+      cleanPhoneNumber, // +50588897925
+      phoneNumber, // +505 8889 7925
+      cleanPhoneNumber.startsWith('+') ? cleanPhoneNumber : `+${cleanPhoneNumber}`, // +50588897925
+      cleanPhoneNumber.replace('+', ''), // 50588897925
+      // For +505 numbers, try without country code
+      cleanPhoneNumber.replace(/^\+505/, ''), // 88897925
+      cleanPhoneNumber.replace(/^505/, ''), // 88897925 (if starts with 505)
+      // Try with Nicaragua country code variations
+      cleanPhoneNumber.replace(/^\+505/, '+505'),
+      cleanPhoneNumber.replace(/^505/, '+505'),
+      // Extract just the local number part (last 8 digits for Nicaragua)
+      cleanPhoneNumber.slice(-8), // 88897925
+      cleanPhoneNumber.slice(-7), // 8897925 (in case some are stored with 7 digits)
     ];
 
-    console.log('Trying search patterns:', searchPatterns);
+    // Remove duplicates and empty patterns
+    const uniquePatterns = [...new Set(searchPatterns)].filter(p => p && p.length > 0);
+    
+    console.log('Trying search patterns:', uniquePatterns);
 
     let matchedProcess = null;
     let matchedPattern = '';
 
-    for (const pattern of searchPatterns) {
-      console.log(`Searching with pattern: ${pattern}`);
+    for (const pattern of uniquePatterns) {
+      console.log(`Searching with pattern: "${pattern}"`);
       
+      // Search in phone_number field
       const { data: processes, error: queryError } = await supabase
         .from('processes')
         .select(`
@@ -259,13 +276,52 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
         continue;
       }
 
-      console.log(`Found ${processes?.length || 0} matching processes for pattern:`, pattern);
+      console.log(`Found ${processes?.length || 0} matching processes for phone_number pattern:`, pattern);
 
       if (processes && processes.length > 0) {
         matchedProcess = processes[0];
         matchedPattern = pattern;
-        console.log('Match found with pattern:', pattern);
+        console.log('Match found with phone_number pattern:', pattern);
         break;
+      }
+
+      // Also try searching by combining country_code + phone_number
+      console.log(`Searching for pattern "${pattern}" in combined country_code + phone_number`);
+      
+      const { data: combinedProcesses, error: combinedError } = await supabase
+        .from('processes')
+        .select(`
+          id,
+          user_id,
+          client_name,
+          iphone_model,
+          imei,
+          serial_number,
+          owner_name,
+          country_code,
+          phone_number,
+          profiles!inner(telegram_bot_token, telegram_chat_id)
+        `)
+        .not('profiles.telegram_bot_token', 'is', null)
+        .not('profiles.telegram_chat_id', 'is', null);
+
+      if (!combinedError && combinedProcesses) {
+        for (const proc of combinedProcesses) {
+          const fullNumber = `${proc.country_code}${proc.phone_number}`;
+          const fullNumberClean = fullNumber.replace(/[\s\-\(\)]/g, '');
+          
+          if (fullNumberClean === pattern || 
+              fullNumberClean === pattern.replace('+', '') ||
+              fullNumber === pattern ||
+              proc.phone_number === pattern) {
+            matchedProcess = proc;
+            matchedPattern = pattern;
+            console.log('Match found with combined pattern:', pattern, 'matching:', fullNumber);
+            break;
+          }
+        }
+        
+        if (matchedProcess) break;
       }
     }
 
@@ -277,8 +333,18 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
           error: 'Process not found',
           message: `No se encontró un proceso con el número de teléfono: ${cleanPhoneNumber}`,
           phone_searched: cleanPhoneNumber,
-          patterns_tried: searchPatterns,
-          sample_numbers_in_db: allProcesses?.slice(0, 5).map(p => p.phone_number)
+          patterns_tried: uniquePatterns,
+          sample_numbers_in_db: allProcesses?.slice(0, 5).map(p => ({
+            phone: p.phone_number,
+            country: p.country_code,
+            full: `${p.country_code}${p.phone_number}`,
+            client: p.client_name
+          })),
+          debug_info: {
+            original_phone: phoneNumber,
+            cleaned_phone: cleanPhoneNumber,
+            total_processes_in_db: allProcesses?.length || 0
+          }
         }), 
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
