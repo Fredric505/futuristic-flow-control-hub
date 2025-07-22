@@ -7,11 +7,8 @@ const corsHeaders = {
 }
 
 interface NotificationData {
-  // Formato que viene de IFTTT
   NotificationTitle?: string;
   NotificationMessage?: string;
-  
-  // Formato alternativo para pruebas manuales
   message?: string;
   sender?: string;
   response?: string;
@@ -20,7 +17,6 @@ interface NotificationData {
 serve(async (req) => {
   console.log(`[${new Date().toISOString()}] Received ${req.method} request to telegram-notification`);
   
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     console.log('Handling CORS preflight request');
     return new Response(null, { headers: corsHeaders });
@@ -38,8 +34,8 @@ serve(async (req) => {
       if (!body || body.trim() === '') {
         console.log('Empty request body, using default test data');
         requestData = {
-          NotificationTitle: 'Prueba',
-          NotificationMessage: 'Este es un mensaje de prueba desde IFTTT'
+          NotificationTitle: '+50588897925',
+          NotificationMessage: 'Este es un mensaje de prueba'
         };
       } else {
         requestData = JSON.parse(body);
@@ -61,44 +57,24 @@ serve(async (req) => {
     
     console.log('Parsed notification data:', requestData);
 
-    // Extraer número de teléfono y mensaje
     let phoneNumber = '';
     let messageText = '';
-    let sender = 'IFTTT SMS';
     
     if (requestData.NotificationTitle || requestData.NotificationMessage) {
-      // Formato de IFTTT - el título normalmente contiene el número
-      const fullMessage = `${requestData.NotificationTitle || ''}\n${requestData.NotificationMessage || ''}`.trim();
-      console.log('Full IFTTT message:', fullMessage);
-      
-      // Extraer número de teléfono del mensaje completo
-      const phoneMatch = fullMessage.match(/(\+\d{1,3}\s?\d{3,4}\s?\d{3,4}\s?\d{4})/);
-      phoneNumber = phoneMatch ? phoneMatch[1].replace(/\s/g, '') : '';
-      
-      // El mensaje es todo lo que no sea el número de teléfono
-      messageText = fullMessage.replace(/(\+\d{1,3}\s?\d{3,4}\s?\d{3,4}\s?\d{4})/g, '').trim();
-      
-      // Si no se pudo extraer el número del mensaje, usar el título como número y el mensaje como texto
-      if (!phoneNumber && requestData.NotificationTitle && requestData.NotificationMessage) {
-        phoneNumber = requestData.NotificationTitle.replace(/\s/g, '');
-        messageText = requestData.NotificationMessage;
-      }
+      phoneNumber = requestData.NotificationTitle || '';
+      messageText = requestData.NotificationMessage || '';
     } else if (requestData.message) {
-      // Formato manual/alternativo
       messageText = requestData.message;
       phoneNumber = requestData.sender || '';
-      sender = 'Manual';
     }
 
-    console.log('Extracted data:', { phoneNumber, messageText, sender });
+    console.log('Extracted data:', { phoneNumber, messageText });
 
-    // Limpiar el número de teléfono para la búsqueda
     const cleanPhoneNumber = phoneNumber.replace(/[\s\-\(\)]/g, '');
     
     if (!cleanPhoneNumber) {
       console.log('No phone number found, will try to find any process for testing');
       
-      // Create Supabase client
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       
@@ -106,7 +82,6 @@ serve(async (req) => {
       const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
       const supabase = createClient(supabaseUrl, supabaseKey);
 
-      // Para pruebas, buscar cualquier proceso que tenga bot configurado
       const { data: processes, error: queryError } = await supabase
         .from('processes')
         .select(`
@@ -146,7 +121,7 @@ serve(async (req) => {
           JSON.stringify({ 
             success: false, 
             error: 'No processes found',
-            message: 'No se encontraron procesos con Telegram configurado para hacer la prueba'
+            message: 'No se encontraron procesos con Telegram configurado'
           }), 
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -160,7 +135,6 @@ serve(async (req) => {
 
       console.log('Found test process:', process.id, 'for user:', process.user_id);
 
-      // Format the notification message
       const notificationMessage = `🔔 Alerta de proceso de WhatsApp (PRUEBA)
 
 👩🏽‍💻 Servidor Astro
@@ -172,7 +146,7 @@ serve(async (req) => {
 🔢 Serie: ${process.serial_number || 'Serie de prueba'}
 ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
 
-📞 Remitente: ${cleanPhoneNumber || 'Número de prueba'}
+📞 Remitente: ${phoneNumber || 'Número de prueba'}
 📥 Respuesta o código: ${messageText || 'Mensaje de prueba'}
 
 🤖 Bot Astro en línea 🟢
@@ -181,7 +155,6 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
 
       console.log('Sending test notification to Telegram...');
       
-      // Send notification to user's Telegram bot
       const telegramUrl = `https://api.telegram.org/bot${profile.telegram_bot_token}/sendMessage`;
       
       const telegramResponse = await fetch(telegramUrl, {
@@ -221,7 +194,6 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
           message: 'Test notification sent successfully',
           process_id: process.id,
           user_id: process.user_id,
-          identifiers_found: false,
           test_mode: true
         }), 
         { 
@@ -231,7 +203,6 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
       );
     }
 
-    // Buscar proceso por número de teléfono
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
@@ -241,7 +212,6 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
 
     console.log('Searching for process with phone number:', cleanPhoneNumber);
 
-    // Buscar proceso que coincida con el número de teléfono
     const { data: processes, error: queryError } = await supabase
       .from('processes')
       .select(`
@@ -313,7 +283,6 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
       );
     }
 
-    // Format the notification message
     const notificationMessage = `🔔 Alerta de proceso de WhatsApp
 
 👩🏽‍💻 Servidor Astro
@@ -332,7 +301,6 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
 
     console.log('Sending notification to Telegram...');
     
-    // Send notification to user's Telegram bot
     const telegramUrl = `https://api.telegram.org/bot${profile.telegram_bot_token}/sendMessage`;
     
     const telegramResponse = await fetch(telegramUrl, {
