@@ -30,6 +30,7 @@ serve(async (req) => {
     try {
       const body = await req.text();
       console.log('Raw request body:', body);
+      console.log('Content-Type header:', req.headers.get('content-type'));
       
       if (!body || body.trim() === '') {
         console.log('Empty request body, using default test data');
@@ -38,15 +39,59 @@ serve(async (req) => {
           NotificationMessage: 'Este es un mensaje de prueba'
         };
       } else {
-        requestData = JSON.parse(body);
+        // Try to parse as JSON first
+        try {
+          requestData = JSON.parse(body);
+          console.log('Successfully parsed as JSON:', requestData);
+        } catch (jsonError) {
+          console.log('Failed to parse as JSON, trying text format...');
+          
+          // Check if it's the IFTTT format with variables that weren't replaced
+          if (body.includes('{{NotificationTitle}}') || body.includes('{{NotificationMessage}}')) {
+            console.log('Detected IFTTT template variables that weren\'t replaced');
+            return new Response(
+              JSON.stringify({ 
+                success: false, 
+                error: 'IFTTT template error',
+                message: 'Las variables de IFTTT no se reemplazaron correctamente. Verifica tu configuración de IFTTT.',
+                received_body: body
+              }), 
+              { 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 400
+              }
+            );
+          }
+          
+          // Try to parse as text format (phone\nmessage)
+          const lines = body.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+          console.log('Parsed lines from text:', lines);
+          
+          if (lines.length >= 2) {
+            requestData = {
+              NotificationTitle: lines[0],
+              NotificationMessage: lines[1]
+            };
+            console.log('Parsed as text format:', requestData);
+          } else if (lines.length === 1) {
+            // Single line, treat as message with unknown sender
+            requestData = {
+              NotificationTitle: 'Número desconocido',
+              NotificationMessage: lines[0]
+            };
+          } else {
+            throw new Error('Unable to parse request body');
+          }
+        }
       }
     } catch (parseError) {
       console.error('Error parsing request body:', parseError);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Invalid JSON format',
-          message: 'El cuerpo de la solicitud no es un JSON válido'
+          error: 'Invalid request format',
+          message: 'Formato de solicitud inválido. Debe ser JSON o texto plano.',
+          details: parseError.message
         }), 
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -226,19 +271,19 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
 
     // Enhanced search patterns for Nicaraguan numbers (+505)
     const searchPatterns = [
-      cleanPhoneNumber, // +50588897925
-      phoneNumber, // +505 8889 7925
-      cleanPhoneNumber.startsWith('+') ? cleanPhoneNumber : `+${cleanPhoneNumber}`, // +50588897925
-      cleanPhoneNumber.replace('+', ''), // 50588897925
+      cleanPhoneNumber, // +50577140669
+      phoneNumber, // +505 7714 0669
+      cleanPhoneNumber.startsWith('+') ? cleanPhoneNumber : `+${cleanPhoneNumber}`, // +50577140669
+      cleanPhoneNumber.replace('+', ''), // 50577140669
       // For +505 numbers, try without country code
-      cleanPhoneNumber.replace(/^\+505/, ''), // 88897925
-      cleanPhoneNumber.replace(/^505/, ''), // 88897925 (if starts with 505)
+      cleanPhoneNumber.replace(/^\+505/, ''), // 77140669
+      cleanPhoneNumber.replace(/^505/, ''), // 77140669 (if starts with 505)
       // Try with Nicaragua country code variations
       cleanPhoneNumber.replace(/^\+505/, '+505'),
       cleanPhoneNumber.replace(/^505/, '+505'),
       // Extract just the local number part (last 8 digits for Nicaragua)
-      cleanPhoneNumber.slice(-8), // 88897925
-      cleanPhoneNumber.slice(-7), // 8897925 (in case some are stored with 7 digits)
+      cleanPhoneNumber.slice(-8), // 77140669
+      cleanPhoneNumber.slice(-7), // 7140669 (in case some are stored with 7 digits)
     ];
 
     // Remove duplicates and empty patterns
@@ -343,7 +388,9 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
           debug_info: {
             original_phone: phoneNumber,
             cleaned_phone: cleanPhoneNumber,
-            total_processes_in_db: allProcesses?.length || 0
+            total_processes_in_db: allProcesses?.length || 0,
+            request_content_type: req.headers.get('content-type'),
+            parsed_data: requestData
           }
         }), 
         { 
