@@ -70,18 +70,16 @@ serve(async (req) => {
 
     console.log('Extracted data:', { phoneNumber, messageText });
 
-    const cleanPhoneNumber = phoneNumber.replace(/[\s\-\(\)]/g, '');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
-    if (!cleanPhoneNumber) {
-      console.log('No phone number found, will try to find any process for testing');
-      
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      
-      console.log('Connecting to Supabase...');
-      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-      const supabase = createClient(supabaseUrl, supabaseKey);
+    console.log('Connecting to Supabase...');
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
+    if (!phoneNumber) {
+      console.log('No phone number provided, will try to find any process for testing');
+      
       const { data: processes, error: queryError } = await supabase
         .from('processes')
         .select(`
@@ -203,58 +201,84 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
-    console.log('Connecting to Supabase...');
-    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
+    // Clean and normalize phone number for search
+    const cleanPhoneNumber = phoneNumber.replace(/[\s\-\(\)]/g, '');
     console.log('Searching for process with phone number:', cleanPhoneNumber);
 
-    const { data: processes, error: queryError } = await supabase
+    // First, let's check what phone numbers we have in the database
+    console.log('Checking all phone numbers in database...');
+    const { data: allProcesses, error: allProcessesError } = await supabase
       .from('processes')
-      .select(`
-        id,
-        user_id,
-        client_name,
-        iphone_model,
-        imei,
-        serial_number,
-        owner_name,
-        country_code,
-        phone_number,
-        profiles!inner(telegram_bot_token, telegram_chat_id)
-      `)
-      .eq('phone_number', cleanPhoneNumber)
-      .not('profiles.telegram_bot_token', 'is', null)
-      .not('profiles.telegram_chat_id', 'is', null);
+      .select('phone_number, client_name, id')
+      .limit(10);
 
-    if (queryError) {
-      console.error('Database query error:', queryError);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Database error',
-          details: queryError.message 
-        }), 
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500
-        }
-      );
+    if (allProcessesError) {
+      console.error('Error fetching all processes:', allProcessesError);
+    } else {
+      console.log('Sample phone numbers in database:', allProcesses?.map(p => ({ phone: p.phone_number, client: p.client_name, id: p.id })));
     }
 
-    console.log(`Found ${processes?.length || 0} matching processes for phone:`, cleanPhoneNumber);
+    // Try multiple search patterns for the phone number
+    const searchPatterns = [
+      cleanPhoneNumber,
+      phoneNumber,
+      cleanPhoneNumber.startsWith('+') ? cleanPhoneNumber : `+${cleanPhoneNumber}`,
+      cleanPhoneNumber.replace('+', ''),
+      cleanPhoneNumber.replace(/^(\+505)/, '505'),
+      cleanPhoneNumber.replace(/^505/, '+505')
+    ];
 
-    if (!processes || processes.length === 0) {
-      console.log('No matching process found for phone number:', cleanPhoneNumber);
+    console.log('Trying search patterns:', searchPatterns);
+
+    let matchedProcess = null;
+    let matchedPattern = '';
+
+    for (const pattern of searchPatterns) {
+      console.log(`Searching with pattern: ${pattern}`);
+      
+      const { data: processes, error: queryError } = await supabase
+        .from('processes')
+        .select(`
+          id,
+          user_id,
+          client_name,
+          iphone_model,
+          imei,
+          serial_number,
+          owner_name,
+          country_code,
+          phone_number,
+          profiles!inner(telegram_bot_token, telegram_chat_id)
+        `)
+        .eq('phone_number', pattern)
+        .not('profiles.telegram_bot_token', 'is', null)
+        .not('profiles.telegram_chat_id', 'is', null);
+
+      if (queryError) {
+        console.error('Database query error for pattern', pattern, ':', queryError);
+        continue;
+      }
+
+      console.log(`Found ${processes?.length || 0} matching processes for pattern:`, pattern);
+
+      if (processes && processes.length > 0) {
+        matchedProcess = processes[0];
+        matchedPattern = pattern;
+        console.log('Match found with pattern:', pattern);
+        break;
+      }
+    }
+
+    if (!matchedProcess) {
+      console.log('No matching process found for any pattern');
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: 'Process not found',
           message: `No se encontró un proceso con el número de teléfono: ${cleanPhoneNumber}`,
-          phone_searched: cleanPhoneNumber
+          phone_searched: cleanPhoneNumber,
+          patterns_tried: searchPatterns,
+          sample_numbers_in_db: allProcesses?.slice(0, 5).map(p => p.phone_number)
         }), 
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -263,10 +287,10 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
       );
     }
 
-    const process = processes[0];
+    const process = matchedProcess;
     const profile = process.profiles;
 
-    console.log('Found process:', process.id, 'for user:', process.user_id);
+    console.log('Found process:', process.id, 'for user:', process.user_id, 'with pattern:', matchedPattern);
 
     if (!profile.telegram_bot_token || !profile.telegram_chat_id) {
       console.log('User has not configured Telegram bot');
@@ -341,6 +365,7 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
         process_id: process.id,
         user_id: process.user_id,
         phone_number: cleanPhoneNumber,
+        matched_pattern: matchedPattern,
         message_content: messageText
       }), 
       { 
