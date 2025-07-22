@@ -61,48 +61,42 @@ serve(async (req) => {
     
     console.log('Parsed notification data:', requestData);
 
-    // Determinar el mensaje y extraer información
-    let fullMessage = '';
-    let sender = 'IFTTT';
-    let response = '';
+    // Extraer número de teléfono y mensaje
+    let phoneNumber = '';
+    let messageText = '';
+    let sender = 'IFTTT SMS';
     
     if (requestData.NotificationTitle || requestData.NotificationMessage) {
-      // Formato de IFTTT
-      fullMessage = `${requestData.NotificationTitle || ''}\n${requestData.NotificationMessage || ''}`.trim();
-      sender = 'IFTTT SMS';
-      response = requestData.NotificationMessage || '';
+      // Formato de IFTTT - el título normalmente contiene el número
+      const fullMessage = `${requestData.NotificationTitle || ''}\n${requestData.NotificationMessage || ''}`.trim();
+      console.log('Full IFTTT message:', fullMessage);
+      
+      // Extraer número de teléfono del mensaje completo
+      const phoneMatch = fullMessage.match(/(\+\d{1,3}\s?\d{3,4}\s?\d{3,4}\s?\d{4})/);
+      phoneNumber = phoneMatch ? phoneMatch[1].replace(/\s/g, '') : '';
+      
+      // El mensaje es todo lo que no sea el número de teléfono
+      messageText = fullMessage.replace(/(\+\d{1,3}\s?\d{3,4}\s?\d{3,4}\s?\d{4})/g, '').trim();
+      
+      // Si no se pudo extraer el número del mensaje, usar el título como número y el mensaje como texto
+      if (!phoneNumber && requestData.NotificationTitle && requestData.NotificationMessage) {
+        phoneNumber = requestData.NotificationTitle.replace(/\s/g, '');
+        messageText = requestData.NotificationMessage;
+      }
     } else if (requestData.message) {
       // Formato manual/alternativo
-      fullMessage = requestData.message;
-      sender = requestData.sender || 'Manual';
-      response = requestData.response || '';
-    } else {
-      console.log('No message content found, using default');
-      fullMessage = 'Mensaje de prueba';
-      sender = 'Sistema';
-      response = 'Prueba';
+      messageText = requestData.message;
+      phoneNumber = requestData.sender || '';
+      sender = 'Manual';
     }
 
-    console.log('Processing message:', { 
-      fullMessage: fullMessage.substring(0, 100) + '...', 
-      sender, 
-      response: response.substring(0, 100) + '...' 
-    });
+    console.log('Extracted data:', { phoneNumber, messageText, sender });
 
-    // Extract potential identifiers from the message
-    const imeiMatch = fullMessage.match(/IMEI[:\s]*([0-9]{15})/i);
-    const serialMatch = fullMessage.match(/Serie[:\s]*([A-Z0-9]+)/i) || fullMessage.match(/Serial[:\s]*([A-Z0-9]+)/i);
-    const phoneMatch = fullMessage.match(/(\+\d{1,3}\s?\d{3}\s?\d{3}\s?\d{4})/);
+    // Limpiar el número de teléfono para la búsqueda
+    const cleanPhoneNumber = phoneNumber.replace(/[\s\-\(\)]/g, '');
     
-    const imei = imeiMatch ? imeiMatch[1] : null;
-    const serialNumber = serialMatch ? serialMatch[1] : null;
-    const phoneNumber = phoneMatch ? phoneMatch[1].replace(/\s/g, '') : null;
-
-    console.log('Extracted identifiers:', { imei, serialNumber, phoneNumber });
-
-    // Para pruebas, si no hay identificadores, usar datos de prueba
-    if (!imei && !serialNumber && !phoneNumber) {
-      console.log('No identifiers found, will try to find any process for testing');
+    if (!cleanPhoneNumber) {
+      console.log('No phone number found, will try to find any process for testing');
       
       // Create Supabase client
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -123,6 +117,8 @@ serve(async (req) => {
           imei,
           serial_number,
           owner_name,
+          country_code,
+          phone_number,
           profiles!inner(telegram_bot_token, telegram_chat_id)
         `)
         .not('profiles.telegram_bot_token', 'is', null)
@@ -176,9 +172,8 @@ serve(async (req) => {
 🔢 Serie: ${process.serial_number || 'Serie de prueba'}
 ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
 
-📞 Remitente: ${sender}
-📥 Mensaje recibido: ${fullMessage}
-📥 Respuesta o código: ${response}
+📞 Remitente: ${cleanPhoneNumber || 'Número de prueba'}
+📥 Respuesta o código: ${messageText || 'Mensaje de prueba'}
 
 🤖 Bot Astro en línea 🟢
 
@@ -236,7 +231,7 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
       );
     }
 
-    // Si hay identificadores, continuar con el flujo normal
+    // Buscar proceso por número de teléfono
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
@@ -244,9 +239,10 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Find the process owner by matching identifiers
-    console.log('Searching for matching process...');
-    let query = supabase
+    console.log('Searching for process with phone number:', cleanPhoneNumber);
+
+    // Buscar proceso que coincida con el número de teléfono
+    const { data: processes, error: queryError } = await supabase
       .from('processes')
       .select(`
         id,
@@ -256,19 +252,13 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
         imei,
         serial_number,
         owner_name,
+        country_code,
+        phone_number,
         profiles!inner(telegram_bot_token, telegram_chat_id)
-      `);
-
-    // Build the query based on available identifiers
-    if (imei) {
-      query = query.eq('imei', imei);
-    } else if (serialNumber) {
-      query = query.eq('serial_number', serialNumber);
-    } else if (phoneNumber) {
-      query = query.eq('phone_number', phoneNumber);
-    }
-
-    const { data: processes, error: queryError } = await query;
+      `)
+      .eq('phone_number', cleanPhoneNumber)
+      .not('profiles.telegram_bot_token', 'is', null)
+      .not('profiles.telegram_chat_id', 'is', null);
 
     if (queryError) {
       console.error('Database query error:', queryError);
@@ -285,15 +275,16 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
       );
     }
 
-    console.log(`Found ${processes?.length || 0} matching processes`);
+    console.log(`Found ${processes?.length || 0} matching processes for phone:`, cleanPhoneNumber);
 
     if (!processes || processes.length === 0) {
-      console.log('No matching process found');
+      console.log('No matching process found for phone number:', cleanPhoneNumber);
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: 'Process not found',
-          message: 'No se encontró un proceso que coincida con los identificadores del mensaje'
+          message: `No se encontró un proceso con el número de teléfono: ${cleanPhoneNumber}`,
+          phone_searched: cleanPhoneNumber
         }), 
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -334,8 +325,8 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
 🔢 Serie: ${process.serial_number}
 ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
 
-📞 Remitente: ${sender}
-📥 Respuesta o código: ${response}
+📞 Remitente: ${phoneNumber}
+📥 Respuesta o código: ${messageText}
 
 🤖 Bot Astro en línea 🟢`;
 
@@ -381,7 +372,8 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
         message: 'Notification sent successfully',
         process_id: process.id,
         user_id: process.user_id,
-        identifiers_found: true
+        phone_number: cleanPhoneNumber,
+        message_content: messageText
       }), 
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
