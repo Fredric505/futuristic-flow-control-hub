@@ -13,6 +13,7 @@ const TelegramBotConfig = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
 
   useEffect(() => {
     loadTelegramConfig();
@@ -26,18 +27,85 @@ const TelegramBotConfig = () => {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('telegram_bot_token, telegram_chat_id')
+        .select('telegram_bot_token, telegram_chat_id, email')
         .eq('id', user.id)
         .single();
 
       if (profile) {
-        setBotToken((profile as any).telegram_bot_token || '');
-        setChatId((profile as any).telegram_chat_id || '');
+        setBotToken(profile.telegram_bot_token || '');
+        setChatId(profile.telegram_chat_id || '');
       }
     } catch (error) {
       console.error('Error loading Telegram config:', error);
+      toast({
+        title: "Error",
+        description: "Error al cargar la configuración de Telegram",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const validateBotConfig = async () => {
+    if (!botToken.trim() || !chatId.trim()) {
+      toast({
+        title: "Error",
+        description: "Por favor completa todos los campos antes de validar",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    setIsValidating(true);
+    
+    try {
+      // Validar que el bot token sea válido
+      const botInfoResponse = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
+      const botInfo = await botInfoResponse.json();
+      
+      if (!botInfoResponse.ok) {
+        throw new Error(botInfo.description || 'Token de bot inválido');
+      }
+
+      console.log('Bot info:', botInfo);
+      
+      // Validar que el chat ID sea accesible
+      const chatInfoResponse = await fetch(`https://api.telegram.org/bot${botToken}/getChat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: chatId
+        }),
+      });
+      
+      const chatInfo = await chatInfoResponse.json();
+      
+      if (!chatInfoResponse.ok) {
+        throw new Error(chatInfo.description || 'Chat ID inválido o bot no tiene acceso');
+      }
+
+      console.log('Chat info:', chatInfo);
+      
+      toast({
+        title: "✅ Configuración válida",
+        description: `Bot: ${botInfo.result.first_name} | Chat: ${chatInfo.result.first_name || chatInfo.result.title || chatId}`,
+      });
+      
+      return true;
+      
+    } catch (error: any) {
+      console.error('Error validating bot config:', error);
+      toast({
+        title: "Error de validación",
+        description: error.message || "Error al validar la configuración del bot",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setIsValidating(false);
     }
   };
 
@@ -53,6 +121,10 @@ const TelegramBotConfig = () => {
       return;
     }
 
+    // Validar configuración antes de guardar
+    const isValid = await validateBotConfig();
+    if (!isValid) return;
+
     setIsSaving(true);
     
     try {
@@ -64,14 +136,14 @@ const TelegramBotConfig = () => {
         .update({
           telegram_bot_token: botToken.trim(),
           telegram_chat_id: chatId.trim()
-        } as any)
+        })
         .eq('id', user.id);
 
       if (error) throw error;
 
       toast({
-        title: "Configuración guardada",
-        description: "Tu bot de Telegram ha sido configurado correctamente",
+        title: "✅ Configuración guardada",
+        description: "Tu bot de Telegram ha sido configurado y validado correctamente",
       });
     } catch (error: any) {
       console.error('Error saving Telegram config:', error);
@@ -98,50 +170,37 @@ const TelegramBotConfig = () => {
     setIsTesting(true);
 
     try {
-      const testMessage = `🤖 **Prueba de Bot de Telegram**
-
-✅ ¡Tu bot está funcionando correctamente!
-
-📅 Fecha: ${new Date().toLocaleString('es-ES')}
-🔧 Sistema: Astro505
-👤 Usuario: Admin
-
-Este es un mensaje de prueba para verificar que tu bot de Telegram está configurado correctamente y puede recibir notificaciones.`;
-
-      const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+      // Probar enviando notificación via edge function
+      console.log('Testing notification via edge function...');
       
-      const response = await fetch(telegramUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const { data, error } = await supabase.functions.invoke('telegram-notification', {
         body: JSON.stringify({
-          chat_id: chatId,
-          text: testMessage,
-          parse_mode: 'Markdown'
-        }),
+          NotificationTitle: 'Número de prueba',
+          NotificationMessage: `Prueba masiva del sistema - ${new Date().toLocaleString('es-ES')}`
+        })
       });
 
-      const result = await response.json();
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
+      }
 
-      if (response.ok) {
+      console.log('Edge function response:', data);
+
+      if (data.success) {
         toast({
-          title: "¡Prueba exitosa!",
-          description: "El mensaje de prueba se envió correctamente a tu bot de Telegram",
+          title: "✅ Prueba exitosa",
+          description: "El sistema de notificaciones masivas está funcionando correctamente",
         });
       } else {
-        console.error('Telegram API error:', result);
-        toast({
-          title: "Error en la prueba",
-          description: result.description || "Error al enviar el mensaje de prueba",
-          variant: "destructive",
-        });
+        throw new Error(data.message || 'Error en la prueba');
       }
+
     } catch (error: any) {
-      console.error('Error testing Telegram bot:', error);
+      console.error('Error testing notification:', error);
       toast({
         title: "Error en la prueba",
-        description: "Error al conectar con el bot de Telegram",
+        description: error.message || "Error al probar el sistema de notificaciones",
         variant: "destructive",
       });
     } finally {
@@ -163,6 +222,7 @@ Este es un mensaje de prueba para verificar que tu bot de Telegram está configu
     <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
       <CardHeader>
         <CardTitle className="text-blue-300">Configuración Bot de Telegram</CardTitle>
+        <p className="text-blue-200/70 text-sm">Sistema optimizado para notificaciones masivas</p>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSave} className="space-y-4">
@@ -176,7 +236,7 @@ Este es un mensaje de prueba para verificar que tu bot de Telegram está configu
               placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
               className="bg-white/5 border-blue-500/30 text-white"
               required
-              disabled={isSaving}
+              disabled={isSaving || isValidating}
             />
             <p className="text-xs text-blue-200/60">
               Obtén tu token de @BotFather en Telegram
@@ -193,11 +253,21 @@ Este es un mensaje de prueba para verificar que tu bot de Telegram está configu
               placeholder="123456789"
               className="bg-white/5 border-blue-500/30 text-white"
               required
-              disabled={isSaving}
+              disabled={isSaving || isValidating}
             />
             <p className="text-xs text-blue-200/60">
               Tu Chat ID personal (envía /start a @userinfobot para obtenerlo)
             </p>
+          </div>
+
+          <div className="bg-blue-950/30 p-4 rounded-lg border border-blue-500/20">
+            <h4 className="text-blue-300 font-semibold mb-2">🚀 Sistema Masivo</h4>
+            <ul className="text-blue-200/70 text-sm space-y-1">
+              <li>• Maneja múltiples usuarios simultáneamente</li>
+              <li>• Notificaciones privadas por usuario</li>
+              <li>• Optimizado para respuestas masivas de WhatsApp</li>
+              <li>• Cada usuario recibe solo sus notificaciones</li>
+            </ul>
           </div>
 
           <div className="bg-blue-950/30 p-4 rounded-lg border border-blue-500/20">
@@ -213,9 +283,18 @@ Este es un mensaje de prueba para verificar que tu bot de Telegram está configu
 
           <div className="flex gap-2">
             <Button 
+              type="button"
+              onClick={validateBotConfig}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+              disabled={isValidating || isSaving}
+            >
+              {isValidating ? 'Validando...' : 'Validar Config'}
+            </Button>
+            
+            <Button 
               type="submit"
               className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
-              disabled={isSaving}
+              disabled={isSaving || isValidating}
             >
               {isSaving ? 'Guardando...' : 'Guardar Configuración'}
             </Button>
@@ -226,7 +305,7 @@ Este es un mensaje de prueba para verificar que tu bot de Telegram está configu
               className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
               disabled={isTesting || !botToken || !chatId}
             >
-              {isTesting ? 'Enviando...' : 'Probar Bot'}
+              {isTesting ? 'Probando...' : 'Probar Sistema'}
             </Button>
           </div>
         </form>

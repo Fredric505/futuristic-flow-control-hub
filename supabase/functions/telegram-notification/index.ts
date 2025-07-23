@@ -15,7 +15,8 @@ interface NotificationData {
 }
 
 serve(async (req) => {
-  console.log(`[${new Date().toISOString()}] Received ${req.method} request to telegram-notification`);
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] Received ${req.method} request to telegram-notification`);
   
   if (req.method === 'OPTIONS') {
     console.log('Handling CORS preflight request');
@@ -35,18 +36,16 @@ serve(async (req) => {
       if (!body || body.trim() === '') {
         console.log('Empty request body, using default test data');
         requestData = {
-          NotificationTitle: '+505 8889 7925',
-          NotificationMessage: 'Este es un mensaje de prueba'
+          NotificationTitle: 'Número de prueba',
+          NotificationMessage: 'Mensaje de prueba masivo'
         };
       } else {
-        // Try to parse as JSON first
         try {
           requestData = JSON.parse(body);
           console.log('Successfully parsed as JSON:', requestData);
         } catch (jsonError) {
           console.log('Failed to parse as JSON, trying text format...');
           
-          // Check if it's the IFTTT format with variables that weren't replaced
           if (body.includes('{{NotificationTitle}}') || body.includes('{{NotificationMessage}}')) {
             console.log('Detected IFTTT template variables that weren\'t replaced');
             return new Response(
@@ -63,7 +62,6 @@ serve(async (req) => {
             );
           }
           
-          // Try to parse as text format (phone\nmessage)
           const lines = body.split('\n').map(line => line.trim()).filter(line => line.length > 0);
           console.log('Parsed lines from text:', lines);
           
@@ -74,7 +72,6 @@ serve(async (req) => {
             };
             console.log('Parsed as text format:', requestData);
           } else if (lines.length === 1) {
-            // Single line, treat as message with unknown sender
             requestData = {
               NotificationTitle: 'Número desconocido',
               NotificationMessage: lines[0]
@@ -122,10 +119,10 @@ serve(async (req) => {
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    if (!phoneNumber) {
-      console.log('No phone number provided, will try to find any process for testing');
+    // Si no hay número de teléfono, usar modo prueba
+    if (!phoneNumber || phoneNumber === 'Número de prueba' || phoneNumber === 'Número desconocido') {
+      console.log('No phone number provided or test mode, searching for any active process...');
       
-      // Get any process with Telegram configured for testing
       const { data: processes, error: queryError } = await supabase
         .from('processes')
         .select('*')
@@ -152,7 +149,7 @@ serve(async (req) => {
           JSON.stringify({ 
             success: false, 
             error: 'No processes found',
-            message: 'No se encontraron procesos'
+            message: 'No se encontraron procesos para modo prueba'
           }), 
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -162,236 +159,21 @@ serve(async (req) => {
       }
 
       const process = processes[0];
-      
-      // Get the user's profile with Telegram config
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('telegram_bot_token, telegram_chat_id')
-        .eq('id', process.user_id)
-        .single();
-
-      if (profileError || !profile) {
-        console.error('Profile not found:', profileError);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: 'Profile not found',
-            message: 'No se encontró el perfil del usuario'
-          }), 
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 404
-          }
-        );
-      }
-
-      if (!profile.telegram_bot_token || !profile.telegram_chat_id) {
-        console.log('User has not configured Telegram bot');
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: 'Telegram not configured',
-            message: 'El usuario no ha configurado su bot de Telegram'
-          }), 
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400
-          }
-        );
-      }
-
-      console.log('Found test process:', process.id, 'for user:', process.user_id);
-
-      const notificationMessage = `🔔 Alerta de proceso de WhatsApp (PRUEBA)
-
-👩🏽‍💻 Servidor Astro
-
-📊 INFORMACIÓN DEL PROCESO:
-👤 Cliente: ${process.client_name || 'Cliente de prueba'}
-📱 Modelo: ${process.iphone_model || 'iPhone de prueba'}
-📞 IMEI: ${process.imei || 'IMEI de prueba'}
-🔢 Serie: ${process.serial_number || 'Serie de prueba'}
-${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
-
-📞 Remitente: ${phoneNumber || 'Número de prueba'}
-📥 Respuesta o código: ${messageText || 'Mensaje de prueba'}
-
-🤖 Bot Astro en línea 🟢
-
-⚠️ Este es un mensaje de PRUEBA`;
-
-      console.log('Sending test notification to Telegram...');
-      
-      const telegramUrl = `https://api.telegram.org/bot${profile.telegram_bot_token}/sendMessage`;
-      
-      const telegramResponse = await fetch(telegramUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id: profile.telegram_chat_id,
-          text: notificationMessage,
-          parse_mode: 'HTML'
-        }),
-      });
-
-      const telegramResult = await telegramResponse.json();
-      
-      if (!telegramResponse.ok) {
-        console.error('Telegram API error:', telegramResult);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: 'Failed to send Telegram message',
-            details: telegramResult
-          }), 
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 500
-          }
-        );
-      }
-
-      console.log('Test notification sent successfully to user:', process.user_id);
-
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'Test notification sent successfully',
-          process_id: process.id,
-          user_id: process.user_id,
-          test_mode: true
-        }), 
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200
-        }
-      );
+      return await sendNotificationToUser(process, phoneNumber || 'Número de prueba', messageText || 'Mensaje de prueba', supabase, true);
     }
 
-    // Clean and normalize phone number for search
-    const cleanPhoneNumber = phoneNumber.replace(/[\s\-\(\)]/g, '');
-    console.log('Searching for process with phone number:', cleanPhoneNumber);
-
-    // First, let's check what phone numbers we have in the database
-    console.log('Checking all phone numbers in database...');
-    const { data: allProcesses, error: allProcessesError } = await supabase
-      .from('processes')
-      .select('phone_number, client_name, id, country_code, user_id')
-      .limit(20);
-
-    if (allProcessesError) {
-      console.error('Error fetching all processes:', allProcessesError);
-    } else {
-      console.log('All phone numbers in database:', allProcesses?.map(p => ({ 
-        phone: p.phone_number, 
-        client: p.client_name, 
-        id: p.id,
-        country_code: p.country_code,
-        user_id: p.user_id,
-        full_number: `${p.country_code}${p.phone_number}`
-      })));
-    }
-
-    // Enhanced search patterns for Nicaraguan numbers (+505)
-    const searchPatterns = [
-      cleanPhoneNumber, // +50577140669
-      phoneNumber, // +505 7714 0669
-      cleanPhoneNumber.startsWith('+') ? cleanPhoneNumber : `+${cleanPhoneNumber}`, // +50577140669
-      cleanPhoneNumber.replace('+', ''), // 50577140669
-      // For +505 numbers, try without country code
-      cleanPhoneNumber.replace(/^\+505/, ''), // 77140669
-      cleanPhoneNumber.replace(/^505/, ''), // 77140669 (if starts with 505)
-      // Try with Nicaragua country code variations
-      cleanPhoneNumber.replace(/^\+505/, '+505'),
-      cleanPhoneNumber.replace(/^505/, '+505'),
-      // Extract just the local number part (last 8 digits for Nicaragua)
-      cleanPhoneNumber.slice(-8), // 77140669
-      cleanPhoneNumber.slice(-7), // 7140669 (in case some are stored with 7 digits)
-    ];
-
-    // Remove duplicates and empty patterns
-    const uniquePatterns = [...new Set(searchPatterns)].filter(p => p && p.length > 0);
-    
-    console.log('Trying search patterns:', uniquePatterns);
-
-    let matchedProcess = null;
-    let matchedPattern = '';
-
-    for (const pattern of uniquePatterns) {
-      console.log(`Searching with pattern: "${pattern}"`);
-      
-      // Search in phone_number field
-      const { data: processes, error: queryError } = await supabase
-        .from('processes')
-        .select('*')
-        .eq('phone_number', pattern);
-
-      if (queryError) {
-        console.error('Database query error for pattern', pattern, ':', queryError);
-        continue;
-      }
-
-      console.log(`Found ${processes?.length || 0} matching processes for phone_number pattern:`, pattern);
-
-      if (processes && processes.length > 0) {
-        matchedProcess = processes[0];
-        matchedPattern = pattern;
-        console.log('Match found with phone_number pattern:', pattern);
-        break;
-      }
-
-      // Also try searching by combining country_code + phone_number
-      console.log(`Searching for pattern "${pattern}" in combined country_code + phone_number`);
-      
-      const { data: combinedProcesses, error: combinedError } = await supabase
-        .from('processes')
-        .select('*');
-
-      if (!combinedError && combinedProcesses) {
-        for (const proc of combinedProcesses) {
-          const fullNumber = `${proc.country_code}${proc.phone_number}`;
-          const fullNumberClean = fullNumber.replace(/[\s\-\(\)]/g, '');
-          
-          if (fullNumberClean === pattern || 
-              fullNumberClean === pattern.replace('+', '') ||
-              fullNumber === pattern ||
-              proc.phone_number === pattern) {
-            matchedProcess = proc;
-            matchedPattern = pattern;
-            console.log('Match found with combined pattern:', pattern, 'matching:', fullNumber);
-            break;
-          }
-        }
-        
-        if (matchedProcess) break;
-      }
-    }
+    // Buscar proceso por número de teléfono
+    console.log('Searching for process with phone number:', phoneNumber);
+    const matchedProcess = await findProcessByPhoneNumber(phoneNumber, supabase);
 
     if (!matchedProcess) {
-      console.log('No matching process found for any pattern');
+      console.log('No matching process found for phone number:', phoneNumber);
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: 'Process not found',
-          message: `No se encontró un proceso con el número de teléfono: ${cleanPhoneNumber}`,
-          phone_searched: cleanPhoneNumber,
-          patterns_tried: uniquePatterns,
-          sample_numbers_in_db: allProcesses?.slice(0, 5).map(p => ({
-            phone: p.phone_number,
-            country: p.country_code,
-            full: `${p.country_code}${p.phone_number}`,
-            client: p.client_name,
-            user_id: p.user_id
-          })),
-          debug_info: {
-            original_phone: phoneNumber,
-            cleaned_phone: cleanPhoneNumber,
-            total_processes_in_db: allProcesses?.length || 0,
-            request_content_type: req.headers.get('content-type'),
-            parsed_data: requestData
-          }
+          message: `No se encontró un proceso con el número de teléfono: ${phoneNumber}`,
+          phone_searched: phoneNumber
         }), 
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -400,50 +182,134 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
       );
     }
 
-    const process = matchedProcess;
+    console.log('Found process:', matchedProcess.id, 'for user:', matchedProcess.user_id);
+    return await sendNotificationToUser(matchedProcess, phoneNumber, messageText, supabase, false);
 
-    console.log('Found process:', process.id, 'for user:', process.user_id, 'with pattern:', matchedPattern);
+  } catch (error) {
+    console.error('Error processing notification:', error);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: 'Internal server error',
+        details: error.message,
+        timestamp: new Date().toISOString()
+      }), 
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500
+      }
+    );
+  }
+});
 
-    // Get the user's profile with Telegram configuration
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('telegram_bot_token, telegram_chat_id')
-      .eq('id', process.user_id)
-      .single();
+async function findProcessByPhoneNumber(phoneNumber: string, supabase: any) {
+  const cleanPhoneNumber = phoneNumber.replace(/[\s\-\(\)]/g, '');
+  console.log('Searching for process with cleaned phone number:', cleanPhoneNumber);
 
-    if (profileError || !profile) {
-      console.error('Profile not found for user:', process.user_id, profileError);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Profile not found',
-          message: 'No se encontró el perfil del usuario'
-        }), 
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 404
-        }
-      );
+  // Patrones de búsqueda optimizados
+  const searchPatterns = [
+    cleanPhoneNumber,
+    phoneNumber,
+    cleanPhoneNumber.startsWith('+') ? cleanPhoneNumber : `+${cleanPhoneNumber}`,
+    cleanPhoneNumber.replace('+', ''),
+    cleanPhoneNumber.replace(/^\+505/, ''),
+    cleanPhoneNumber.replace(/^505/, ''),
+    cleanPhoneNumber.slice(-8),
+    cleanPhoneNumber.slice(-7),
+  ];
+
+  const uniquePatterns = [...new Set(searchPatterns)].filter(p => p && p.length > 0);
+  console.log('Search patterns:', uniquePatterns);
+
+  // Buscar en la base de datos de forma optimizada
+  for (const pattern of uniquePatterns) {
+    console.log(`Searching with pattern: "${pattern}"`);
+    
+    const { data: processes, error } = await supabase
+      .from('processes')
+      .select('*')
+      .eq('phone_number', pattern)
+      .limit(1);
+
+    if (!error && processes && processes.length > 0) {
+      console.log('Match found with pattern:', pattern);
+      return processes[0];
     }
 
-    if (!profile.telegram_bot_token || !profile.telegram_chat_id) {
-      console.log('User has not configured Telegram bot:', process.user_id);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Telegram not configured',
-          message: 'El usuario no ha configurado su bot de Telegram'
-        }), 
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400
+    // Buscar combinando country_code + phone_number
+    const { data: allProcesses, error: allError } = await supabase
+      .from('processes')
+      .select('*')
+      .limit(100);
+
+    if (!allError && allProcesses) {
+      for (const proc of allProcesses) {
+        const fullNumber = `${proc.country_code}${proc.phone_number}`;
+        const fullNumberClean = fullNumber.replace(/[\s\-\(\)]/g, '');
+        
+        if (fullNumberClean === pattern || 
+            fullNumberClean === pattern.replace('+', '') ||
+            fullNumber === pattern ||
+            proc.phone_number === pattern) {
+          console.log('Match found with combined pattern:', pattern, 'matching:', fullNumber);
+          return proc;
         }
-      );
+      }
     }
+  }
 
-    const notificationMessage = `🔔 Alerta de proceso de WhatsApp
+  return null;
+}
 
-👩🏽‍💻 Servidor Astro
+async function sendNotificationToUser(process: any, phoneNumber: string, messageText: string, supabase: any, isTestMode: boolean) {
+  console.log('Sending notification to user:', process.user_id, 'for process:', process.id);
+
+  // Obtener configuración del bot del usuario
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('telegram_bot_token, telegram_chat_id, email')
+    .eq('id', process.user_id)
+    .single();
+
+  if (profileError || !profile) {
+    console.error('Profile not found for user:', process.user_id, profileError);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: 'Profile not found',
+        message: `No se encontró el perfil del usuario: ${process.user_id}`,
+        user_id: process.user_id
+      }), 
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 404
+      }
+    );
+  }
+
+  console.log('Profile found for user:', profile.email);
+
+  if (!profile.telegram_bot_token || !profile.telegram_chat_id) {
+    console.log('User has not configured Telegram bot:', process.user_id);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: 'Telegram not configured',
+        message: `El usuario ${profile.email} no ha configurado su bot de Telegram`,
+        user_id: process.user_id,
+        user_email: profile.email
+      }), 
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400
+      }
+    );
+  }
+
+  // Crear mensaje de notificación personalizado
+  const notificationMessage = `🔔 ${isTestMode ? 'PRUEBA - ' : ''}Alerta de proceso de WhatsApp
+
+👩🏽‍💻 Servidor Astro${isTestMode ? ' - MODO PRUEBA' : ''}
 
 📊 INFORMACIÓN DEL PROCESO:
 👤 Cliente: ${process.client_name}
@@ -455,12 +321,18 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
 📞 Remitente: ${phoneNumber}
 📥 Respuesta o código: ${messageText}
 
-🤖 Bot Astro en línea 🟢`;
+🤖 Bot Astro en línea 🟢
+⏰ ${new Date().toLocaleString('es-ES')}
 
-    console.log('Sending notification to Telegram for user:', process.user_id);
-    
-    const telegramUrl = `https://api.telegram.org/bot${profile.telegram_bot_token}/sendMessage`;
-    
+${isTestMode ? '⚠️ Este es un mensaje de PRUEBA' : ''}`;
+
+  console.log('Sending notification to Telegram...');
+  console.log('Bot token (first 10 chars):', profile.telegram_bot_token?.substring(0, 10));
+  console.log('Chat ID:', profile.telegram_chat_id);
+  
+  const telegramUrl = `https://api.telegram.org/bot${profile.telegram_bot_token}/sendMessage`;
+  
+  try {
     const telegramResponse = await fetch(telegramUrl, {
       method: 'POST',
       headers: {
@@ -481,7 +353,14 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
         JSON.stringify({ 
           success: false, 
           error: 'Failed to send Telegram message',
-          details: telegramResult
+          details: telegramResult,
+          user_id: process.user_id,
+          user_email: profile.email,
+          bot_config: {
+            has_token: !!profile.telegram_bot_token,
+            has_chat_id: !!profile.telegram_chat_id,
+            token_length: profile.telegram_bot_token?.length || 0
+          }
         }), 
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -495,12 +374,14 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Notification sent successfully',
+        message: isTestMode ? 'Test notification sent successfully' : 'Notification sent successfully',
         process_id: process.id,
         user_id: process.user_id,
-        phone_number: cleanPhoneNumber,
-        matched_pattern: matchedPattern,
-        message_content: messageText
+        user_email: profile.email,
+        phone_number: phoneNumber,
+        message_content: messageText,
+        test_mode: isTestMode,
+        timestamp: new Date().toISOString()
       }), 
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -508,13 +389,15 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
       }
     );
 
-  } catch (error) {
-    console.error('Error processing notification:', error);
+  } catch (telegramError) {
+    console.error('Error calling Telegram API:', telegramError);
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: 'Internal server error',
-        details: error.message
+        error: 'Telegram API connection error',
+        details: telegramError.message,
+        user_id: process.user_id,
+        user_email: profile.email
       }), 
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -522,4 +405,4 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
       }
     );
   }
-});
+}
