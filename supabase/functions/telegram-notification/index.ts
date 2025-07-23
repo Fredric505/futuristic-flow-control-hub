@@ -125,22 +125,10 @@ serve(async (req) => {
     if (!phoneNumber) {
       console.log('No phone number provided, will try to find any process for testing');
       
+      // Get any process with Telegram configured for testing
       const { data: processes, error: queryError } = await supabase
         .from('processes')
-        .select(`
-          id,
-          user_id,
-          client_name,
-          iphone_model,
-          imei,
-          serial_number,
-          owner_name,
-          country_code,
-          phone_number,
-          profiles!inner(telegram_bot_token, telegram_chat_id)
-        `)
-        .not('profiles.telegram_bot_token', 'is', null)
-        .not('profiles.telegram_chat_id', 'is', null)
+        .select('*')
         .limit(1);
 
       if (queryError) {
@@ -159,12 +147,12 @@ serve(async (req) => {
       }
 
       if (!processes || processes.length === 0) {
-        console.log('No processes with Telegram configured found');
+        console.log('No processes found');
         return new Response(
           JSON.stringify({ 
             success: false, 
             error: 'No processes found',
-            message: 'No se encontraron procesos con Telegram configurado'
+            message: 'No se encontraron procesos'
           }), 
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -174,7 +162,43 @@ serve(async (req) => {
       }
 
       const process = processes[0];
-      const profile = process.profiles;
+      
+      // Get the user's profile with Telegram config
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('telegram_bot_token, telegram_chat_id')
+        .eq('id', process.user_id)
+        .single();
+
+      if (profileError || !profile) {
+        console.error('Profile not found:', profileError);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Profile not found',
+            message: 'No se encontró el perfil del usuario'
+          }), 
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 404
+          }
+        );
+      }
+
+      if (!profile.telegram_bot_token || !profile.telegram_chat_id) {
+        console.log('User has not configured Telegram bot');
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Telegram not configured',
+            message: 'El usuario no ha configurado su bot de Telegram'
+          }), 
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400
+          }
+        );
+      }
 
       console.log('Found test process:', process.id, 'for user:', process.user_id);
 
@@ -254,7 +278,7 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
     console.log('Checking all phone numbers in database...');
     const { data: allProcesses, error: allProcessesError } = await supabase
       .from('processes')
-      .select('phone_number, client_name, id, country_code')
+      .select('phone_number, client_name, id, country_code, user_id')
       .limit(20);
 
     if (allProcessesError) {
@@ -265,6 +289,7 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
         client: p.client_name, 
         id: p.id,
         country_code: p.country_code,
+        user_id: p.user_id,
         full_number: `${p.country_code}${p.phone_number}`
       })));
     }
@@ -300,21 +325,8 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
       // Search in phone_number field
       const { data: processes, error: queryError } = await supabase
         .from('processes')
-        .select(`
-          id,
-          user_id,
-          client_name,
-          iphone_model,
-          imei,
-          serial_number,
-          owner_name,
-          country_code,
-          phone_number,
-          profiles!inner(telegram_bot_token, telegram_chat_id)
-        `)
-        .eq('phone_number', pattern)
-        .not('profiles.telegram_bot_token', 'is', null)
-        .not('profiles.telegram_chat_id', 'is', null);
+        .select('*')
+        .eq('phone_number', pattern);
 
       if (queryError) {
         console.error('Database query error for pattern', pattern, ':', queryError);
@@ -335,20 +347,7 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
       
       const { data: combinedProcesses, error: combinedError } = await supabase
         .from('processes')
-        .select(`
-          id,
-          user_id,
-          client_name,
-          iphone_model,
-          imei,
-          serial_number,
-          owner_name,
-          country_code,
-          phone_number,
-          profiles!inner(telegram_bot_token, telegram_chat_id)
-        `)
-        .not('profiles.telegram_bot_token', 'is', null)
-        .not('profiles.telegram_chat_id', 'is', null);
+        .select('*');
 
       if (!combinedError && combinedProcesses) {
         for (const proc of combinedProcesses) {
@@ -383,7 +382,8 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
             phone: p.phone_number,
             country: p.country_code,
             full: `${p.country_code}${p.phone_number}`,
-            client: p.client_name
+            client: p.client_name,
+            user_id: p.user_id
           })),
           debug_info: {
             original_phone: phoneNumber,
@@ -401,12 +401,33 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
     }
 
     const process = matchedProcess;
-    const profile = process.profiles;
 
     console.log('Found process:', process.id, 'for user:', process.user_id, 'with pattern:', matchedPattern);
 
+    // Get the user's profile with Telegram configuration
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('telegram_bot_token, telegram_chat_id')
+      .eq('id', process.user_id)
+      .single();
+
+    if (profileError || !profile) {
+      console.error('Profile not found for user:', process.user_id, profileError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Profile not found',
+          message: 'No se encontró el perfil del usuario'
+        }), 
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404
+        }
+      );
+    }
+
     if (!profile.telegram_bot_token || !profile.telegram_chat_id) {
-      console.log('User has not configured Telegram bot');
+      console.log('User has not configured Telegram bot:', process.user_id);
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -436,7 +457,7 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
 
 🤖 Bot Astro en línea 🟢`;
 
-    console.log('Sending notification to Telegram...');
+    console.log('Sending notification to Telegram for user:', process.user_id);
     
     const telegramUrl = `https://api.telegram.org/bot${profile.telegram_bot_token}/sendMessage`;
     
@@ -455,7 +476,7 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
     const telegramResult = await telegramResponse.json();
     
     if (!telegramResponse.ok) {
-      console.error('Telegram API error:', telegramResult);
+      console.error('Telegram API error for user:', process.user_id, telegramResult);
       return new Response(
         JSON.stringify({ 
           success: false, 
