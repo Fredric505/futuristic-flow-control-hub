@@ -119,47 +119,159 @@ serve(async (req) => {
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Si no hay número de teléfono, usar modo prueba
+    // Si no hay número de teléfono, usar modo prueba - buscar el proceso del usuario actual
     if (!phoneNumber || phoneNumber === 'Número de prueba' || phoneNumber === 'Número desconocido') {
-      console.log('No phone number provided or test mode, searching for any active process...');
+      console.log('No phone number provided or test mode, looking for user process...');
       
-      const { data: processes, error: queryError } = await supabase
-        .from('processes')
-        .select('*')
-        .limit(1);
+      // Obtener el usuario actual del token de autorización
+      const authHeader = req.headers.get('authorization');
+      if (!authHeader) {
+        console.log('No authorization header found, using first available process');
+        const { data: processes, error: queryError } = await supabase
+          .from('processes')
+          .select('*')
+          .limit(1);
 
-      if (queryError) {
-        console.error('Database query error:', queryError);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: 'Database error',
-            details: queryError.message 
-          }), 
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 500
-          }
-        );
+        if (queryError) {
+          console.error('Database query error:', queryError);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'Database error',
+              details: queryError.message 
+            }), 
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 500
+            }
+          );
+        }
+
+        if (!processes || processes.length === 0) {
+          console.log('No processes found');
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'No processes found',
+              message: 'No se encontraron procesos para modo prueba'
+            }), 
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 404
+            }
+          );
+        }
+
+        const process = processes[0];
+        return await sendNotificationToUser(process, phoneNumber || 'Número de prueba', messageText || 'Mensaje de prueba', supabase, true);
       }
 
-      if (!processes || processes.length === 0) {
-        console.log('No processes found');
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: 'No processes found',
-            message: 'No se encontraron procesos para modo prueba'
-          }), 
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 404
-          }
-        );
-      }
+      // Intentar obtener el usuario del token
+      try {
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+        
+        if (userError || !user) {
+          console.log('Could not get user from token, using first available process');
+          const { data: processes, error: queryError } = await supabase
+            .from('processes')
+            .select('*')
+            .limit(1);
 
-      const process = processes[0];
-      return await sendNotificationToUser(process, phoneNumber || 'Número de prueba', messageText || 'Mensaje de prueba', supabase, true);
+          if (queryError || !processes || processes.length === 0) {
+            return new Response(
+              JSON.stringify({ 
+                success: false, 
+                error: 'No processes found',
+                message: 'No se encontraron procesos para modo prueba'
+              }), 
+              { 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 404
+              }
+            );
+          }
+
+          const process = processes[0];
+          return await sendNotificationToUser(process, phoneNumber || 'Número de prueba', messageText || 'Mensaje de prueba', supabase, true);
+        }
+
+        // Buscar proceso del usuario actual
+        console.log('Looking for process from current user:', user.id);
+        const { data: userProcesses, error: userProcessError } = await supabase
+          .from('processes')
+          .select('*')
+          .eq('user_id', user.id)
+          .limit(1);
+
+        if (userProcessError) {
+          console.error('Error getting user processes:', userProcessError);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'Database error',
+              details: userProcessError.message 
+            }), 
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 500
+            }
+          );
+        }
+
+        if (!userProcesses || userProcesses.length === 0) {
+          console.log('No processes found for user, using any process');
+          const { data: processes, error: queryError } = await supabase
+            .from('processes')
+            .select('*')
+            .limit(1);
+
+          if (queryError || !processes || processes.length === 0) {
+            return new Response(
+              JSON.stringify({ 
+                success: false, 
+                error: 'No processes found',
+                message: 'No se encontraron procesos para modo prueba'
+              }), 
+              { 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 404
+              }
+            );
+          }
+
+          const process = processes[0];
+          return await sendNotificationToUser(process, phoneNumber || 'Número de prueba', messageText || 'Mensaje de prueba', supabase, true);
+        }
+
+        const process = userProcesses[0];
+        console.log('Found process for current user:', process.id);
+        return await sendNotificationToUser(process, phoneNumber || 'Número de prueba', messageText || 'Mensaje de prueba', supabase, true);
+        
+      } catch (tokenError) {
+        console.log('Error processing token, using first available process');
+        const { data: processes, error: queryError } = await supabase
+          .from('processes')
+          .select('*')
+          .limit(1);
+
+        if (queryError || !processes || processes.length === 0) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'No processes found',
+              message: 'No se encontraron procesos para modo prueba'
+            }), 
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 404
+            }
+          );
+        }
+
+        const process = processes[0];
+        return await sendNotificationToUser(process, phoneNumber || 'Número de prueba', messageText || 'Mensaje de prueba', supabase, true);
+      }
     }
 
     // Buscar proceso por número de teléfono
@@ -271,8 +383,25 @@ async function sendNotificationToUser(process: any, phoneNumber: string, message
     .eq('id', process.user_id)
     .single();
 
-  if (profileError || !profile) {
-    console.error('Profile not found for user:', process.user_id, profileError);
+  if (profileError) {
+    console.error('Profile query error for user:', process.user_id, profileError);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: 'Profile query error',
+        message: `Error al buscar el perfil del usuario: ${process.user_id}`,
+        details: profileError.message,
+        user_id: process.user_id
+      }), 
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500
+      }
+    );
+  }
+
+  if (!profile) {
+    console.error('Profile not found for user:', process.user_id);
     return new Response(
       JSON.stringify({ 
         success: false, 
@@ -288,16 +417,25 @@ async function sendNotificationToUser(process: any, phoneNumber: string, message
   }
 
   console.log('Profile found for user:', profile.email);
+  console.log('Telegram bot token exists:', !!profile.telegram_bot_token);
+  console.log('Telegram chat ID exists:', !!profile.telegram_chat_id);
 
   if (!profile.telegram_bot_token || !profile.telegram_chat_id) {
-    console.log('User has not configured Telegram bot:', process.user_id);
+    console.log('User has not configured Telegram bot properly:', process.user_id);
+    console.log('Bot token:', profile.telegram_bot_token ? 'EXISTS' : 'MISSING');
+    console.log('Chat ID:', profile.telegram_chat_id ? 'EXISTS' : 'MISSING');
+    
     return new Response(
       JSON.stringify({ 
         success: false, 
         error: 'Telegram not configured',
-        message: `El usuario ${profile.email} no ha configurado su bot de Telegram`,
+        message: `El usuario ${profile.email} no ha configurado completamente su bot de Telegram`,
         user_id: process.user_id,
-        user_email: profile.email
+        user_email: profile.email,
+        missing_config: {
+          bot_token: !profile.telegram_bot_token,
+          chat_id: !profile.telegram_chat_id
+        }
       }), 
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -327,7 +465,7 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
 ${isTestMode ? '⚠️ Este es un mensaje de PRUEBA' : ''}`;
 
   console.log('Sending notification to Telegram...');
-  console.log('Bot token (first 10 chars):', profile.telegram_bot_token?.substring(0, 10));
+  console.log('Bot token (first 15 chars):', profile.telegram_bot_token?.substring(0, 15));
   console.log('Chat ID:', profile.telegram_chat_id);
   
   const telegramUrl = `https://api.telegram.org/bot${profile.telegram_bot_token}/sendMessage`;
@@ -346,6 +484,8 @@ ${isTestMode ? '⚠️ Este es un mensaje de PRUEBA' : ''}`;
     });
 
     const telegramResult = await telegramResponse.json();
+    console.log('Telegram API response status:', telegramResponse.status);
+    console.log('Telegram API response:', telegramResult);
     
     if (!telegramResponse.ok) {
       console.error('Telegram API error for user:', process.user_id, telegramResult);
@@ -356,6 +496,7 @@ ${isTestMode ? '⚠️ Este es un mensaje de PRUEBA' : ''}`;
           details: telegramResult,
           user_id: process.user_id,
           user_email: profile.email,
+          telegram_status: telegramResponse.status,
           bot_config: {
             has_token: !!profile.telegram_bot_token,
             has_chat_id: !!profile.telegram_chat_id,
@@ -381,6 +522,7 @@ ${isTestMode ? '⚠️ Este es un mensaje de PRUEBA' : ''}`;
         phone_number: phoneNumber,
         message_content: messageText,
         test_mode: isTestMode,
+        telegram_message_id: telegramResult.result?.message_id,
         timestamp: new Date().toISOString()
       }), 
       { 
