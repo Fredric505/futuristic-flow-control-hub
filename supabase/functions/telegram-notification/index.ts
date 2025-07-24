@@ -18,6 +18,7 @@ serve(async (req) => {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] 🚀 INICIANDO PROCESAMIENTO DE NOTIFICACIÓN`);
   console.log(`[${timestamp}] Método: ${req.method}`);
+  console.log(`[${timestamp}] Headers:`, Object.fromEntries(req.headers.entries()));
   
   if (req.method === 'OPTIONS') {
     console.log('✅ Manejando solicitud CORS preflight');
@@ -31,24 +32,25 @@ serve(async (req) => {
     
     try {
       const body = await req.text();
-      console.log('📝 Cuerpo de la solicitud:', body);
+      console.log('📝 Cuerpo completo de la solicitud:', body);
       console.log('📋 Content-Type:', req.headers.get('content-type'));
       
       if (!body || body.trim() === '') {
         console.log('⚠️ Cuerpo vacío, usando datos de prueba');
         requestData = {
           NotificationTitle: 'Número de prueba',
-          NotificationMessage: 'Mensaje de prueba masivo'
+          NotificationMessage: 'Mensaje de prueba'
         };
       } else {
         try {
           requestData = JSON.parse(body);
           console.log('✅ Parseado como JSON exitoso:', requestData);
         } catch (jsonError) {
-          console.log('⚠️ Error JSON, intentando formato texto...');
+          console.log('⚠️ Error JSON, procesando como texto plano...');
           
+          // Verificar si son variables IFTTT no reemplazadas
           if (body.includes('{{NotificationTitle}}') || body.includes('{{NotificationMessage}}')) {
-            console.log('❌ Variables IFTTT no reemplazadas');
+            console.log('❌ Variables IFTTT no reemplazadas detectadas');
             return new Response(
               JSON.stringify({ 
                 success: false, 
@@ -63,8 +65,9 @@ serve(async (req) => {
             );
           }
           
+          // Procesar como texto plano
           const lines = body.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-          console.log('📄 Líneas procesadas:', lines);
+          console.log('📄 Líneas extraídas del texto:', lines);
           
           if (lines.length >= 2) {
             requestData = {
@@ -73,21 +76,25 @@ serve(async (req) => {
             };
           } else if (lines.length === 1) {
             requestData = {
-              NotificationTitle: 'Número desconocido',
-              NotificationMessage: lines[0]
+              NotificationTitle: lines[0],
+              NotificationMessage: 'Sin mensaje'
             };
           } else {
-            throw new Error('No se pudo procesar el cuerpo de la solicitud');
+            console.log('❌ No se pudo extraer información del cuerpo');
+            requestData = {
+              NotificationTitle: 'Número desconocido',
+              NotificationMessage: 'Mensaje sin contenido'
+            };
           }
         }
       }
     } catch (parseError) {
-      console.error('❌ Error procesando solicitud:', parseError);
+      console.error('❌ Error crítico procesando solicitud:', parseError);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Formato de solicitud inválido',
-          message: 'Debe ser JSON o texto plano.',
+          error: 'Error procesando solicitud',
+          message: 'No se pudo procesar la solicitud entrante',
           details: parseError.message
         }), 
         { 
@@ -97,7 +104,7 @@ serve(async (req) => {
       );
     }
     
-    console.log('📊 Datos de notificación procesados:', requestData);
+    console.log('📊 Datos finales procesados:', requestData);
 
     let phoneNumber = '';
     let messageText = '';
@@ -110,7 +117,9 @@ serve(async (req) => {
       phoneNumber = requestData.sender || '';
     }
 
-    console.log('🎯 Datos extraídos:', { phoneNumber, messageText });
+    console.log('🎯 Datos extraídos para procesamiento:');
+    console.log('   📱 Número de teléfono:', phoneNumber);
+    console.log('   📧 Mensaje:', messageText);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -119,9 +128,15 @@ serve(async (req) => {
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Modo de prueba
-    if (!phoneNumber || phoneNumber === 'Número de prueba' || phoneNumber === 'Número desconocido') {
-      console.log('🧪 MODO PRUEBA DETECTADO');
+    // Modo de prueba - detectar si es una prueba
+    const isTestMode = !phoneNumber || 
+                      phoneNumber === 'Número de prueba' || 
+                      phoneNumber === 'Número desconocido' ||
+                      phoneNumber.includes('prueba') ||
+                      phoneNumber.includes('test');
+
+    if (isTestMode) {
+      console.log('🧪 MODO PRUEBA DETECTADO - Patrón:', phoneNumber);
       
       const authHeader = req.headers.get('authorization');
       let targetUserId = null;
@@ -133,10 +148,10 @@ serve(async (req) => {
           
           if (!userError && user) {
             targetUserId = user.id;
-            console.log('👤 Usuario encontrado:', user.email);
+            console.log('👤 Usuario de prueba identificado:', user.email);
           }
         } catch (tokenError) {
-          console.log('⚠️ Error procesando token:', tokenError);
+          console.log('⚠️ Error procesando token de prueba:', tokenError);
         }
       }
       
@@ -146,13 +161,13 @@ serve(async (req) => {
         processQuery = processQuery.eq('user_id', targetUserId);
         console.log('🎯 Buscando proceso para usuario específico:', targetUserId);
       } else {
-        console.log('🔍 Buscando cualquier proceso disponible');
+        console.log('🔍 Buscando cualquier proceso disponible para prueba');
       }
       
       const { data: processes, error: queryError } = await processQuery.limit(1);
 
       if (queryError) {
-        console.error('❌ Error en consulta:', queryError);
+        console.error('❌ Error en consulta de prueba:', queryError);
         return new Response(
           JSON.stringify({ 
             success: false, 
@@ -167,7 +182,7 @@ serve(async (req) => {
       }
 
       if (!processes || processes.length === 0) {
-        console.log('❌ No se encontraron procesos');
+        console.log('❌ No se encontraron procesos para prueba');
         return new Response(
           JSON.stringify({ 
             success: false, 
@@ -182,22 +197,47 @@ serve(async (req) => {
       }
 
       const process = processes[0];
-      console.log('✅ Usando proceso:', process.id, 'usuario:', process.user_id);
+      console.log('✅ Proceso de prueba seleccionado:', process.id, 'usuario:', process.user_id);
       return await sendNotificationToUser(process, phoneNumber || 'Número de prueba', messageText || 'Mensaje de prueba', supabase, true);
     }
 
-    // Modo real - búsqueda exhaustiva
-    console.log('🔍 MODO REAL: Buscando proceso para:', phoneNumber);
+    // Modo real - búsqueda exhaustiva mejorada
+    console.log('🔍 MODO REAL: Iniciando búsqueda para número:', phoneNumber);
+    
+    if (!phoneNumber || phoneNumber.trim() === '') {
+      console.log('❌ Número de teléfono vacío o inválido');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Número inválido',
+          message: 'No se proporcionó un número de teléfono válido'
+        }), 
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400
+        }
+      );
+    }
+
     const matchedProcess = await findProcessByPhoneNumber(phoneNumber, supabase);
 
     if (!matchedProcess) {
-      console.log('❌ No se encontró proceso para:', phoneNumber);
+      console.log('❌ No se encontró proceso para número:', phoneNumber);
+      
+      // Mostrar todos los procesos disponibles para debugging
+      const { data: allProcesses } = await supabase.from('processes').select('client_name, country_code, phone_number, user_id');
+      console.log('📋 Procesos disponibles en base de datos:');
+      allProcesses?.forEach((proc, index) => {
+        console.log(`   ${index + 1}. ${proc.client_name} - ${proc.country_code}${proc.phone_number} (${proc.user_id})`);
+      });
+      
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: 'Proceso no encontrado',
-          message: `No se encontró proceso para: ${phoneNumber}`,
-          phone_searched: phoneNumber
+          message: `No se encontró proceso para el número: ${phoneNumber}`,
+          phone_searched: phoneNumber,
+          available_processes: allProcesses?.length || 0
         }), 
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -210,12 +250,13 @@ serve(async (req) => {
     return await sendNotificationToUser(matchedProcess, phoneNumber, messageText, supabase, false);
 
   } catch (error) {
-    console.error('💥 ERROR CRÍTICO:', error);
+    console.error('💥 ERROR CRÍTICO EN FUNCIÓN:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
         error: 'Error interno del servidor',
         details: error.message,
+        stack: error.stack,
         timestamp: new Date().toISOString()
       }), 
       { 
@@ -227,51 +268,54 @@ serve(async (req) => {
 });
 
 async function findProcessByPhoneNumber(phoneNumber: string, supabase: any) {
-  console.log('🔍 Iniciando búsqueda exhaustiva para:', phoneNumber);
+  console.log('🔍 === BÚSQUEDA EXHAUSTIVA INICIADA ===');
+  console.log('📱 Número original recibido:', phoneNumber);
   
-  const cleanPhoneNumber = phoneNumber.replace(/[\s\-\(\)]/g, '');
+  const cleanPhoneNumber = phoneNumber.replace(/[\s\-\(\)\.]/g, '');
   console.log('🧹 Número limpio:', cleanPhoneNumber);
 
-  // Patrones de búsqueda más exhaustivos
+  // Patrones de búsqueda ultra-exhaustivos
   const searchPatterns = [
-    phoneNumber,                                    // Original
-    cleanPhoneNumber,                               // Limpio
+    phoneNumber,                                    // Original exacto
+    cleanPhoneNumber,                              // Limpio
     cleanPhoneNumber.startsWith('+') ? cleanPhoneNumber : `+${cleanPhoneNumber}`,
-    cleanPhoneNumber.replace('+', ''),              // Sin +
-    cleanPhoneNumber.replace(/^\+505/, ''),         // Sin código Nicaragua
-    cleanPhoneNumber.replace(/^\+52/, ''),          // Sin código México
-    cleanPhoneNumber.replace(/^\+57/, ''),          // Sin código Colombia
-    cleanPhoneNumber.replace(/^\+593/, ''),         // Sin código Ecuador
-    cleanPhoneNumber.replace(/^\+591/, ''),         // Sin código Bolivia
-    cleanPhoneNumber.replace(/^\+56/, ''),          // Sin código Chile
-    cleanPhoneNumber.replace(/^\+51/, ''),          // Sin código Perú
-    cleanPhoneNumber.replace(/^\+506/, ''),         // Sin código Costa Rica
-    cleanPhoneNumber.replace(/^\+502/, ''),         // Sin código Guatemala
-    cleanPhoneNumber.replace(/^\+503/, ''),         // Sin código El Salvador
-    cleanPhoneNumber.replace(/^\+504/, ''),         // Sin código Honduras
-    cleanPhoneNumber.replace(/^\+507/, ''),         // Sin código Panamá
-    cleanPhoneNumber.replace(/^505/, ''),           // Sin 505
-    cleanPhoneNumber.replace(/^52/, ''),            // Sin 52
-    cleanPhoneNumber.replace(/^57/, ''),            // Sin 57
-    cleanPhoneNumber.replace(/^593/, ''),           // Sin 593
-    cleanPhoneNumber.replace(/^591/, ''),           // Sin 591
-    cleanPhoneNumber.replace(/^56/, ''),            // Sin 56
-    cleanPhoneNumber.replace(/^51/, ''),            // Sin 51
-    cleanPhoneNumber.replace(/^506/, ''),           // Sin 506
-    cleanPhoneNumber.replace(/^502/, ''),           // Sin 502
-    cleanPhoneNumber.replace(/^503/, ''),           // Sin 503
-    cleanPhoneNumber.replace(/^504/, ''),           // Sin 504
-    cleanPhoneNumber.replace(/^507/, ''),           // Sin 507
-    cleanPhoneNumber.slice(-8),                     // Últimos 8 dígitos
-    cleanPhoneNumber.slice(-7),                     // Últimos 7 dígitos
-    cleanPhoneNumber.slice(-6),                     // Últimos 6 dígitos
-    cleanPhoneNumber.slice(-5),                     // Últimos 5 dígitos
+    cleanPhoneNumber.replace(/^\+/, ''),           // Sin + inicial
+    
+    // Códigos de país latinoamericanos
+    cleanPhoneNumber.replace(/^\+?505/, ''),       // Nicaragua
+    cleanPhoneNumber.replace(/^\+?52/, ''),        // México
+    cleanPhoneNumber.replace(/^\+?57/, ''),        // Colombia
+    cleanPhoneNumber.replace(/^\+?593/, ''),       // Ecuador
+    cleanPhoneNumber.replace(/^\+?591/, ''),       // Bolivia
+    cleanPhoneNumber.replace(/^\+?56/, ''),        // Chile
+    cleanPhoneNumber.replace(/^\+?51/, ''),        // Perú
+    cleanPhoneNumber.replace(/^\+?506/, ''),       // Costa Rica
+    cleanPhoneNumber.replace(/^\+?502/, ''),       // Guatemala
+    cleanPhoneNumber.replace(/^\+?503/, ''),       // El Salvador
+    cleanPhoneNumber.replace(/^\+?504/, ''),       // Honduras
+    cleanPhoneNumber.replace(/^\+?507/, ''),       // Panamá
+    cleanPhoneNumber.replace(/^\+?1/, ''),         // USA/Canadá
+    
+    // Variaciones de longitud
+    cleanPhoneNumber.slice(-10),                   // Últimos 10 dígitos
+    cleanPhoneNumber.slice(-9),                    // Últimos 9 dígitos
+    cleanPhoneNumber.slice(-8),                    // Últimos 8 dígitos
+    cleanPhoneNumber.slice(-7),                    // Últimos 7 dígitos
+    cleanPhoneNumber.slice(-6),                    // Últimos 6 dígitos
+    
+    // Con códigos añadidos
+    `+505${cleanPhoneNumber.replace(/^\+?505/, '')}`,
+    `+52${cleanPhoneNumber.replace(/^\+?52/, '')}`,
+    `+57${cleanPhoneNumber.replace(/^\+?57/, '')}`,
+    `505${cleanPhoneNumber.replace(/^\+?505/, '')}`,
+    `52${cleanPhoneNumber.replace(/^\+?52/, '')}`,
+    `57${cleanPhoneNumber.replace(/^\+?57/, '')}`,
   ];
 
   const uniquePatterns = [...new Set(searchPatterns)].filter(p => p && p.length > 0);
-  console.log('🎯 Patrones de búsqueda:', uniquePatterns);
+  console.log('🎯 Patrones de búsqueda generados:', uniquePatterns);
 
-  // Obtener TODOS los procesos
+  // Obtener TODOS los procesos de la base de datos
   const { data: allProcesses, error: allError } = await supabase
     .from('processes')
     .select('*');
@@ -286,74 +330,76 @@ async function findProcessByPhoneNumber(phoneNumber: string, supabase: any) {
     return null;
   }
 
-  console.log(`🔍 Verificando ${allProcesses.length} procesos`);
+  console.log(`🔍 Verificando ${allProcesses.length} procesos en base de datos`);
 
-  // Búsqueda exhaustiva con múltiples estrategias
-  for (const proc of allProcesses) {
-    const fullNumber = `${proc.country_code}${proc.phone_number}`;
-    const fullNumberClean = fullNumber.replace(/[\s\-\(\)]/g, '');
-    const phoneOnly = proc.phone_number.replace(/[\s\-\(\)]/g, '');
-    
-    console.log(`🔍 Verificando proceso ${proc.id}:`);
-    console.log(`   📱 Teléfono almacenado: "${proc.phone_number}"`);
+  // Búsqueda exhaustiva proceso por proceso
+  for (const [index, proc] of allProcesses.entries()) {
+    console.log(`\n🔍 === PROCESO ${index + 1}/${allProcesses.length} ===`);
+    console.log(`   📋 ID: ${proc.id}`);
+    console.log(`   👤 Cliente: ${proc.client_name}`);
+    console.log(`   📱 Teléfono: "${proc.phone_number}"`);
     console.log(`   🌍 Código país: "${proc.country_code}"`);
+    console.log(`   👨‍💼 Usuario: ${proc.user_id}`);
+    
+    const fullNumber = `${proc.country_code}${proc.phone_number}`;
+    const fullNumberClean = fullNumber.replace(/[\s\-\(\)\.]/g, '');
+    const phoneOnly = proc.phone_number.replace(/[\s\-\(\)\.]/g, '');
+    
     console.log(`   🔢 Número completo: "${fullNumber}"`);
     console.log(`   🧹 Número completo limpio: "${fullNumberClean}"`);
+    console.log(`   📞 Solo teléfono: "${phoneOnly}"`);
     
-    // Múltiples estrategias de matching
+    // Probar cada patrón contra este proceso
     for (const pattern of uniquePatterns) {
-      // Estrategia 1: Coincidencia exacta
-      if (fullNumberClean === pattern || 
-          fullNumber === pattern ||
-          proc.phone_number === pattern ||
-          phoneOnly === pattern) {
-        console.log(`✅ COINCIDENCIA EXACTA! Patrón: "${pattern}" = proceso ${proc.id}`);
-        return proc;
-      }
+      if (!pattern) continue;
       
-      // Estrategia 2: Coincidencia al final
-      if (fullNumberClean.endsWith(pattern) || 
-          pattern.endsWith(fullNumberClean) ||
-          fullNumberClean.endsWith(phoneOnly) ||
-          pattern.endsWith(phoneOnly)) {
-        console.log(`✅ COINCIDENCIA AL FINAL! Patrón: "${pattern}" = proceso ${proc.id}`);
-        return proc;
-      }
+      // Múltiples estrategias de coincidencia
+      const matches = [
+        fullNumberClean === pattern,
+        fullNumber === pattern,
+        proc.phone_number === pattern,
+        phoneOnly === pattern,
+        fullNumberClean.endsWith(pattern),
+        pattern.endsWith(fullNumberClean),
+        fullNumberClean.endsWith(phoneOnly),
+        pattern.endsWith(phoneOnly),
+        fullNumberClean.includes(pattern),
+        pattern.includes(fullNumberClean),
+        phoneOnly.includes(pattern),
+        pattern.includes(phoneOnly),
+        // Coincidencia parcial más flexible
+        fullNumberClean.slice(-8) === pattern.slice(-8) && pattern.length >= 8,
+        fullNumberClean.slice(-7) === pattern.slice(-7) && pattern.length >= 7,
+      ];
       
-      // Estrategia 3: Coincidencia sin código de país
-      if (phoneOnly === pattern || 
-          pattern === phoneOnly) {
-        console.log(`✅ COINCIDENCIA SIN CÓDIGO! Patrón: "${pattern}" = proceso ${proc.id}`);
-        return proc;
-      }
-      
-      // Estrategia 4: Coincidencia flexible (contiene)
-      if (fullNumberClean.includes(pattern) || 
-          pattern.includes(fullNumberClean) ||
-          fullNumberClean.includes(phoneOnly) ||
-          pattern.includes(phoneOnly)) {
-        console.log(`✅ COINCIDENCIA FLEXIBLE! Patrón: "${pattern}" = proceso ${proc.id}`);
+      if (matches.some(match => match)) {
+        console.log(`\n✅ ¡COINCIDENCIA ENCONTRADA!`);
+        console.log(`   🎯 Patrón exitoso: "${pattern}"`);
+        console.log(`   📱 Proceso: ${proc.id}`);
+        console.log(`   👤 Usuario: ${proc.user_id}`);
+        console.log(`   📞 Teléfono proceso: ${proc.country_code}${proc.phone_number}`);
         return proc;
       }
     }
   }
 
-  console.log('❌ No se encontró coincidencia después de verificar todos los patrones');
-  
-  // Log de debug para ayudar a diagnosticar
-  console.log('📊 RESUMEN DE BÚSQUEDA:');
-  console.log('   🔍 Número buscado:', phoneNumber);
-  console.log('   🧹 Número limpio:', cleanPhoneNumber);
-  console.log('   📱 Procesos en DB:', allProcesses.length);
-  console.log('   🎯 Patrones probados:', uniquePatterns.length);
+  console.log('\n❌ === BÚSQUEDA COMPLETADA SIN RESULTADOS ===');
+  console.log('📊 RESUMEN FINAL:');
+  console.log(`   🔍 Número buscado: "${phoneNumber}"`);
+  console.log(`   🧹 Número limpio: "${cleanPhoneNumber}"`);
+  console.log(`   📱 Procesos verificados: ${allProcesses.length}`);
+  console.log(`   🎯 Patrones probados: ${uniquePatterns.length}`);
+  console.log(`   ❌ Resultado: SIN COINCIDENCIAS`);
   
   return null;
 }
 
 async function sendNotificationToUser(process: any, phoneNumber: string, messageText: string, supabase: any, isTestMode: boolean) {
-  console.log(`🔔 ENVIANDO NOTIFICACIÓN:`);
-  console.log(`   👤 Usuario: ${process.user_id}`);
-  console.log(`   📋 Proceso: ${process.id}`);
+  console.log(`\n🔔 === ENVIANDO NOTIFICACIÓN ===`);
+  console.log(`   📋 Proceso ID: ${process.id}`);
+  console.log(`   👤 Usuario ID: ${process.user_id}`);
+  console.log(`   📱 Número: ${phoneNumber}`);
+  console.log(`   💬 Mensaje: ${messageText}`);
   console.log(`   🧪 Modo prueba: ${isTestMode}`);
 
   // Obtener configuración del usuario
@@ -364,12 +410,12 @@ async function sendNotificationToUser(process: any, phoneNumber: string, message
     .single();
 
   if (profileError) {
-    console.error('❌ Error obteniendo perfil:', profileError);
+    console.error('❌ Error obteniendo perfil del usuario:', profileError);
     return new Response(
       JSON.stringify({ 
         success: false, 
         error: 'Error de perfil',
-        message: `Error buscando perfil: ${process.user_id}`,
+        message: `Error buscando perfil para usuario: ${process.user_id}`,
         details: profileError.message
       }), 
       { 
@@ -380,12 +426,12 @@ async function sendNotificationToUser(process: any, phoneNumber: string, message
   }
 
   if (!profile) {
-    console.error('❌ Perfil no encontrado:', process.user_id);
+    console.error('❌ Perfil no encontrado para usuario:', process.user_id);
     return new Response(
       JSON.stringify({ 
         success: false, 
         error: 'Perfil no encontrado',
-        message: `No existe perfil para: ${process.user_id}`
+        message: `No existe perfil para usuario: ${process.user_id}`
       }), 
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -395,8 +441,8 @@ async function sendNotificationToUser(process: any, phoneNumber: string, message
   }
 
   console.log(`📧 Perfil encontrado: ${profile.email}`);
-  console.log(`🤖 Bot token: ${profile.telegram_bot_token ? 'CONFIGURADO' : 'NO CONFIGURADO'}`);
-  console.log(`💬 Chat ID: ${profile.telegram_chat_id ? 'CONFIGURADO' : 'NO CONFIGURADO'}`);
+  console.log(`🤖 Bot token: ${profile.telegram_bot_token ? 'CONFIGURADO ✅' : 'NO CONFIGURADO ❌'}`);
+  console.log(`💬 Chat ID: ${profile.telegram_chat_id ? 'CONFIGURADO ✅' : 'NO CONFIGURADO ❌'}`);
 
   if (!profile.telegram_bot_token || !profile.telegram_chat_id) {
     console.log('❌ Configuración Telegram incompleta');
@@ -404,7 +450,7 @@ async function sendNotificationToUser(process: any, phoneNumber: string, message
       JSON.stringify({ 
         success: false, 
         error: 'Telegram no configurado',
-        message: `Usuario ${profile.email} no tiene Telegram configurado`,
+        message: `Usuario ${profile.email} no tiene Telegram configurado correctamente`,
         user_id: process.user_id,
         user_email: profile.email,
         missing_config: {
@@ -419,7 +465,7 @@ async function sendNotificationToUser(process: any, phoneNumber: string, message
     );
   }
 
-  // Crear mensaje personalizado
+  // Crear mensaje de notificación
   const notificationMessage = `🔔 ${isTestMode ? 'PRUEBA - ' : ''}Alerta WhatsApp
 
 👩🏽‍💻 Servidor Astro${isTestMode ? ' - MODO PRUEBA' : ''}
@@ -435,11 +481,14 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
 📥 Mensaje: ${messageText}
 
 🤖 Bot Astro 🟢
-⏰ ${new Date().toLocaleString('es-ES')}
+⏰ ${new Date().toLocaleString('es-ES', { timeZone: 'America/Managua' })}
 
 ${isTestMode ? '⚠️ MENSAJE DE PRUEBA' : ''}`;
 
-  console.log(`🚀 Enviando a Telegram para: ${profile.email}`);
+  console.log(`🚀 Enviando notificación a Telegram...`);
+  console.log(`   📧 Usuario: ${profile.email}`);
+  console.log(`   🤖 Bot: ${profile.telegram_bot_token.substring(0, 10)}...`);
+  console.log(`   💬 Chat: ${profile.telegram_chat_id}`);
   
   const telegramUrl = `https://api.telegram.org/bot${profile.telegram_bot_token}/sendMessage`;
   
@@ -457,16 +506,16 @@ ${isTestMode ? '⚠️ MENSAJE DE PRUEBA' : ''}`;
     });
 
     const telegramResult = await telegramResponse.json();
-    console.log(`📡 Telegram API status: ${telegramResponse.status}`);
-    console.log('📡 Telegram respuesta:', telegramResult);
+    console.log(`📡 Telegram API Status: ${telegramResponse.status}`);
+    console.log('📡 Telegram Response:', telegramResult);
     
     if (!telegramResponse.ok) {
-      console.error('❌ Error Telegram API:', telegramResult);
+      console.error('❌ Error en Telegram API:', telegramResult);
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: 'Error enviando a Telegram',
-          details: telegramResult,
+          telegram_error: telegramResult,
           user_id: process.user_id,
           user_email: profile.email,
           telegram_status: telegramResponse.status
@@ -478,7 +527,11 @@ ${isTestMode ? '⚠️ MENSAJE DE PRUEBA' : ''}`;
       );
     }
 
-    console.log(`✅ NOTIFICACIÓN ENVIADA EXITOSAMENTE a: ${profile.email}`);
+    console.log(`\n✅ === NOTIFICACIÓN ENVIADA EXITOSAMENTE ===`);
+    console.log(`   📧 Usuario: ${profile.email}`);
+    console.log(`   📱 Número: ${phoneNumber}`);
+    console.log(`   🆔 Message ID: ${telegramResult.result?.message_id}`);
+    console.log(`   ⏰ Timestamp: ${new Date().toISOString()}`);
 
     return new Response(
       JSON.stringify({ 
@@ -500,11 +553,11 @@ ${isTestMode ? '⚠️ MENSAJE DE PRUEBA' : ''}`;
     );
 
   } catch (telegramError) {
-    console.error('❌ Error conexión Telegram:', telegramError);
+    console.error('❌ Error de conexión con Telegram:', telegramError);
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: 'Error conexión Telegram',
+        error: 'Error de conexión con Telegram',
         details: telegramError.message,
         user_id: process.user_id,
         user_email: profile.email
