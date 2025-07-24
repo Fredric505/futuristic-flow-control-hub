@@ -33,7 +33,7 @@ const ManageUsers = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      console.log('Loading users with new RLS policies...');
+      console.log('Loading users...');
       
       // Verificar que el usuario actual esté autenticado
       const { data: { session } } = await supabase.auth.getSession();
@@ -41,11 +41,34 @@ const ManageUsers = () => {
       
       if (!session) {
         console.log('No active session');
+        toast({
+          title: "Error",
+          description: "No hay sesión activa. Por favor, inicia sesión.",
+          variant: "destructive",
+        });
         setUsers([]);
         return;
       }
 
-      // Cargar todos los perfiles (las nuevas políticas RLS permiten al admin ver todos)
+      // Verificar si el usuario actual es admin
+      const { data: currentProfile } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!currentProfile || currentProfile.email !== 'fredric@gmail.com') {
+        console.log('User is not admin:', currentProfile?.email);
+        toast({
+          title: "Error",
+          description: "Solo los administradores pueden ver esta sección.",
+          variant: "destructive",
+        });
+        setUsers([]);
+        return;
+      }
+
+      // Cargar todos los perfiles
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -60,6 +83,7 @@ const ManageUsers = () => {
           description: `Error al cargar usuarios: ${profileError.message}`,
           variant: "destructive",
         });
+        setUsers([]);
         return;
       }
 
@@ -73,6 +97,7 @@ const ManageUsers = () => {
         description: `Error al cargar usuarios: ${error.message}`,
         variant: "destructive",
       });
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -215,9 +240,9 @@ const ManageUsers = () => {
         <div className="space-y-4">
           {users.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-blue-200/70 mb-4">No hay usuarios registrados o no tienes permisos para verlos</p>
+              <p className="text-blue-200/70 mb-4">No hay usuarios registrados</p>
               <p className="text-blue-200/50 text-sm">
-                Si hay usuarios registrados, puede ser un problema de permisos. Contacta al administrador del sistema.
+                Los usuarios aparecerán aquí cuando se registren en el sistema.
               </p>
             </div>
           ) : (
@@ -247,6 +272,10 @@ const ManageUsers = () => {
                       <p className={`text-sm font-medium ${expirationStatus.className}`}>
                         {expirationStatus.text}
                       </p>
+                      <div className="text-blue-200/70 text-sm">
+                        <p>Telegram Bot: {user.telegram_bot_token ? '✅ Configurado' : '❌ No configurado'}</p>
+                        <p>Chat ID: {user.telegram_chat_id ? '✅ Configurado' : '❌ No configurado'}</p>
+                      </div>
                     </div>
                     
                     <div className="flex space-x-2">

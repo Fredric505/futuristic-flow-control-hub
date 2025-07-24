@@ -1,568 +1,328 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface NotificationData {
-  NotificationTitle?: string;
-  NotificationMessage?: string;
-  message?: string;
-  sender?: string;
-  response?: string;
-}
+Deno.serve(async (req) => {
+  console.log(`[${new Date().toISOString()}] 🚀 INICIANDO PROCESAMIENTO DE NOTIFICACIÓN GLOBAL`);
+  console.log(`[${new Date().toISOString()}] Método: ${req.method}`);
 
-serve(async (req) => {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] 🚀 INICIANDO PROCESAMIENTO DE NOTIFICACIÓN GLOBAL`);
-  console.log(`[${timestamp}] Método: ${req.method}`);
-  console.log(`[${timestamp}] Headers:`, Object.fromEntries(req.headers.entries()));
-  
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('✅ Manejando solicitud CORS preflight');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('🔍 Procesando datos de la notificación GLOBAL...');
+    console.log(`[${new Date().toISOString()}] Headers:`, Object.fromEntries(req.headers.entries()));
+
+    console.log('🔗 Conectando a Supabase con Service Role Key...');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
-    let requestData: NotificationData;
-    
-    try {
-      const body = await req.text();
-      console.log('📝 Cuerpo completo de la solicitud:', body);
-      console.log('📋 Content-Type:', req.headers.get('content-type'));
-      
-      if (!body || body.trim() === '') {
-        console.log('⚠️ Cuerpo vacío, usando datos de prueba');
-        requestData = {
-          NotificationTitle: 'Número de prueba',
-          NotificationMessage: 'Mensaje de prueba'
-        };
-      } else {
-        try {
-          requestData = JSON.parse(body);
-          console.log('✅ Parseado como JSON exitoso:', requestData);
-        } catch (jsonError) {
-          console.log('⚠️ Error JSON, procesando como texto plano...');
-          
-          // Verificar si son variables IFTTT no reemplazadas
-          if (body.includes('{{NotificationTitle}}') || body.includes('{{NotificationMessage}}')) {
-            console.log('❌ Variables IFTTT no reemplazadas detectadas');
-            return new Response(
-              JSON.stringify({ 
-                success: false, 
-                error: 'IFTTT template error',
-                message: 'Variables IFTTT no reemplazadas correctamente.',
-                received_body: body
-              }), 
-              { 
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 400
-              }
-            );
-          }
-          
-          // Procesar como texto plano
-          const lines = body.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-          console.log('📄 Líneas extraídas del texto:', lines);
-          
-          if (lines.length >= 2) {
-            requestData = {
-              NotificationTitle: lines[0],
-              NotificationMessage: lines[1]
-            };
-          } else if (lines.length === 1) {
-            requestData = {
-              NotificationTitle: lines[0],
-              NotificationMessage: 'Sin mensaje'
-            };
-          } else {
-            console.log('❌ No se pudo extraer información del cuerpo');
-            requestData = {
-              NotificationTitle: 'Número desconocido',
-              NotificationMessage: 'Mensaje sin contenido'
-            };
-          }
-        }
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
       }
-    } catch (parseError) {
-      console.error('❌ Error crítico procesando solicitud:', parseError);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Error procesando solicitud',
-          message: 'No se pudo procesar la solicitud entrante',
-          details: parseError.message
-        }), 
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400
-        }
-      );
+    });
+
+    // Leer el cuerpo de la petición
+    const contentType = req.headers.get('content-type');
+    console.log('📋 Content-Type:', contentType);
+    
+    let body = '';
+    try {
+      body = await req.text();
+    } catch (error) {
+      console.log('⚠️ Error leyendo body:', error);
     }
     
-    console.log('📊 Datos finales procesados:', requestData);
+    console.log('📝 Cuerpo completo de la solicitud:', body);
 
+    let data: any = {};
+    
+    // Procesar diferentes tipos de contenido
+    if (contentType?.includes('application/json') && body) {
+      try {
+        data = JSON.parse(body);
+        console.log('✅ Parseado como JSON exitoso:', data);
+      } catch (error) {
+        console.log('❌ Error parseando JSON:', error);
+        data = {};
+      }
+    } else if (contentType?.includes('application/x-www-form-urlencoded') && body) {
+      try {
+        const params = new URLSearchParams(body);
+        data = Object.fromEntries(params);
+        console.log('✅ Parseado como URL encoded exitoso:', data);
+      } catch (error) {
+        console.log('❌ Error parseando URL encoded:', error);
+        data = {};
+      }
+    }
+
+    // Extraer información del mensaje
     let phoneNumber = '';
-    let messageText = '';
-    
-    if (requestData.NotificationTitle || requestData.NotificationMessage) {
-      phoneNumber = requestData.NotificationTitle || '';
-      messageText = requestData.NotificationMessage || '';
-    } else if (requestData.message) {
-      messageText = requestData.message;
-      phoneNumber = requestData.sender || '';
+    let message = '';
+    let sender = '';
+
+    // Intentar extraer de diferentes formatos
+    if (data.message || data.Text) {
+      message = data.message || data.Text || '';
+      phoneNumber = data.sender || data.FromNumber || '';
+      sender = data.sender || data.FromNumber || '';
+    } else if (data.NotificationTitle || data.NotificationMessage) {
+      phoneNumber = data.NotificationTitle || '';
+      message = data.NotificationMessage || '';
     }
 
+    // Si no hay datos, usar datos de prueba
+    if (!phoneNumber && !message) {
+      console.log('⚠️ Cuerpo vacío, usando datos de prueba');
+      phoneNumber = 'Número de prueba';
+      message = 'Mensaje de prueba';
+    }
+
+    console.log('📊 Datos finales procesados:', { NotificationTitle: phoneNumber, NotificationMessage: message });
+
+    console.log('🔍 Procesando datos de la notificación GLOBAL...');
     console.log('🎯 Datos extraídos para procesamiento:');
     console.log('   📱 Número de teléfono:', phoneNumber);
-    console.log('   📧 Mensaje:', messageText);
+    console.log('   📧 Mensaje:', message);
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    // Detectar si es modo prueba
+    const isTestMode = phoneNumber.toLowerCase().includes('prueba') || 
+                      phoneNumber.toLowerCase().includes('test') ||
+                      phoneNumber === 'Número de prueba';
     
-    console.log('🔗 Conectando a Supabase con Service Role Key...');
-    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Modo de prueba - detectar si es una prueba
-    const isTestMode = !phoneNumber || 
-                      phoneNumber === 'Número de prueba' || 
-                      phoneNumber === 'Número desconocido' ||
-                      phoneNumber.includes('prueba') ||
-                      phoneNumber.includes('test');
-
     if (isTestMode) {
       console.log('🧪 MODO PRUEBA DETECTADO - Patrón:', phoneNumber);
-      
-      // En modo prueba, buscar cualquier proceso disponible
-      const { data: processes, error: queryError } = await supabase
+    }
+
+    // Buscar proceso que coincida con el número de teléfono
+    let matchingProcess = null;
+    
+    if (isTestMode) {
+      // En modo prueba, buscar cualquier proceso para testing
+      console.log('🔍 Buscando proceso de prueba...');
+      const { data: testProcesses, error: testError } = await supabase
         .from('processes')
         .select('*')
         .limit(1);
-
-      if (queryError) {
-        console.error('❌ Error en consulta de prueba:', queryError);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: 'Error en base de datos',
-            details: queryError.message 
-          }), 
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 500
-          }
-        );
-      }
-
-      if (!processes || processes.length === 0) {
-        console.log('❌ No se encontraron procesos para prueba');
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: 'No se encontraron procesos',
-            message: 'No hay procesos disponibles para modo prueba'
-          }), 
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 404
-          }
-        );
-      }
-
-      const process = processes[0];
-      console.log('✅ Proceso de prueba seleccionado:', process.id, 'usuario:', process.user_id);
-      return await sendNotificationToUser(process, phoneNumber || 'Número de prueba', messageText || 'Mensaje de prueba', supabase, true);
-    }
-
-    // Modo real - búsqueda GLOBAL por número de teléfono
-    console.log('🔍 MODO REAL GLOBAL: Iniciando búsqueda para número:', phoneNumber);
-    
-    if (!phoneNumber || phoneNumber.trim() === '') {
-      console.log('❌ Número de teléfono vacío o inválido');
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Número inválido',
-          message: 'No se proporcionó un número de teléfono válido'
-        }), 
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400
-        }
-      );
-    }
-
-    const matchedProcess = await findProcessByPhoneNumberGlobal(phoneNumber, supabase);
-
-    if (!matchedProcess) {
-      console.log('❌ No se encontró proceso GLOBAL para número:', phoneNumber);
       
-      // Mostrar todos los procesos disponibles para debugging
-      const { data: allProcesses } = await supabase
+      if (testError) {
+        console.log('❌ Error buscando proceso de prueba:', testError);
+      } else if (testProcesses && testProcesses.length > 0) {
+        matchingProcess = testProcesses[0];
+        console.log('✅ Proceso de prueba seleccionado:', matchingProcess.id, 'usuario:', matchingProcess.user_id);
+      }
+    } else {
+      // Buscar proceso real por número de teléfono
+      console.log('🔍 Buscando proceso real por número:', phoneNumber);
+      
+      // Limpiar número de teléfono para búsqueda
+      const cleanPhone = phoneNumber.replace(/\D/g, '');
+      console.log('🧹 Número limpio para búsqueda:', cleanPhone);
+      
+      const { data: processes, error: processError } = await supabase
         .from('processes')
-        .select('client_name, country_code, phone_number, user_id');
+        .select('*');
       
-      console.log('📋 Procesos disponibles GLOBALMENTE en base de datos:');
-      allProcesses?.forEach((proc, index) => {
-        console.log(`   ${index + 1}. ${proc.client_name} - ${proc.country_code}${proc.phone_number} (${proc.user_id})`);
-      });
-      
+      if (processError) {
+        console.log('❌ Error buscando procesos:', processError);
+      } else if (processes) {
+        console.log('📋 Total de procesos encontrados:', processes.length);
+        
+        // Buscar coincidencia en diferentes formatos
+        for (const process of processes) {
+          const fullPhone = `${process.country_code}${process.phone_number}`;
+          const cleanProcessPhone = fullPhone.replace(/\D/g, '');
+          
+          console.log(`🔍 Comparando: "${cleanPhone}" vs "${cleanProcessPhone}" (${process.client_name})`);
+          
+          if (cleanPhone === cleanProcessPhone || 
+              phoneNumber.includes(fullPhone) || 
+              fullPhone.includes(phoneNumber) ||
+              cleanPhone.includes(cleanProcessPhone) ||
+              cleanProcessPhone.includes(cleanPhone)) {
+            matchingProcess = process;
+            console.log('✅ Proceso encontrado:', process.id, 'para usuario:', process.user_id);
+            break;
+          }
+        }
+      }
+    }
+
+    if (!matchingProcess) {
+      console.log('❌ No se encontró proceso para el número:', phoneNumber);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
+        JSON.stringify({
+          success: false,
           error: 'Proceso no encontrado',
-          message: `No se encontró proceso GLOBAL para el número: ${phoneNumber}`,
-          phone_searched: phoneNumber,
-          available_processes: allProcesses?.length || 0
-        }), 
+          message: `No se encontró proceso para el número: ${phoneNumber}`,
+          phone_searched: phoneNumber
+        }),
         { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 404
+          status: 404, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
 
-    console.log('✅ Proceso GLOBAL encontrado:', matchedProcess.id, 'para usuario:', matchedProcess.user_id);
-    return await sendNotificationToUser(matchedProcess, phoneNumber, messageText, supabase, false);
+    console.log('\n🔔 === ENVIANDO NOTIFICACIÓN AL USUARIO CORRECTO ===');
+    console.log('   👤 Usuario ID:', matchingProcess.user_id);
+    console.log('   📱 Número:', phoneNumber);
+    console.log('   💬 Mensaje:', message);
+    console.log('   👨‍💼 Cliente:', matchingProcess.client_name);
+    console.log('   🧪 Modo prueba:', isTestMode);
+    console.log('   📋 Proceso ID:', matchingProcess.id);
+
+    // Buscar configuración de Telegram del usuario dueño del proceso
+    console.log('🔍 Buscando configuración de Telegram del usuario...');
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('email, telegram_bot_token, telegram_chat_id')
+      .eq('id', matchingProcess.user_id)
+      .single();
+
+    if (profileError) {
+      console.log('❌ Error obteniendo perfil del usuario:', profileError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Usuario no encontrado',
+          message: `Error obteniendo perfil del usuario: ${profileError.message}`,
+          user_id: matchingProcess.user_id
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    console.log('📧 Perfil del propietario encontrado:', profile.email);
+    console.log('🤖 Bot token:', profile.telegram_bot_token ? 'CONFIGURADO ✅' : 'NO CONFIGURADO ❌');
+    console.log('💬 Chat ID:', profile.telegram_chat_id ? 'CONFIGURADO ✅' : 'NO CONFIGURADO ❌');
+
+    // Verificar si el usuario tiene Telegram configurado
+    if (!profile.telegram_bot_token || !profile.telegram_chat_id) {
+      console.log('⚠️ Usuario sin configuración de Telegram, pero continuando...');
+      
+      // En lugar de fallar, simplemente registrar y continuar
+      console.log('📝 Registrando notificación sin enviar a Telegram...');
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Notificación procesada pero no enviada - Telegram no configurado',
+          user_id: matchingProcess.user_id,
+          user_email: profile.email,
+          process_id: matchingProcess.id,
+          client_name: matchingProcess.client_name,
+          phone_number: phoneNumber,
+          telegram_configured: false
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Enviar notificación a Telegram
+    console.log('📱 Enviando notificación a Telegram...');
+    const telegramMessage = `🔔 *Respuesta de WhatsApp recibida*\n\n` +
+                           `👤 Cliente: ${matchingProcess.client_name}\n` +
+                           `📱 Número: ${phoneNumber}\n` +
+                           `💬 Mensaje: ${message}\n` +
+                           `📋 Proceso ID: ${matchingProcess.id}\n\n` +
+                           `🕐 ${new Date().toLocaleString('es-ES')}`;
+
+    try {
+      const telegramResponse = await fetch(
+        `https://api.telegram.org/bot${profile.telegram_bot_token}/sendMessage`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chat_id: profile.telegram_chat_id,
+            text: telegramMessage,
+            parse_mode: 'Markdown',
+          }),
+        }
+      );
+
+      const telegramResult = await telegramResponse.json();
+      console.log('📤 Respuesta de Telegram:', telegramResult);
+
+      if (telegramResult.ok) {
+        console.log('✅ Notificación enviada exitosamente a Telegram');
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: 'Notificación enviada exitosamente',
+            user_id: matchingProcess.user_id,
+            user_email: profile.email,
+            process_id: matchingProcess.id,
+            client_name: matchingProcess.client_name,
+            phone_number: phoneNumber,
+            telegram_sent: true
+          }),
+          { 
+            status: 200, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      } else {
+        console.log('❌ Error enviando a Telegram:', telegramResult);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Error enviando a Telegram',
+            message: telegramResult.description || 'Error desconocido',
+            user_id: matchingProcess.user_id,
+            telegram_error: telegramResult
+          }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+    } catch (telegramError) {
+      console.log('❌ Error conectando con Telegram:', telegramError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Error conectando con Telegram',
+          message: String(telegramError),
+          user_id: matchingProcess.user_id
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
 
   } catch (error) {
-    console.error('💥 ERROR CRÍTICO EN FUNCIÓN GLOBAL:', error);
+    console.log('❌ Error general:', error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
+      JSON.stringify({
+        success: false,
         error: 'Error interno del servidor',
-        details: error.message,
-        stack: error.stack,
-        timestamp: new Date().toISOString()
-      }), 
+        message: String(error)
+      }),
       { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
 });
-
-async function findProcessByPhoneNumberGlobal(phoneNumber: string, supabase: any) {
-  console.log('🔍 === BÚSQUEDA GLOBAL EXHAUSTIVA INICIADA ===');
-  console.log('📱 Número original recibido:', phoneNumber);
-  
-  const cleanPhoneNumber = phoneNumber.replace(/[\s\-\(\)\.]/g, '');
-  console.log('🧹 Número limpio:', cleanPhoneNumber);
-
-  // Patrones de búsqueda ULTRA-EXHAUSTIVOS para cobertura global
-  const searchPatterns = [
-    phoneNumber,                                    // Original exacto
-    cleanPhoneNumber,                              // Limpio
-    cleanPhoneNumber.startsWith('+') ? cleanPhoneNumber : `+${cleanPhoneNumber}`,
-    cleanPhoneNumber.replace(/^\+/, ''),           // Sin + inicial
-    
-    // Códigos de país latinoamericanos más comunes
-    cleanPhoneNumber.replace(/^\+?505/, ''),       // Nicaragua
-    cleanPhoneNumber.replace(/^\+?52/, ''),        // México
-    cleanPhoneNumber.replace(/^\+?57/, ''),        // Colombia
-    cleanPhoneNumber.replace(/^\+?593/, ''),       // Ecuador
-    cleanPhoneNumber.replace(/^\+?591/, ''),       // Bolivia
-    cleanPhoneNumber.replace(/^\+?56/, ''),        // Chile
-    cleanPhoneNumber.replace(/^\+?51/, ''),        // Perú
-    cleanPhoneNumber.replace(/^\+?506/, ''),       // Costa Rica
-    cleanPhoneNumber.replace(/^\+?502/, ''),       // Guatemala
-    cleanPhoneNumber.replace(/^\+?503/, ''),       // El Salvador
-    cleanPhoneNumber.replace(/^\+?504/, ''),       // Honduras
-    cleanPhoneNumber.replace(/^\+?507/, ''),       // Panamá
-    cleanPhoneNumber.replace(/^\+?1/, ''),         // USA/Canadá
-    cleanPhoneNumber.replace(/^\+?54/, ''),        // Argentina
-    cleanPhoneNumber.replace(/^\+?55/, ''),        // Brasil
-    cleanPhoneNumber.replace(/^\+?598/, ''),       // Uruguay
-    cleanPhoneNumber.replace(/^\+?595/, ''),       // Paraguay
-    cleanPhoneNumber.replace(/^\+?58/, ''),        // Venezuela
-    cleanPhoneNumber.replace(/^\+?34/, ''),        // España
-    
-    // Variaciones de longitud
-    cleanPhoneNumber.slice(-10),                   // Últimos 10 dígitos
-    cleanPhoneNumber.slice(-9),                    // Últimos 9 dígitos
-    cleanPhoneNumber.slice(-8),                    // Últimos 8 dígitos
-    cleanPhoneNumber.slice(-7),                    // Últimos 7 dígitos
-    cleanPhoneNumber.slice(-6),                    // Últimos 6 dígitos
-    
-    // Con códigos añadidos comunes
-    `+505${cleanPhoneNumber.replace(/^\+?505/, '')}`,
-    `+52${cleanPhoneNumber.replace(/^\+?52/, '')}`,
-    `+57${cleanPhoneNumber.replace(/^\+?57/, '')}`,
-    `+54${cleanPhoneNumber.replace(/^\+?54/, '')}`,
-    `505${cleanPhoneNumber.replace(/^\+?505/, '')}`,
-    `52${cleanPhoneNumber.replace(/^\+?52/, '')}`,
-    `57${cleanPhoneNumber.replace(/^\+?57/, '')}`,
-    `54${cleanPhoneNumber.replace(/^\+?54/, '')}`,
-  ];
-
-  const uniquePatterns = [...new Set(searchPatterns)].filter(p => p && p.length > 0);
-  console.log('🎯 Patrones de búsqueda GLOBAL generados:', uniquePatterns);
-
-  // Obtener TODOS los procesos de TODOS los usuarios
-  const { data: allProcesses, error: allError } = await supabase
-    .from('processes')
-    .select('*');
-
-  if (allError) {
-    console.error('❌ Error obteniendo procesos GLOBALES:', allError);
-    return null;
-  }
-
-  if (!allProcesses || allProcesses.length === 0) {
-    console.log('❌ No hay procesos GLOBALES en la base de datos');
-    return null;
-  }
-
-  console.log(`🔍 Verificando ${allProcesses.length} procesos GLOBALES en base de datos`);
-
-  // Búsqueda exhaustiva proceso por proceso GLOBAL
-  for (const [index, proc] of allProcesses.entries()) {
-    console.log(`\n🔍 === PROCESO GLOBAL ${index + 1}/${allProcesses.length} ===`);
-    console.log(`   📋 ID: ${proc.id}`);
-    console.log(`   👤 Cliente: ${proc.client_name}`);
-    console.log(`   📱 Teléfono: "${proc.phone_number}"`);
-    console.log(`   🌍 Código país: "${proc.country_code}"`);
-    console.log(`   👨‍💼 Usuario: ${proc.user_id}`);
-    
-    const fullNumber = `${proc.country_code}${proc.phone_number}`;
-    const fullNumberClean = fullNumber.replace(/[\s\-\(\)\.]/g, '');
-    const phoneOnly = proc.phone_number.replace(/[\s\-\(\)\.]/g, '');
-    
-    console.log(`   🔢 Número completo: "${fullNumber}"`);
-    console.log(`   🧹 Número completo limpio: "${fullNumberClean}"`);
-    console.log(`   📞 Solo teléfono: "${phoneOnly}"`);
-    
-    // Probar cada patrón contra este proceso
-    for (const pattern of uniquePatterns) {
-      if (!pattern) continue;
-      
-      // Múltiples estrategias de coincidencia EXHAUSTIVAS
-      const matches = [
-        fullNumberClean === pattern,
-        fullNumber === pattern,
-        proc.phone_number === pattern,
-        phoneOnly === pattern,
-        fullNumberClean.endsWith(pattern),
-        pattern.endsWith(fullNumberClean),
-        fullNumberClean.endsWith(phoneOnly),
-        pattern.endsWith(phoneOnly),
-        fullNumberClean.includes(pattern),
-        pattern.includes(fullNumberClean),
-        phoneOnly.includes(pattern),
-        pattern.includes(phoneOnly),
-        // Coincidencia parcial flexible
-        fullNumberClean.slice(-8) === pattern.slice(-8) && pattern.length >= 8,
-        fullNumberClean.slice(-7) === pattern.slice(-7) && pattern.length >= 7,
-        fullNumberClean.slice(-6) === pattern.slice(-6) && pattern.length >= 6,
-        // Coincidencia sin espacios
-        fullNumber.replace(/\s/g, '') === pattern.replace(/\s/g, ''),
-        proc.phone_number.replace(/\s/g, '') === pattern.replace(/\s/g, ''),
-      ];
-      
-      if (matches.some(match => match)) {
-        console.log(`\n✅ ¡COINCIDENCIA GLOBAL ENCONTRADA!`);
-        console.log(`   🎯 Patrón exitoso: "${pattern}"`);
-        console.log(`   📱 Proceso: ${proc.id}`);
-        console.log(`   👤 Usuario: ${proc.user_id}`);
-        console.log(`   👨‍💼 Cliente: ${proc.client_name}`);
-        console.log(`   📞 Teléfono proceso: ${proc.country_code}${proc.phone_number}`);
-        return proc;
-      }
-    }
-  }
-
-  console.log('\n❌ === BÚSQUEDA GLOBAL COMPLETADA SIN RESULTADOS ===');
-  console.log('📊 RESUMEN GLOBAL FINAL:');
-  console.log(`   🔍 Número buscado: "${phoneNumber}"`);
-  console.log(`   🧹 Número limpio: "${cleanPhoneNumber}"`);
-  console.log(`   📱 Procesos verificados: ${allProcesses.length}`);
-  console.log(`   🎯 Patrones probados: ${uniquePatterns.length}`);
-  console.log(`   ❌ Resultado: SIN COINCIDENCIAS GLOBALES`);
-  
-  return null;
-}
-
-async function sendNotificationToUser(process: any, phoneNumber: string, messageText: string, supabase: any, isTestMode: boolean) {
-  console.log(`\n🔔 === ENVIANDO NOTIFICACIÓN AL USUARIO CORRECTO ===`);
-  console.log(`   📋 Proceso ID: ${process.id}`);
-  console.log(`   👤 Usuario ID: ${process.user_id}`);
-  console.log(`   👨‍💼 Cliente: ${process.client_name}`);
-  console.log(`   📱 Número: ${phoneNumber}`);
-  console.log(`   💬 Mensaje: ${messageText}`);
-  console.log(`   🧪 Modo prueba: ${isTestMode}`);
-
-  // Obtener configuración del usuario PROPIETARIO del proceso
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('telegram_bot_token, telegram_chat_id, email')
-    .eq('id', process.user_id)
-    .single();
-
-  if (profileError) {
-    console.error('❌ Error obteniendo perfil del usuario propietario:', profileError);
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: 'Error de perfil',
-        message: `Error buscando perfil para usuario propietario: ${process.user_id}`,
-        details: profileError.message
-      }), 
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
-      }
-    );
-  }
-
-  if (!profile) {
-    console.error('❌ Perfil no encontrado para usuario propietario:', process.user_id);
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: 'Perfil no encontrado',
-        message: `No existe perfil para usuario propietario: ${process.user_id}`
-      }), 
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 404
-      }
-    );
-  }
-
-  console.log(`📧 Perfil del propietario encontrado: ${profile.email}`);
-  console.log(`🤖 Bot token: ${profile.telegram_bot_token ? 'CONFIGURADO ✅' : 'NO CONFIGURADO ❌'}`);
-  console.log(`💬 Chat ID: ${profile.telegram_chat_id ? 'CONFIGURADO ✅' : 'NO CONFIGURADO ❌'}`);
-
-  if (!profile.telegram_bot_token || !profile.telegram_chat_id) {
-    console.log('❌ Configuración Telegram incompleta para el propietario');
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: 'Telegram no configurado',
-        message: `Usuario propietario ${profile.email} no tiene Telegram configurado correctamente`,
-        user_id: process.user_id,
-        user_email: profile.email,
-        missing_config: {
-          bot_token: !profile.telegram_bot_token,
-          chat_id: !profile.telegram_chat_id
-        }
-      }), 
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400
-      }
-    );
-  }
-
-  // Crear mensaje de notificación
-  const notificationMessage = `🔔 ${isTestMode ? 'PRUEBA - ' : ''}Alerta WhatsApp
-
-👩🏽‍💻 Servidor Astro${isTestMode ? ' - MODO PRUEBA' : ''}
-
-📊 PROCESO:
-👤 Cliente: ${process.client_name}
-📱 Modelo: ${process.iphone_model}
-📞 IMEI: ${process.imei}
-🔢 Serie: ${process.serial_number}
-${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
-
-📞 De: ${phoneNumber}
-📥 Mensaje: ${messageText}
-
-🤖 Bot Astro 🟢
-⏰ ${new Date().toLocaleString('es-ES', { timeZone: 'America/Managua' })}
-
-${isTestMode ? '⚠️ MENSAJE DE PRUEBA' : ''}`;
-
-  console.log(`🚀 Enviando notificación a Telegram del propietario...`);
-  console.log(`   📧 Usuario propietario: ${profile.email}`);
-  console.log(`   🤖 Bot: ${profile.telegram_bot_token.substring(0, 10)}...`);
-  console.log(`   💬 Chat: ${profile.telegram_chat_id}`);
-  
-  const telegramUrl = `https://api.telegram.org/bot${profile.telegram_bot_token}/sendMessage`;
-  
-  try {
-    const telegramResponse = await fetch(telegramUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chat_id: profile.telegram_chat_id,
-        text: notificationMessage,
-        parse_mode: 'HTML'
-      }),
-    });
-
-    const telegramResult = await telegramResponse.json();
-    console.log(`📡 Telegram API Status: ${telegramResponse.status}`);
-    console.log('📡 Telegram Response:', telegramResult);
-    
-    if (!telegramResponse.ok) {
-      console.error('❌ Error en Telegram API:', telegramResult);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Error enviando a Telegram',
-          telegram_error: telegramResult,
-          user_id: process.user_id,
-          user_email: profile.email,
-          telegram_status: telegramResponse.status
-        }), 
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500
-        }
-      );
-    }
-
-    console.log(`\n✅ === NOTIFICACIÓN ENVIADA EXITOSAMENTE AL PROPIETARIO ===`);
-    console.log(`   📧 Usuario propietario: ${profile.email}`);
-    console.log(`   👨‍💼 Cliente: ${process.client_name}`);
-    console.log(`   📱 Número: ${phoneNumber}`);
-    console.log(`   🆔 Message ID: ${telegramResult.result?.message_id}`);
-    console.log(`   ⏰ Timestamp: ${new Date().toISOString()}`);
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: isTestMode ? 'Prueba enviada exitosamente al propietario' : 'Notificación enviada exitosamente al propietario',
-        process_id: process.id,
-        user_id: process.user_id,
-        user_email: profile.email,
-        client_name: process.client_name,
-        phone_number: phoneNumber,
-        message_content: messageText,
-        test_mode: isTestMode,
-        telegram_message_id: telegramResult.result?.message_id,
-        timestamp: new Date().toISOString()
-      }), 
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200
-      }
-    );
-
-  } catch (telegramError) {
-    console.error('❌ Error de conexión con Telegram:', telegramError);
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: 'Error de conexión con Telegram',
-        details: telegramError.message,
-        user_id: process.user_id,
-        user_email: profile.email
-      }), 
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
-      }
-    );
-  }
-}
