@@ -1,16 +1,15 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import WebhookInfo from './WebhookInfo';
 
 const InstanceSettings = () => {
-  const [whatsappInstance, setWhatsappInstance] = useState('');
-  const [whatsappToken, setWhatsappToken] = useState('');
+  const [instance, setInstance] = useState('');
+  const [token, setToken] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,24 +18,25 @@ const InstanceSettings = () => {
 
   const loadSettings = async () => {
     try {
-      setLoading(true);
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('system_settings')
         .select('*')
         .in('setting_key', ['whatsapp_instance', 'whatsapp_token']);
 
-      const config = data?.reduce((acc: any, setting: any) => {
+      if (error) throw error;
+
+      const settings = data?.reduce((acc: any, setting: any) => {
         acc[setting.setting_key] = setting.setting_value;
         return acc;
       }, {});
 
-      setWhatsappInstance(config?.whatsapp_instance || '');
-      setWhatsappToken(config?.whatsapp_token || '');
+      setInstance(settings?.whatsapp_instance || '');
+      setToken(settings?.whatsapp_token || '');
     } catch (error) {
       console.error('Error loading settings:', error);
       toast({
         title: "Error",
-        description: "Error al cargar la configuración",
+        description: "Error al cargar configuraciones",
         variant: "destructive",
       });
     } finally {
@@ -44,92 +44,135 @@ const InstanceSettings = () => {
     }
   };
 
-  const updateSetting = async (key: string, value: string) => {
+  const handleSave = async () => {
     try {
-      const { error } = await supabase
+      // Update instance setting
+      const { error: instanceError } = await supabase
         .from('system_settings')
-        .upsert(
-          { setting_key: key, setting_value: value },
-          { onConflict: 'setting_key' }
-        );
+        .upsert({
+          setting_key: 'whatsapp_instance',
+          setting_value: instance,
+          updated_at: new Date().toISOString()
+        });
 
-      if (error) {
-        console.error('Error updating setting:', error);
-        throw error;
-      }
+      if (instanceError) throw instanceError;
+
+      // Update token setting
+      const { error: tokenError } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: 'whatsapp_token',
+          setting_value: token,
+          updated_at: new Date().toISOString()
+        });
+
+      if (tokenError) throw tokenError;
 
       toast({
-        title: "Configuración actualizada",
-        description: `La configuración de ${key} ha sido actualizada`,
+        title: "Configuración guardada",
+        description: "Instancia y token actualizados exitosamente",
       });
     } catch (error: any) {
-      console.error('Error updating setting:', error);
+      console.error('Error saving settings:', error);
       toast({
         title: "Error",
-        description: `Error al actualizar ${key}: ${error.message}`,
+        description: error.message || "Error al guardar configuración",
         variant: "destructive",
       });
     }
   };
 
-  const handleInstanceChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setWhatsappInstance(value);
-    await updateSetting('whatsapp_instance', value);
+  const handleDelete = async () => {
+    try {
+      const { error } = await supabase
+        .from('system_settings')
+        .delete()
+        .in('setting_key', ['whatsapp_instance', 'whatsapp_token']);
+
+      if (error) throw error;
+
+      setInstance('');
+      setToken('');
+      
+      toast({
+        title: "Configuración eliminada",
+        description: "Instancia y token eliminados",
+        variant: "destructive",
+      });
+    } catch (error: any) {
+      console.error('Error deleting settings:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al eliminar configuración",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleTokenChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setWhatsappToken(value);
-    await updateSetting('whatsapp_token', value);
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-blue-300">Configuración de Instancia</h2>
-        <Button
-          onClick={loadSettings}
-          className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300"
-          size="sm"
-        >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Actualizar
-        </Button>
-      </div>
-
-      <WebhookInfo />
-
+  if (loading) {
+    return (
       <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-        <CardHeader>
-          <CardTitle className="text-blue-300">Configuración de WhatsApp</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="whatsapp-instance" className="text-blue-200/70">
-              WhatsApp Instance ID
-            </Label>
-            <Input
-              id="whatsapp-instance"
-              className="bg-black/40 border-blue-500/30 text-blue-200"
-              value={whatsappInstance}
-              onChange={handleInstanceChange}
-            />
-          </div>
-          <div>
-            <Label htmlFor="whatsapp-token" className="text-blue-200/70">
-              WhatsApp Token
-            </Label>
-            <Input
-              id="whatsapp-token"
-              className="bg-black/40 border-blue-500/30 text-blue-200"
-              value={whatsappToken}
-              onChange={handleTokenChange}
-            />
-          </div>
+        <CardContent className="p-6">
+          <p className="text-blue-200/70 text-center">Cargando configuraciones...</p>
         </CardContent>
       </Card>
-    </div>
+    );
+  }
+
+  return (
+    <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+      <CardHeader>
+        <CardTitle className="text-blue-300">Configuraciones de Sistema</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="instance" className="text-blue-200">ID de Instancia</Label>
+            <Input
+              id="instance"
+              type="text"
+              value={instance}
+              onChange={(e) => setInstance(e.target.value)}
+              className="bg-white/5 border-blue-500/30 text-white"
+              placeholder="Ingresa el ID de instancia"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="token" className="text-blue-200">Token</Label>
+            <Input
+              id="token"
+              type="text"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              className="bg-white/5 border-blue-500/30 text-white"
+              placeholder="Ingresa el token"
+            />
+          </div>
+          
+          <div className="flex space-x-4">
+            <Button 
+              onClick={handleSave}
+              className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+            >
+              Guardar Cambios
+            </Button>
+            <Button 
+              onClick={handleDelete}
+              className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30"
+            >
+              Eliminar
+            </Button>
+          </div>
+          
+          <div className="mt-6 p-4 bg-blue-950/30 rounded-lg border border-blue-500/20">
+            <h4 className="text-blue-300 font-semibold mb-2">Configuración Actual</h4>
+            <p className="text-blue-200/70 text-sm">Instancia: {instance || 'No configurada'}</p>
+            <p className="text-blue-200/70 text-sm">Token: {token || 'No configurado'}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

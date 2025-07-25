@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      imei_checks: {
+        Row: {
+          activation_lock: boolean | null
+          blacklist_status: string | null
+          carrier: string | null
+          color: string | null
+          created_at: string
+          credits_deducted: number
+          device_name: string | null
+          error_message: string | null
+          find_my_iphone: boolean | null
+          id: string
+          model: string | null
+          search_type: string
+          search_value: string
+          serial_number: string | null
+          status: string
+          storage: string | null
+          user_id: string
+          warranty: string | null
+        }
+        Insert: {
+          activation_lock?: boolean | null
+          blacklist_status?: string | null
+          carrier?: string | null
+          color?: string | null
+          created_at?: string
+          credits_deducted?: number
+          device_name?: string | null
+          error_message?: string | null
+          find_my_iphone?: boolean | null
+          id?: string
+          model?: string | null
+          search_type: string
+          search_value: string
+          serial_number?: string | null
+          status?: string
+          storage?: string | null
+          user_id: string
+          warranty?: string | null
+        }
+        Update: {
+          activation_lock?: boolean | null
+          blacklist_status?: string | null
+          carrier?: string | null
+          color?: string | null
+          created_at?: string
+          credits_deducted?: number
+          device_name?: string | null
+          error_message?: string | null
+          find_my_iphone?: boolean | null
+          id?: string
+          model?: string | null
+          search_type?: string
+          search_value?: string
+          serial_number?: string | null
+          status?: string
+          storage?: string | null
+          user_id?: string
+          warranty?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           id: string
@@ -134,8 +197,6 @@ export type Database = {
           email: string
           expiration_date: string | null
           id: string
-          telegram_bot_token: string | null
-          telegram_chat_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -144,8 +205,6 @@ export type Database = {
           email: string
           expiration_date?: string | null
           id: string
-          telegram_bot_token?: string | null
-          telegram_chat_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -154,11 +213,50 @@ export type Database = {
           email?: string
           expiration_date?: string | null
           id?: string
-          telegram_bot_token?: string | null
-          telegram_chat_id?: string | null
           updated_at?: string | null
         }
         Relationships: []
+      }
+      script_captures: {
+        Row: {
+          captured_data: Json
+          created_at: string
+          id: string
+          process_id: string | null
+          script_type: string
+          subdomain: string
+          telegram_sent: boolean | null
+          user_id: string
+        }
+        Insert: {
+          captured_data: Json
+          created_at?: string
+          id?: string
+          process_id?: string | null
+          script_type: string
+          subdomain: string
+          telegram_sent?: boolean | null
+          user_id: string
+        }
+        Update: {
+          captured_data?: Json
+          created_at?: string
+          id?: string
+          process_id?: string | null
+          script_type?: string
+          subdomain?: string
+          telegram_sent?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "script_captures_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_settings: {
         Row: {
@@ -184,15 +282,71 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_bots: {
+        Row: {
+          bot_token: string
+          chat_id: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bot_token: string
+          chat_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bot_token?: string
+          chat_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_domains: {
+        Row: {
+          created_at: string
+          domain_name: string
+          id: string
+          is_active: boolean | null
+          subdomain_prefix: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          domain_name: string
+          id?: string
+          is_active?: boolean | null
+          subdomain_prefix: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          domain_name?: string
+          id?: string
+          is_active?: boolean | null
+          subdomain_prefix?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      find_user_by_phone: {
-        Args: { input_phone: string }
-        Returns: string
-      }
       get_user_config_by_subdomain: {
         Args: { subdomain_param: string }
         Returns: {
@@ -209,30 +363,6 @@ export type Database = {
       is_user_active: {
         Args: Record<PropertyKey, never>
         Returns: boolean
-      }
-      normalize_phone_number: {
-        Args: { input_phone: string }
-        Returns: string
-      }
-      register_incoming_message: {
-        Args:
-          | {
-              p_phone_number: string
-              p_message_text: string
-              p_timestamp?: string
-            }
-          | {
-              p_phone_number: string
-              p_message_text: string
-              p_timestamp?: string
-              p_message_type?: string
-              p_metadata?: Json
-            }
-        Returns: {
-          success: boolean
-          user_id: string
-          message_id: number
-        }[]
       }
     }
     Enums: {

