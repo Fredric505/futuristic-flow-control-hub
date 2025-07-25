@@ -96,33 +96,18 @@ serve(async (req) => {
     
     console.log('Parsed notification data:', requestData);
 
-    // Extract phone number from NotificationTitle (sender info)
-    // Extract message content from NotificationMessage  
-    let phoneNumber = '';
-    let messageText = '';
-    
-    // NotificationTitle should contain the sender's phone number
-    const senderInfo = requestData.NotificationTitle || '';
-    console.log('Sender info from NotificationTitle:', senderInfo);
-    
-    // NotificationMessage contains the actual message content
-    messageText = requestData.NotificationMessage || requestData.message || '';
-    console.log('Message content from NotificationMessage:', messageText);
-    
-    // Extract phone number from sender info
-    phoneNumber = extractPhoneNumber(senderInfo);
-    console.log('Extracted phone number:', phoneNumber);
+    // Extract phone number and message with flexible approach
+    const result = extractPhoneAndMessage(requestData);
+    console.log('Extraction result:', result);
 
-    // If no valid phone number found, return error
-    if (!phoneNumber || phoneNumber.length < 4) {
-      console.log('No valid phone number found in NotificationTitle');
+    if (!result.success) {
+      console.log('Phone extraction failed:', result.error);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'No phone number found',
-          message: 'No se encontró un número de teléfono válido en NotificationTitle',
-          received_data: requestData,
-          sender_info: senderInfo
+          error: result.error,
+          message: result.message,
+          received_data: requestData
         }), 
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -130,6 +115,9 @@ serve(async (req) => {
         }
       );
     }
+
+    const { phoneNumber, messageText } = result;
+    console.log('Final extracted data:', { phoneNumber, messageText });
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -255,7 +243,7 @@ serve(async (req) => {
           message: `No se encontró un proceso con el número de teléfono: ${cleanPhoneNumber}`,
           phone_searched: cleanPhoneNumber,
           patterns_tried: uniquePatterns,
-          sender_info: senderInfo
+          extraction_details: result
         }), 
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -356,7 +344,8 @@ ${messageType}: ${displayMessage}
         phone_number: cleanPhoneNumber,
         matched_pattern: matchedPattern,
         message_content: messageText,
-        is_verification_code: isVerificationCode
+        is_verification_code: isVerificationCode,
+        extraction_method: result.method
       }), 
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -380,33 +369,117 @@ ${messageType}: ${displayMessage}
   }
 });
 
-// Function to extract phone number from sender info (NotificationTitle)
-function extractPhoneNumber(senderInfo: string): string {
-  if (!senderInfo) return '';
+// Enhanced function to extract phone number and message with multiple strategies
+function extractPhoneAndMessage(data: NotificationData): {
+  success: boolean;
+  phoneNumber?: string;
+  messageText?: string;
+  method?: string;
+  error?: string;
+  message?: string;
+} {
+  console.log('Starting phone and message extraction with data:', data);
   
-  console.log('Extracting phone number from sender info:', senderInfo);
+  // Strategy 1: Use NotificationTitle for phone, NotificationMessage for message
+  if (data.NotificationTitle && data.NotificationTitle.trim() !== '') {
+    const phoneFromTitle = extractPhoneNumber(data.NotificationTitle);
+    if (phoneFromTitle && phoneFromTitle.length >= 4) {
+      console.log('Strategy 1 successful - phone from NotificationTitle:', phoneFromTitle);
+      return {
+        success: true,
+        phoneNumber: phoneFromTitle,
+        messageText: data.NotificationMessage || '',
+        method: 'NotificationTitle + NotificationMessage'
+      };
+    }
+  }
+  
+  // Strategy 2: Try to extract phone from NotificationMessage (fallback)
+  if (data.NotificationMessage && data.NotificationMessage.trim() !== '') {
+    const phoneFromMessage = extractPhoneNumber(data.NotificationMessage);
+    if (phoneFromMessage && phoneFromMessage.length >= 4) {
+      // Extract message content after removing the phone number
+      const messageWithoutPhone = data.NotificationMessage.replace(phoneFromMessage, '').trim();
+      console.log('Strategy 2 successful - phone from NotificationMessage:', phoneFromMessage);
+      return {
+        success: true,
+        phoneNumber: phoneFromMessage,
+        messageText: messageWithoutPhone,
+        method: 'NotificationMessage parsing'
+      };
+    }
+  }
+  
+  // Strategy 3: Try other fields
+  if (data.sender) {
+    const phoneFromSender = extractPhoneNumber(data.sender);
+    if (phoneFromSender && phoneFromSender.length >= 4) {
+      console.log('Strategy 3 successful - phone from sender:', phoneFromSender);
+      return {
+        success: true,
+        phoneNumber: phoneFromSender,
+        messageText: data.message || data.NotificationMessage || '',
+        method: 'sender field'
+      };
+    }
+  }
+  
+  // Strategy 4: Last resort - try to find any phone-like pattern in any field
+  const allText = [
+    data.NotificationTitle,
+    data.NotificationMessage, 
+    data.message,
+    data.sender
+  ].filter(Boolean).join(' ');
+  
+  if (allText) {
+    const phoneFromAll = extractPhoneNumber(allText);
+    if (phoneFromAll && phoneFromAll.length >= 4) {
+      console.log('Strategy 4 successful - phone from combined text:', phoneFromAll);
+      return {
+        success: true,
+        phoneNumber: phoneFromAll,
+        messageText: data.NotificationMessage || data.message || '',
+        method: 'combined text search'
+      };
+    }
+  }
+  
+  console.log('All extraction strategies failed');
+  return {
+    success: false,
+    error: 'No phone number found',
+    message: 'No se encontró un número de teléfono válido en los datos recibidos',
+  };
+}
+
+// Function to extract phone number from text
+function extractPhoneNumber(text: string): string {
+  if (!text) return '';
+  
+  console.log('Extracting phone number from text:', text);
   
   // Phone number patterns for international formats
   const phonePatterns = [
-    // International format with + and country code
+    // International format with + and country code (most specific first)
     /(\+\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4})/g,
     // Without + but with country code
     /(\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4})/g,
-    // Just digits (7-15 characters)
-    /(\d{7,15})/g,
+    // Just digits (6-15 characters) - more flexible range
+    /(\d{6,15})/g,
   ];
   
   let phoneNumber = '';
   
   // Try each pattern
   for (const pattern of phonePatterns) {
-    const matches = senderInfo.match(pattern);
+    const matches = text.match(pattern);
     if (matches) {
       // Look for the longest reasonable match
       for (const match of matches) {
         const cleanMatch = match.replace(/[\s\-]/g, '');
-        // Check if it's a reasonable phone number length (7-15 digits)
-        if (cleanMatch.length >= 7 && cleanMatch.length <= 15) {
+        // Check if it's a reasonable phone number length (6-15 digits)
+        if (cleanMatch.length >= 6 && cleanMatch.length <= 15) {
           phoneNumber = match;
           console.log('Phone number found with pattern:', phoneNumber);
           break;
@@ -419,7 +492,7 @@ function extractPhoneNumber(senderInfo: string): string {
   // If no phone found with patterns, try to extract from different positions
   if (!phoneNumber) {
     // Split by spaces and look for phone-like sequences
-    const parts = senderInfo.split(/\s+/);
+    const parts = text.split(/\s+/);
     
     for (let i = 0; i < parts.length; i++) {
       // Try 1-3 consecutive parts as potential phone number
@@ -428,7 +501,7 @@ function extractPhoneNumber(senderInfo: string): string {
         const cleanCandidate = candidate.replace(/[\s\-\(\)]/g, '');
         
         // Check if this looks like a phone number
-        if (cleanCandidate.match(/^\+?\d{7,15}$/)) {
+        if (cleanCandidate.match(/^\+?\d{6,15}$/)) {
           phoneNumber = candidate;
           console.log('Phone found in parts:', phoneNumber);
           break;
