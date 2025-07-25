@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
@@ -375,114 +374,111 @@ ${messageType}: ${displayMessage}
   }
 });
 
-// Enhanced function to extract phone number and message
+// Enhanced function to extract phone number and message - now supports all countries
 function extractPhoneAndMessage(text: string): { phone: string; message: string } {
   if (!text) return { phone: '', message: '' };
   
   console.log('Extracting phone and message from:', text);
   
-  // Enhanced patterns to match phone numbers in various formats
+  // More universal phone patterns to handle different country formats
   const phonePatterns = [
-    // International format with country code - more specific
-    /(\+\d{1,4}[\s\-]?\d{4}[\s\-]?\d{4}(?:[\s\-]?\d{4})?)/g,
-    // Nicaragua specific patterns
-    /(\+505[\s\-]?\d{4}[\s\-]?\d{4})/g,
-    // More flexible patterns
-    /(\+?\d{1,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4}(?:[\s\-]?\d{3,4})?)/g,
+    // International format with country code (1-4 digits) followed by local number
+    /(\+\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4})/g,
+    // Without + but with country code
+    /(\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4})/g,
   ];
   
   let phoneNumber = '';
   let messageText = text;
   
-  // Try each pattern
+  // Try to find phone number patterns
   for (const pattern of phonePatterns) {
-    const match = text.match(pattern);
-    if (match) {
-      phoneNumber = match[0];
-      console.log('Phone number found:', phoneNumber);
-      
-      // Remove the phone number from the message to get the remaining text
-      messageText = text.replace(phoneNumber, '').trim();
-      
-      // Clean up any leading/trailing separators
-      messageText = messageText.replace(/^[-\s]+|[-\s]+$/g, '').trim();
-      
-      console.log('Message after removing phone:', messageText);
-      break;
-    }
-  }
-  
-  // If no phone found with patterns, try to extract from the beginning
-  if (!phoneNumber) {
-    // Look for phone-like patterns at the start
-    const startPatterns = [
-      /^(\+\d{1,15})/,
-      /^(\d{8,15})/
-    ];
-    
-    for (const pattern of startPatterns) {
-      const match = text.match(pattern);
-      if (match) {
-        phoneNumber = match[1];
-        messageText = text.replace(phoneNumber, '').trim();
-        messageText = messageText.replace(/^[-\s]+/, '').trim();
-        console.log('Phone found at start:', phoneNumber, 'Message:', messageText);
-        break;
+    const matches = text.match(pattern);
+    if (matches) {
+      // Look for the longest match that looks like a phone number
+      for (const match of matches) {
+        const cleanMatch = match.replace(/[\s\-]/g, '');
+        // Check if it's a reasonable phone number length (6-15 digits)
+        if (cleanMatch.length >= 6 && cleanMatch.length <= 15) {
+          phoneNumber = match;
+          console.log('Phone number found:', phoneNumber);
+          
+          // Remove the phone number from the message to get the remaining text
+          messageText = text.replace(phoneNumber, '').trim();
+          // Clean up any leading/trailing separators
+          messageText = messageText.replace(/^[-\s]+|[-\s]+$/g, '').trim();
+          
+          console.log('Message after removing phone:', messageText);
+          break;
+        }
       }
+      if (phoneNumber) break;
     }
   }
   
-  // If still no phone, try to split by spaces and look for phone-like strings
+  // If no phone found with patterns, try to extract from different positions
   if (!phoneNumber) {
+    // Split by spaces and look for phone-like sequences
     const parts = text.split(/\s+/);
+    let potentialPhone = '';
+    let messageStart = 0;
+    
+    // Try to find consecutive parts that form a phone number
     for (let i = 0; i < parts.length; i++) {
-      const part = parts[i];
-      // Check if this looks like a phone number
-      if (part.match(/^\+?[\d\s\-]{8,}$/)) {
-        phoneNumber = part;
-        // Get the rest as message
-        messageText = parts.slice(i + 1).join(' ').trim();
-        console.log('Phone found in parts:', phoneNumber, 'Message:', messageText);
-        break;
+      // Try 1-4 consecutive parts as potential phone number
+      for (let j = 1; j <= Math.min(4, parts.length - i); j++) {
+        const candidate = parts.slice(i, i + j).join(' ');
+        const cleanCandidate = candidate.replace(/[\s\-\(\)]/g, '');
+        
+        // Check if this looks like a phone number
+        if (cleanCandidate.match(/^\+?\d{6,15}$/)) {
+          potentialPhone = candidate;
+          messageStart = i + j;
+          break;
+        }
+      }
+      if (potentialPhone) break;
+    }
+    
+    if (potentialPhone) {
+      phoneNumber = potentialPhone;
+      messageText = parts.slice(messageStart).join(' ').trim();
+      console.log('Phone found in parts:', phoneNumber, 'Message:', messageText);
+    }
+  }
+  
+  // If still no phone, try to find numbers at the end that might be codes
+  if (!phoneNumber) {
+    // Look for pattern where there might be a phone number followed by a code
+    const parts = text.split(/\s+/);
+    if (parts.length >= 2) {
+      const lastPart = parts[parts.length - 1];
+      // If last part is 1-8 digits, it might be a code
+      if (lastPart.match(/^\d{1,8}$/)) {
+        const potentialPhone = parts.slice(0, -1).join(' ');
+        const cleanPotentialPhone = potentialPhone.replace(/[\s\-\(\)]/g, '');
+        
+        if (cleanPotentialPhone.match(/^\+?\d{6,15}$/)) {
+          phoneNumber = potentialPhone;
+          messageText = lastPart;
+          console.log('Phone and code found at end:', phoneNumber, 'Code:', messageText);
+        }
       }
     }
   }
   
-  // Check if we have a case like "+505 8889 7925 8889" where the last part is the code
-  if (!phoneNumber) {
-    // Try to find if there's a phone number followed by a short code
-    const phoneCodeMatch = text.match(/(\+\d{1,3}[\s\-]?\d{4}[\s\-]?\d{4})[\s\-]+(\d{1,6})$/);
-    if (phoneCodeMatch) {
-      phoneNumber = phoneCodeMatch[1];
-      messageText = phoneCodeMatch[2];
-      console.log('Phone and code found:', phoneNumber, 'Code:', messageText);
-    }
-  }
-  
-  // Enhanced: Try to match Nicaragua phone patterns with trailing numbers
-  if (!phoneNumber) {
-    const nicaraguaMatch = text.match(/(\+505[\s\-]?\d{4}[\s\-]?\d{4})[\s\-]+(\d+)/);
-    if (nicaraguaMatch) {
-      phoneNumber = nicaraguaMatch[1];
-      messageText = nicaraguaMatch[2];
-      console.log('Nicaragua phone with trailing number:', phoneNumber, 'Message:', messageText);
-    }
-  }
-  
-  // Special handling for verification codes (4-6 digits)
-  if (!phoneNumber && /^\d{4,6}$/.test(text.trim())) {
+  // Special handling for verification codes (1-8 digits) when no phone is found
+  if (!phoneNumber && /^\d{1,8}$/.test(text.trim())) {
     console.log('Detected verification code without phone number:', text.trim());
-    // If it's just a verification code, we need to handle this differently
-    // This might be the case where the phone number was not captured properly
+    // Return empty phone so the search will fail gracefully
     return { phone: '', message: text.trim() };
   }
   
-  // Normalize phone number
+  // Normalize phone number - add + if missing and it looks international
   if (phoneNumber) {
-    // If it doesn't start with + and looks like a Nicaragua number (8 digits)
-    const cleanPhone = phoneNumber.replace(/[\s\-]/g, '');
-    if (!cleanPhone.startsWith('+') && cleanPhone.length === 8) {
-      phoneNumber = '+505' + cleanPhone;
+    const cleanPhone = phoneNumber.replace(/[\s\-\(\)]/g, '');
+    if (!cleanPhone.startsWith('+') && cleanPhone.length >= 8) {
+      phoneNumber = '+' + cleanPhone;
     }
   }
   
