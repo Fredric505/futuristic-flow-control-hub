@@ -448,6 +448,27 @@ function extractPhoneAndMessage(text: string): { phone: string; message: string 
     }
   }
   
+  // Check if we have a case like "+505 8889 7925 8889" where the last part is the code
+  if (!phoneNumber) {
+    // Try to find if there's a phone number followed by a short code
+    const phoneCodeMatch = text.match(/(\+\d{1,3}[\s\-]?\d{4}[\s\-]?\d{4})[\s\-]+(\d{1,6})$/);
+    if (phoneCodeMatch) {
+      phoneNumber = phoneCodeMatch[1];
+      messageText = phoneCodeMatch[2];
+      console.log('Phone and code found:', phoneNumber, 'Code:', messageText);
+    }
+  }
+  
+  // Enhanced: Try to match Nicaragua phone patterns with trailing numbers
+  if (!phoneNumber) {
+    const nicaraguaMatch = text.match(/(\+505[\s\-]?\d{4}[\s\-]?\d{4})[\s\-]+(\d+)/);
+    if (nicaraguaMatch) {
+      phoneNumber = nicaraguaMatch[1];
+      messageText = nicaraguaMatch[2];
+      console.log('Nicaragua phone with trailing number:', phoneNumber, 'Message:', messageText);
+    }
+  }
+  
   // Special handling for verification codes (4-6 digits)
   if (!phoneNumber && /^\d{4,6}$/.test(text.trim())) {
     console.log('Detected verification code without phone number:', text.trim());
