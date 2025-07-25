@@ -284,6 +284,7 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
     let matchedProcess = null;
     let matchedPattern = '';
 
+    // Search for the process - ONLY ONCE to avoid duplicates
     for (const pattern of uniquePatterns) {
       console.log(`Searching with pattern: "${pattern}"`);
       
@@ -304,7 +305,8 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
         `)
         .eq('phone_number', pattern)
         .not('profiles.telegram_bot_token', 'is', null)
-        .not('profiles.telegram_chat_id', 'is', null);
+        .not('profiles.telegram_chat_id', 'is', null)
+        .limit(1); // IMPORTANT: Limit to 1 to avoid duplicates
 
       if (queryError) {
         console.error('Database query error for pattern', pattern, ':', queryError);
@@ -338,7 +340,8 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
           profiles!inner(telegram_bot_token, telegram_chat_id)
         `)
         .not('profiles.telegram_bot_token', 'is', null)
-        .not('profiles.telegram_chat_id', 'is', null);
+        .not('profiles.telegram_chat_id', 'is', null)
+        .limit(10); // Limit to avoid too many results
 
       if (!combinedError && combinedProcesses) {
         for (const proc of combinedProcesses) {
@@ -417,6 +420,7 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
     
     const telegramUrl = `https://api.telegram.org/bot${profile.telegram_bot_token}/sendMessage`;
     
+    // SEND ONLY ONE MESSAGE - removed any duplicate sending logic
     const telegramResponse = await fetch(telegramUrl, {
       method: 'POST',
       headers: {
@@ -448,6 +452,7 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
 
     console.log('Notification sent successfully to user:', process.user_id);
 
+    // Return success response ONLY ONCE
     return new Response(
       JSON.stringify({ 
         success: true, 
