@@ -284,6 +284,13 @@ serve(async (req) => {
     const isVerificationCode = /^\d{4,6}$/.test(messageText.trim());
     const messageType = isVerificationCode ? '🔐 CÓDIGO DE VERIFICACIÓN' : '📥 Respuesta o código';
 
+    console.log('Message analysis:', {
+      messageText,
+      displayMessage,
+      isVerificationCode,
+      messageType
+    });
+
     const notificationMessage = `🔔 Alerta de proceso de WhatsApp
 
 👩🏽‍💻 Servidor Astro
@@ -439,6 +446,14 @@ function extractPhoneAndMessage(text: string): { phone: string; message: string 
         break;
       }
     }
+  }
+  
+  // Special handling for verification codes (4-6 digits)
+  if (!phoneNumber && /^\d{4,6}$/.test(text.trim())) {
+    console.log('Detected verification code without phone number:', text.trim());
+    // If it's just a verification code, we need to handle this differently
+    // This might be the case where the phone number was not captured properly
+    return { phone: '', message: text.trim() };
   }
   
   // Normalize phone number
