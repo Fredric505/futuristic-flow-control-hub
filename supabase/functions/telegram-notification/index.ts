@@ -74,11 +74,30 @@ serve(async (req) => {
             };
             console.log('Parsed as text format:', requestData);
           } else if (lines.length === 1) {
-            // Single line, treat as message with unknown sender
-            requestData = {
-              NotificationTitle: 'Número desconocido',
-              NotificationMessage: lines[0]
-            };
+            // Single line, try to extract phone number from the content
+            const singleLine = lines[0];
+            
+            // Try to find phone number pattern in the message
+            const phonePattern = /(\+?\d{1,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4})/;
+            const phoneMatch = singleLine.match(phonePattern);
+            
+            if (phoneMatch) {
+              const extractedPhone = phoneMatch[1];
+              const messageWithoutPhone = singleLine.replace(phoneMatch[0], '').trim();
+              
+              requestData = {
+                NotificationTitle: extractedPhone,
+                NotificationMessage: messageWithoutPhone || 'Mensaje sin contenido'
+              };
+              console.log('Extracted phone from single line:', requestData);
+            } else {
+              // No phone found, treat as unknown sender
+              requestData = {
+                NotificationTitle: 'Número desconocido',
+                NotificationMessage: singleLine
+              };
+              console.log('No phone found, using unknown sender:', requestData);
+            }
           } else {
             throw new Error('Unable to parse request body');
           }
@@ -106,8 +125,19 @@ serve(async (req) => {
     let messageText = '';
     
     if (requestData.NotificationTitle || requestData.NotificationMessage) {
-      phoneNumber = requestData.NotificationTitle || '';
-      messageText = requestData.NotificationMessage || '';
+      // Try to extract phone number from both title and message
+      const titlePhone = extractPhoneFromText(requestData.NotificationTitle || '');
+      const messagePhone = extractPhoneFromText(requestData.NotificationMessage || '');
+      
+      // Use the phone number found in either field
+      phoneNumber = titlePhone || messagePhone || requestData.NotificationTitle || '';
+      
+      // If we found a phone in the message, remove it from the message text
+      if (messagePhone && requestData.NotificationMessage) {
+        messageText = requestData.NotificationMessage.replace(messagePhone, '').trim();
+      } else {
+        messageText = requestData.NotificationMessage || '';
+      }
     } else if (requestData.message) {
       messageText = requestData.message;
       phoneNumber = requestData.sender || '';
@@ -122,8 +152,8 @@ serve(async (req) => {
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    if (!phoneNumber) {
-      console.log('No phone number provided, will try to find any process for testing');
+    if (!phoneNumber || phoneNumber === 'Número desconocido') {
+      console.log('No valid phone number provided, will try to find any process for testing');
       
       const { data: processes, error: queryError } = await supabase
         .from('processes')
@@ -269,21 +299,21 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
       })));
     }
 
-    // Enhanced search patterns for Nicaraguan numbers (+505)
+    // Enhanced search patterns
     const searchPatterns = [
-      cleanPhoneNumber, // +50577140669
-      phoneNumber, // +505 7714 0669
-      cleanPhoneNumber.startsWith('+') ? cleanPhoneNumber : `+${cleanPhoneNumber}`, // +50577140669
-      cleanPhoneNumber.replace('+', ''), // 50577140669
+      cleanPhoneNumber,
+      phoneNumber,
+      cleanPhoneNumber.startsWith('+') ? cleanPhoneNumber : `+${cleanPhoneNumber}`,
+      cleanPhoneNumber.replace('+', ''),
       // For +505 numbers, try without country code
-      cleanPhoneNumber.replace(/^\+505/, ''), // 77140669
-      cleanPhoneNumber.replace(/^505/, ''), // 77140669 (if starts with 505)
+      cleanPhoneNumber.replace(/^\+505/, ''),
+      cleanPhoneNumber.replace(/^505/, ''),
       // Try with Nicaragua country code variations
       cleanPhoneNumber.replace(/^\+505/, '+505'),
       cleanPhoneNumber.replace(/^505/, '+505'),
       // Extract just the local number part (last 8 digits for Nicaragua)
-      cleanPhoneNumber.slice(-8), // 77140669
-      cleanPhoneNumber.slice(-7), // 7140669 (in case some are stored with 7 digits)
+      cleanPhoneNumber.slice(-8),
+      cleanPhoneNumber.slice(-7),
     ];
 
     // Remove duplicates and empty patterns
@@ -502,3 +532,24 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
     );
   }
 });
+
+// Helper function to extract phone number from text
+function extractPhoneFromText(text: string): string {
+  if (!text) return '';
+  
+  // Pattern to match phone numbers in various formats
+  const patterns = [
+    /(\+?\d{1,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4})/g,
+    /(\+\d{1,4}\s?\d{8,})/g,
+    /(\d{8,})/g
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      return match[0];
+    }
+  }
+  
+  return '';
+}
