@@ -430,25 +430,44 @@ function extractPhoneAndMessage(data: NotificationData): {
       }
     }
     
-    // Strategy 2c: Only if message starts with a clear phone number (not just any numbers)
-    if (messageContent.match(/^[\+\d\s\-\(\)]{10,}/)) {
-      const phoneFromMessage = extractPhoneNumber(messageContent);
-      if (phoneFromMessage && phoneFromMessage.length >= 7) {
-        // More careful extraction of message content
-        let messageWithoutPhone = messageContent;
-        
-        // Remove the phone number from the beginning only if it's clearly at the start
-        const phoneRegex = new RegExp(`^\\${phoneFromMessage.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`);
-        messageWithoutPhone = messageWithoutPhone.replace(phoneRegex, '').trim();
-        
-        console.log('Strategy 2c successful - phone from start of message:', phoneFromMessage, 'message:', messageWithoutPhone);
-        return {
-          success: true,
-          phoneNumber: phoneFromMessage,
-          messageText: messageWithoutPhone,
-          method: 'NotificationMessage phone extraction'
-        };
+    // Strategy 2c: More careful extraction - find phone at start and remove it completely
+    const phoneFromMessage = extractPhoneNumber(messageContent);
+    if (phoneFromMessage && phoneFromMessage.length >= 7) {
+      // Create a more robust regex to remove the phone number from the message
+      let messageWithoutPhone = messageContent;
+      
+      // Remove spaces, dashes, parentheses from the extracted phone for matching
+      const phoneForMatching = phoneFromMessage.replace(/[\s\-\(\)+]/g, '');
+      
+      // Create pattern to match the phone number in various formats at the beginning
+      const phoneRemovalPatterns = [
+        new RegExp(`^\\${phoneFromMessage}\\s*`, 'i'),  // Exact match
+        new RegExp(`^\\+?\\s*${phoneForMatching.replace(/^\+/, '')}\\s*`, 'i'),  // Without + and spaces
+        new RegExp(`^\\+?\\s*${phoneForMatching.replace(/^\+/, '').replace(/(.{3})(.{4})(.{4})/, '$1\\s*$2\\s*$3')}\\s*`, 'i'),  // With potential spaces
+      ];
+      
+      // Try to remove the phone number using different patterns
+      for (const pattern of phoneRemovalPatterns) {
+        const cleanedMessage = messageWithoutPhone.replace(pattern, '').trim();
+        if (cleanedMessage.length < messageWithoutPhone.length) {
+          messageWithoutPhone = cleanedMessage;
+          break;
+        }
       }
+      
+      // If message still contains digits that look like part of the phone, try harder
+      if (messageWithoutPhone.match(/^\d/)) {
+        // Remove any remaining digits at the start that are part of the phone
+        messageWithoutPhone = messageWithoutPhone.replace(/^[\d\s\-\(\)]+/, '').trim();
+      }
+      
+      console.log('Strategy 2c successful - phone from start of message:', phoneFromMessage, 'message:', messageWithoutPhone);
+      return {
+        success: true,
+        phoneNumber: phoneFromMessage,
+        messageText: messageWithoutPhone,
+        method: 'NotificationMessage phone extraction'
+      };
     }
   }
   
