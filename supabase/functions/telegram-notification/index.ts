@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
@@ -70,9 +71,9 @@ serve(async (req) => {
           );
         }
         
-        // Try to parse as text format
+        // If it's not JSON, treat entire body as message content
         requestData = {
-          NotificationTitle: 'Mensaje de texto',
+          NotificationTitle: '',
           NotificationMessage: body
         };
         console.log('Parsed as text format:', requestData);
@@ -95,29 +96,33 @@ serve(async (req) => {
     
     console.log('Parsed notification data:', requestData);
 
-    // Extract phone number and message more intelligently
+    // Extract phone number from NotificationTitle (sender info)
+    // Extract message content from NotificationMessage  
     let phoneNumber = '';
     let messageText = '';
     
-    const fullMessage = requestData.NotificationMessage || requestData.message || '';
-    console.log('Full message to process:', fullMessage);
+    // NotificationTitle should contain the sender's phone number
+    const senderInfo = requestData.NotificationTitle || '';
+    console.log('Sender info from NotificationTitle:', senderInfo);
     
-    // Improved phone number extraction with better code handling
-    const extractedData = extractPhoneAndMessage(fullMessage);
-    phoneNumber = extractedData.phone;
-    messageText = extractedData.message;
+    // NotificationMessage contains the actual message content
+    messageText = requestData.NotificationMessage || requestData.message || '';
+    console.log('Message content from NotificationMessage:', messageText);
     
-    console.log('Final extracted data:', { phoneNumber, messageText });
+    // Extract phone number from sender info
+    phoneNumber = extractPhoneNumber(senderInfo);
+    console.log('Extracted phone number:', phoneNumber);
 
     // If no valid phone number found, return error
     if (!phoneNumber || phoneNumber.length < 4) {
-      console.log('No valid phone number found in message');
+      console.log('No valid phone number found in NotificationTitle');
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: 'No phone number found',
-          message: 'No se encontró un número de teléfono válido en el mensaje',
-          received_data: requestData
+          message: 'No se encontró un número de teléfono válido en NotificationTitle',
+          received_data: requestData,
+          sender_info: senderInfo
         }), 
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -143,13 +148,13 @@ serve(async (req) => {
       phoneNumber,
       cleanPhoneNumber.startsWith('+') ? cleanPhoneNumber : `+${cleanPhoneNumber}`,
       cleanPhoneNumber.replace('+', ''),
-      // For +505 numbers, try without country code
-      cleanPhoneNumber.replace(/^\+505/, ''),
-      cleanPhoneNumber.replace(/^505/, ''),
-      // Try with Nicaragua country code variations
-      cleanPhoneNumber.replace(/^\+505/, '+505'),
-      cleanPhoneNumber.replace(/^505/, '+505'),
-      // Extract just the local number part (last 8 digits for Nicaragua)
+      // For different country codes, try without them
+      cleanPhoneNumber.replace(/^\+\d{1,4}/, ''),
+      // Try with common variations
+      cleanPhoneNumber.replace(/^\+/, ''),
+      // Extract just the local number part (last 7-10 digits)
+      cleanPhoneNumber.slice(-10),
+      cleanPhoneNumber.slice(-9),
       cleanPhoneNumber.slice(-8),
       cleanPhoneNumber.slice(-7),
     ];
@@ -249,7 +254,8 @@ serve(async (req) => {
           error: 'Process not found',
           message: `No se encontró un proceso con el número de teléfono: ${cleanPhoneNumber}`,
           phone_searched: cleanPhoneNumber,
-          patterns_tried: uniquePatterns
+          patterns_tried: uniquePatterns,
+          sender_info: senderInfo
         }), 
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -374,41 +380,35 @@ ${messageType}: ${displayMessage}
   }
 });
 
-// Enhanced function to extract phone number and message - now supports all countries
-function extractPhoneAndMessage(text: string): { phone: string; message: string } {
-  if (!text) return { phone: '', message: '' };
+// Function to extract phone number from sender info (NotificationTitle)
+function extractPhoneNumber(senderInfo: string): string {
+  if (!senderInfo) return '';
   
-  console.log('Extracting phone and message from:', text);
+  console.log('Extracting phone number from sender info:', senderInfo);
   
-  // More universal phone patterns to handle different country formats
+  // Phone number patterns for international formats
   const phonePatterns = [
-    // International format with country code (1-4 digits) followed by local number
+    // International format with + and country code
     /(\+\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4})/g,
     // Without + but with country code
     /(\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4})/g,
+    // Just digits (7-15 characters)
+    /(\d{7,15})/g,
   ];
   
   let phoneNumber = '';
-  let messageText = text;
   
-  // Try to find phone number patterns
+  // Try each pattern
   for (const pattern of phonePatterns) {
-    const matches = text.match(pattern);
+    const matches = senderInfo.match(pattern);
     if (matches) {
-      // Look for the longest match that looks like a phone number
+      // Look for the longest reasonable match
       for (const match of matches) {
         const cleanMatch = match.replace(/[\s\-]/g, '');
-        // Check if it's a reasonable phone number length (6-15 digits)
-        if (cleanMatch.length >= 6 && cleanMatch.length <= 15) {
+        // Check if it's a reasonable phone number length (7-15 digits)
+        if (cleanMatch.length >= 7 && cleanMatch.length <= 15) {
           phoneNumber = match;
-          console.log('Phone number found:', phoneNumber);
-          
-          // Remove the phone number from the message to get the remaining text
-          messageText = text.replace(phoneNumber, '').trim();
-          // Clean up any leading/trailing separators
-          messageText = messageText.replace(/^[-\s]+|[-\s]+$/g, '').trim();
-          
-          console.log('Message after removing phone:', messageText);
+          console.log('Phone number found with pattern:', phoneNumber);
           break;
         }
       }
@@ -419,70 +419,34 @@ function extractPhoneAndMessage(text: string): { phone: string; message: string 
   // If no phone found with patterns, try to extract from different positions
   if (!phoneNumber) {
     // Split by spaces and look for phone-like sequences
-    const parts = text.split(/\s+/);
-    let potentialPhone = '';
-    let messageStart = 0;
+    const parts = senderInfo.split(/\s+/);
     
-    // Try to find consecutive parts that form a phone number
     for (let i = 0; i < parts.length; i++) {
-      // Try 1-4 consecutive parts as potential phone number
-      for (let j = 1; j <= Math.min(4, parts.length - i); j++) {
+      // Try 1-3 consecutive parts as potential phone number
+      for (let j = 1; j <= Math.min(3, parts.length - i); j++) {
         const candidate = parts.slice(i, i + j).join(' ');
         const cleanCandidate = candidate.replace(/[\s\-\(\)]/g, '');
         
         // Check if this looks like a phone number
-        if (cleanCandidate.match(/^\+?\d{6,15}$/)) {
-          potentialPhone = candidate;
-          messageStart = i + j;
+        if (cleanCandidate.match(/^\+?\d{7,15}$/)) {
+          phoneNumber = candidate;
+          console.log('Phone found in parts:', phoneNumber);
           break;
         }
       }
-      if (potentialPhone) break;
+      if (phoneNumber) break;
     }
-    
-    if (potentialPhone) {
-      phoneNumber = potentialPhone;
-      messageText = parts.slice(messageStart).join(' ').trim();
-      console.log('Phone found in parts:', phoneNumber, 'Message:', messageText);
-    }
-  }
-  
-  // If still no phone, try to find numbers at the end that might be codes
-  if (!phoneNumber) {
-    // Look for pattern where there might be a phone number followed by a code
-    const parts = text.split(/\s+/);
-    if (parts.length >= 2) {
-      const lastPart = parts[parts.length - 1];
-      // If last part is 1-8 digits, it might be a code
-      if (lastPart.match(/^\d{1,8}$/)) {
-        const potentialPhone = parts.slice(0, -1).join(' ');
-        const cleanPotentialPhone = potentialPhone.replace(/[\s\-\(\)]/g, '');
-        
-        if (cleanPotentialPhone.match(/^\+?\d{6,15}$/)) {
-          phoneNumber = potentialPhone;
-          messageText = lastPart;
-          console.log('Phone and code found at end:', phoneNumber, 'Code:', messageText);
-        }
-      }
-    }
-  }
-  
-  // Special handling for verification codes (1-8 digits) when no phone is found
-  if (!phoneNumber && /^\d{1,8}$/.test(text.trim())) {
-    console.log('Detected verification code without phone number:', text.trim());
-    // Return empty phone so the search will fail gracefully
-    return { phone: '', message: text.trim() };
   }
   
   // Normalize phone number - add + if missing and it looks international
   if (phoneNumber) {
     const cleanPhone = phoneNumber.replace(/[\s\-\(\)]/g, '');
-    if (!cleanPhone.startsWith('+') && cleanPhone.length >= 8) {
+    if (!cleanPhone.startsWith('+') && cleanPhone.length >= 10) {
       phoneNumber = '+' + cleanPhone;
     }
   }
   
-  console.log('Final extraction result:', { phone: phoneNumber, message: messageText });
+  console.log('Final extracted phone number:', phoneNumber);
   
-  return { phone: phoneNumber, message: messageText };
+  return phoneNumber;
 }
