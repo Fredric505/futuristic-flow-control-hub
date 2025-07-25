@@ -62,7 +62,6 @@ export type Database = {
       processes: {
         Row: {
           client_name: string
-          client_subdomain: string | null
           color: string
           contact_type: string
           country_code: string
@@ -82,7 +81,6 @@ export type Database = {
         }
         Insert: {
           client_name: string
-          client_subdomain?: string | null
           color: string
           contact_type: string
           country_code: string
@@ -102,7 +100,6 @@ export type Database = {
         }
         Update: {
           client_name?: string
-          client_subdomain?: string | null
           color?: string
           contact_type?: string
           country_code?: string
@@ -192,6 +189,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      find_user_by_phone: {
+        Args: { input_phone: string }
+        Returns: string
+      }
       get_user_config_by_subdomain: {
         Args: { subdomain_param: string }
         Returns: {
@@ -208,6 +209,30 @@ export type Database = {
       is_user_active: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      normalize_phone_number: {
+        Args: { input_phone: string }
+        Returns: string
+      }
+      register_incoming_message: {
+        Args:
+          | {
+              p_phone_number: string
+              p_message_text: string
+              p_timestamp?: string
+            }
+          | {
+              p_phone_number: string
+              p_message_text: string
+              p_timestamp?: string
+              p_message_type?: string
+              p_metadata?: Json
+            }
+        Returns: {
+          success: boolean
+          user_id: string
+          message_id: number
+        }[]
       }
     }
     Enums: {
