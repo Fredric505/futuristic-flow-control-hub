@@ -394,13 +394,17 @@ function extractPhoneAndMessage(data: NotificationData): {
     }
   }
   
-  // Strategy 2: Try to extract phone from NotificationMessage (fallback)
+  // Strategy 2: Check if NotificationMessage contains both phone and message
   if (data.NotificationMessage && data.NotificationMessage.trim() !== '') {
-    const phoneFromMessage = extractPhoneNumber(data.NotificationMessage);
+    const messageContent = data.NotificationMessage.trim();
+    console.log('Analyzing NotificationMessage for phone and message:', messageContent);
+    
+    // Check if message starts with a phone number
+    const phoneFromMessage = extractPhoneNumber(messageContent);
     if (phoneFromMessage && phoneFromMessage.length >= 4) {
       // Extract message content after removing the phone number
-      const messageWithoutPhone = data.NotificationMessage.replace(phoneFromMessage, '').trim();
-      console.log('Strategy 2 successful - phone from NotificationMessage:', phoneFromMessage);
+      const messageWithoutPhone = messageContent.replace(phoneFromMessage, '').trim();
+      console.log('Strategy 2 successful - phone from NotificationMessage:', phoneFromMessage, 'message:', messageWithoutPhone);
       return {
         success: true,
         phoneNumber: phoneFromMessage,
@@ -408,13 +412,49 @@ function extractPhoneAndMessage(data: NotificationData): {
         method: 'NotificationMessage parsing'
       };
     }
+    
+    // Strategy 3: Check if message contains a phone number with a colon or separator
+    const phoneWithSeparator = messageContent.match(/^([+\d\s\-\(\)]+)\s*[:]\s*(.*)$/);
+    if (phoneWithSeparator) {
+      const potentialPhone = phoneWithSeparator[1].trim();
+      const messageAfterSeparator = phoneWithSeparator[2].trim();
+      const cleanPhone = extractPhoneNumber(potentialPhone);
+      
+      if (cleanPhone && cleanPhone.length >= 6) {
+        console.log('Strategy 3 successful - phone with separator:', cleanPhone, 'message:', messageAfterSeparator);
+        return {
+          success: true,
+          phoneNumber: cleanPhone,
+          messageText: messageAfterSeparator,
+          method: 'NotificationMessage with separator'
+        };
+      }
+    }
+    
+    // Strategy 4: Check if message starts with number and has text after
+    const numberAndText = messageContent.match(/^([+\d\s\-\(\)]+)\s+(.+)$/);
+    if (numberAndText) {
+      const potentialPhone = numberAndText[1].trim();
+      const messageAfterNumber = numberAndText[2].trim();
+      const cleanPhone = extractPhoneNumber(potentialPhone);
+      
+      if (cleanPhone && cleanPhone.length >= 6) {
+        console.log('Strategy 4 successful - number and text:', cleanPhone, 'message:', messageAfterNumber);
+        return {
+          success: true,
+          phoneNumber: cleanPhone,
+          messageText: messageAfterNumber,
+          method: 'NotificationMessage number and text'
+        };
+      }
+    }
   }
   
-  // Strategy 3: Try other fields
+  // Strategy 5: Try other fields
   if (data.sender) {
     const phoneFromSender = extractPhoneNumber(data.sender);
     if (phoneFromSender && phoneFromSender.length >= 4) {
-      console.log('Strategy 3 successful - phone from sender:', phoneFromSender);
+      console.log('Strategy 5 successful - phone from sender:', phoneFromSender);
       return {
         success: true,
         phoneNumber: phoneFromSender,
@@ -424,7 +464,7 @@ function extractPhoneAndMessage(data: NotificationData): {
     }
   }
   
-  // Strategy 4: Last resort - try to find any phone-like pattern in any field
+  // Strategy 6: Last resort - try to find any phone-like pattern in any field
   const allText = [
     data.NotificationTitle,
     data.NotificationMessage, 
@@ -435,7 +475,7 @@ function extractPhoneAndMessage(data: NotificationData): {
   if (allText) {
     const phoneFromAll = extractPhoneNumber(allText);
     if (phoneFromAll && phoneFromAll.length >= 4) {
-      console.log('Strategy 4 successful - phone from combined text:', phoneFromAll);
+      console.log('Strategy 6 successful - phone from combined text:', phoneFromAll);
       return {
         success: true,
         phoneNumber: phoneFromAll,
