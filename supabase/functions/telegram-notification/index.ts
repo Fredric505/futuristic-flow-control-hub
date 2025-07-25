@@ -52,7 +52,7 @@ serve(async (req) => {
         requestData = JSON.parse(body);
         console.log('Successfully parsed as JSON:', requestData);
       } catch (jsonError) {
-        console.log('Failed to parse as JSON, trying text format...');
+        console.log('Failed to parse as JSON, trying to extract phone and message from text...');
         
         // Check if it's the IFTTT format with variables that weren't replaced
         if (body.includes('{{NotificationTitle}}') || body.includes('{{NotificationMessage}}')) {
@@ -71,12 +71,36 @@ serve(async (req) => {
           );
         }
         
-        // Try to parse as text format
-        requestData = {
-          NotificationTitle: 'Mensaje de texto',
-          NotificationMessage: body
-        };
-        console.log('Parsed as text format:', requestData);
+        // Try to extract phone number and message from text format
+        // Expected format: "+505 8889 7925 mensaje aquí"
+        const phoneRegex = /^(\+?\d{1,4}[\s\-]?\d{4}[\s\-]?\d{4})(?:\s+(.*))?$/;
+        const match = body.trim().match(phoneRegex);
+        
+        if (match) {
+          const [, phoneNumber, message] = match;
+          requestData = {
+            NotificationTitle: phoneNumber.trim(),
+            NotificationMessage: message || ''
+          };
+          console.log('Extracted from text format:', requestData);
+        } else {
+          // If no phone pattern found, try to split by space and take first part as phone
+          const parts = body.trim().split(/\s+/);
+          if (parts.length >= 2) {
+            requestData = {
+              NotificationTitle: parts[0],
+              NotificationMessage: parts.slice(1).join(' ')
+            };
+            console.log('Split by space format:', requestData);
+          } else {
+            // Last resort: treat as message only
+            requestData = {
+              NotificationTitle: 'Número desconocido',
+              NotificationMessage: body.trim()
+            };
+            console.log('Fallback format:', requestData);
+          }
+        }
       }
     } catch (parseError) {
       console.error('Error parsing request body:', parseError);
@@ -96,24 +120,24 @@ serve(async (req) => {
     
     console.log('Parsed notification data:', requestData);
 
-    // FLUJO CORRECTO: 
+    // FLUJO CORRECTO según las instrucciones:
     // NotificationTitle = número de teléfono del cliente
     // NotificationMessage = contenido del mensaje (tal como viene)
     
     const phoneNumber = requestData.NotificationTitle || '';
     const messageText = requestData.NotificationMessage || requestData.message || '';
     
-    console.log('Phone number (from title):', phoneNumber);
-    console.log('Message text (from message):', messageText);
+    console.log('Phone number (from NotificationTitle):', phoneNumber);
+    console.log('Message text (from NotificationMessage):', messageText);
 
     // Validar que tenemos un número de teléfono
-    if (!phoneNumber || phoneNumber.trim() === '') {
-      console.log('No phone number found in NotificationTitle');
+    if (!phoneNumber || phoneNumber.trim() === '' || phoneNumber === 'Número desconocido') {
+      console.log('No valid phone number found in NotificationTitle');
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: 'No phone number found',
-          message: 'No se encontró número de teléfono en NotificationTitle',
+          message: 'No se encontró número de teléfono válido en NotificationTitle',
           received_data: requestData
         }), 
         { 
