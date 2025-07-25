@@ -9,13 +9,12 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface IncomingMessage {
   id: string;
-  phone_number: string;
+  user_id: string;
+  recipient_phone: string;
   message_content: string;
-  source: string;
-  received_at: string;
-  processed: boolean;
-  telegram_sent: boolean;
-  metadata: any;
+  sent_at: string;
+  status: string;
+  process_id?: string;
 }
 
 interface NotificationsPanelProps {
@@ -31,11 +30,11 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ userType }) => 
     
     // Configurar subscripción en tiempo real
     const channel = supabase
-      .channel('incoming-messages-changes')
+      .channel('messages-changes')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'incoming_messages' },
+        { event: '*', schema: 'public', table: 'messages' },
         (payload) => {
-          console.log('New message received:', payload);
+          console.log('Message change detected:', payload);
           loadMessages();
         }
       )
@@ -53,9 +52,9 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ userType }) => 
       if (!session) return;
 
       let query = supabase
-        .from('incoming_messages')
+        .from('messages')
         .select('*')
-        .order('received_at', { ascending: false })
+        .order('sent_at', { ascending: false })
         .limit(50);
 
       // Solo mostrar mensajes del usuario actual si no es admin
@@ -90,21 +89,24 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ userType }) => 
     return `+${phone}`;
   };
 
-  const getStatusBadge = (processed: boolean, telegram_sent: boolean) => {
-    if (!processed) {
-      return <Badge variant="secondary" className="bg-yellow-600">Procesando</Badge>;
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'sent':
+        return <Badge variant="default" className="bg-green-600">Enviado</Badge>;
+      case 'pending':
+        return <Badge variant="secondary" className="bg-yellow-600">Pendiente</Badge>;
+      case 'failed':
+        return <Badge variant="destructive">Error</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
     }
-    if (telegram_sent) {
-      return <Badge variant="default" className="bg-green-600">Enviado</Badge>;
-    }
-    return <Badge variant="destructive">No enviado</Badge>;
   };
 
   if (loading) {
     return (
       <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
         <CardContent className="p-6">
-          <p className="text-blue-200/70 text-center">Cargando notificaciones...</p>
+          <p className="text-blue-200/70 text-center">Cargando mensajes...</p>
         </CardContent>
       </Card>
     );
@@ -114,7 +116,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ userType }) => 
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-blue-300">
-          Notificaciones WhatsApp ({messages.length})
+          Mensajes ({messages.length})
         </h2>
         <Button
           onClick={loadMessages}
@@ -131,9 +133,9 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ userType }) => 
           <CardContent className="p-8">
             <div className="text-center">
               <MessageCircle className="h-16 w-16 text-blue-300/30 mx-auto mb-4" />
-              <p className="text-blue-200/70 mb-4">No hay notificaciones</p>
+              <p className="text-blue-200/70 mb-4">No hay mensajes</p>
               <p className="text-blue-200/50 text-sm">
-                Las notificaciones de WhatsApp aparecerán aquí cuando lleguen.
+                Los mensajes aparecerán aquí cuando se envíen.
               </p>
             </div>
           </CardContent>
@@ -148,19 +150,16 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ userType }) => 
                     <Phone className="h-5 w-5 text-blue-300" />
                     <div>
                       <CardTitle className="text-blue-300 text-lg">
-                        {formatPhoneNumber(message.phone_number)}
+                        {formatPhoneNumber(message.recipient_phone)}
                       </CardTitle>
                       <p className="text-blue-200/70 text-sm flex items-center">
                         <Calendar className="h-4 w-4 mr-1" />
-                        {new Date(message.received_at).toLocaleString('es-ES')}
+                        {new Date(message.sent_at).toLocaleString('es-ES')}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Badge variant="outline" className="text-blue-300">
-                      {message.source}
-                    </Badge>
-                    {getStatusBadge(message.processed, message.telegram_sent)}
+                    {getStatusBadge(message.status)}
                   </div>
                 </div>
               </CardHeader>
@@ -173,12 +172,12 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ userType }) => 
                     </p>
                   </div>
                   
-                  {message.metadata && Object.keys(message.metadata).length > 0 && (
+                  {message.process_id && (
                     <div>
-                      <p className="text-blue-200/50 text-sm mb-1">Datos adicionales:</p>
-                      <pre className="text-blue-200/70 bg-gray-900/20 p-2 rounded text-xs overflow-x-auto">
-                        {JSON.stringify(message.metadata, null, 2)}
-                      </pre>
+                      <p className="text-blue-200/50 text-sm mb-1">Proceso ID:</p>
+                      <p className="text-blue-200/70 bg-gray-900/20 p-2 rounded text-xs">
+                        {message.process_id}
+                      </p>
                     </div>
                   )}
                 </div>
