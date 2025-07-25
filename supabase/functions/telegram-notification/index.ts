@@ -130,7 +130,7 @@ serve(async (req) => {
     const cleanPhoneNumber = phoneNumber.replace(/[\s\-\(\)]/g, '');
     console.log('Searching for process with phone number:', cleanPhoneNumber);
 
-    // Enhanced search patterns
+    // Enhanced search patterns - preserving full numbers
     const searchPatterns = [
       cleanPhoneNumber,
       phoneNumber,
@@ -140,11 +140,6 @@ serve(async (req) => {
       cleanPhoneNumber.replace(/^\+\d{1,4}/, ''),
       // Try with common variations
       cleanPhoneNumber.replace(/^\+/, ''),
-      // Extract just the local number part (last 7-10 digits)
-      cleanPhoneNumber.slice(-10),
-      cleanPhoneNumber.slice(-9),
-      cleanPhoneNumber.slice(-8),
-      cleanPhoneNumber.slice(-7),
     ];
 
     // Remove duplicates and empty patterns
@@ -383,7 +378,7 @@ function extractPhoneAndMessage(data: NotificationData): {
   // Strategy 1: Use NotificationTitle for phone, NotificationMessage for message
   if (data.NotificationTitle && data.NotificationTitle.trim() !== '') {
     const phoneFromTitle = extractPhoneNumber(data.NotificationTitle);
-    if (phoneFromTitle && phoneFromTitle.length >= 7) { // Increased minimum length for better accuracy
+    if (phoneFromTitle && phoneFromTitle.length >= 7) {
       console.log('Strategy 1 successful - phone from NotificationTitle:', phoneFromTitle);
       return {
         success: true,
@@ -418,7 +413,7 @@ function extractPhoneAndMessage(data: NotificationData): {
     }
     
     // Strategy 2b: Check if message starts with a phone number pattern followed by space and text
-    const phoneAndTextPattern = messageContent.match(/^(\+\d{1,4}[\s\-]?\d{4,})\s+(.+)$/);
+    const phoneAndTextPattern = messageContent.match(/^(\+\d{1,4}[\s\-]?\d{7,15})\s+(.+)$/);
     if (phoneAndTextPattern) {
       const potentialPhone = phoneAndTextPattern[1].trim();
       const messageAfterPhone = phoneAndTextPattern[2].trim();
@@ -500,19 +495,19 @@ function extractPhoneAndMessage(data: NotificationData): {
   };
 }
 
-// Function to extract phone number from text
+// Function to extract phone number from text - FIXED to not truncate numbers
 function extractPhoneNumber(text: string): string {
   if (!text) return '';
   
   console.log('Extracting phone number from text:', text);
   
-  // Phone number patterns for international formats (more specific patterns first)
+  // Phone number patterns for international formats (preserving full length)
   const phonePatterns = [
-    // International format with + and country code (most specific first)
-    /(\+\d{1,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4}[\s\-]?\d{2,4})/g,
-    // Without + but with country code pattern
-    /(\d{3,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4}[\s\-]?\d{2,4})/g,
-    // Just digits (7-15 characters) - more restrictive range
+    // International format with + and country code - allowing longer numbers
+    /(\+\d{1,4}[\s\-]?\d{7,15})/g,
+    // Without + but with country code pattern - allowing longer numbers
+    /(\d{3,4}[\s\-]?\d{7,15})/g,
+    // Just digits (7-15 characters) - full range
     /(\d{7,15})/g,
   ];
   
@@ -522,20 +517,23 @@ function extractPhoneNumber(text: string): string {
   for (const pattern of phonePatterns) {
     const matches = text.match(pattern);
     if (matches) {
-      // Look for the longest reasonable match that looks like a phone number
+      // Look for the longest match that looks like a phone number
+      let bestMatch = '';
       for (const match of matches) {
         const cleanMatch = match.replace(/[\s\-]/g, '');
         // Check if it's a reasonable phone number length (7-15 digits)
         if (cleanMatch.length >= 7 && cleanMatch.length <= 15) {
-          // Additional validation: phone numbers typically don't start with 0 (except country codes)
-          if (!cleanMatch.startsWith('0') || cleanMatch.startsWith('00')) {
-            phoneNumber = match;
-            console.log('Phone number found with pattern:', phoneNumber);
-            break;
+          // Take the longest match (preserve full number)
+          if (match.length > bestMatch.length) {
+            bestMatch = match;
           }
         }
       }
-      if (phoneNumber) break;
+      if (bestMatch) {
+        phoneNumber = bestMatch;
+        console.log('Phone number found with pattern:', phoneNumber);
+        break;
+      }
     }
   }
   
@@ -545,13 +543,13 @@ function extractPhoneNumber(text: string): string {
     const parts = text.split(/\s+/);
     
     for (let i = 0; i < parts.length; i++) {
-      // Try 1-3 consecutive parts as potential phone number
-      for (let j = 1; j <= Math.min(3, parts.length - i); j++) {
+      // Try 1-5 consecutive parts as potential phone number (increased from 3)
+      for (let j = 1; j <= Math.min(5, parts.length - i); j++) {
         const candidate = parts.slice(i, i + j).join(' ');
         const cleanCandidate = candidate.replace(/[\s\-\(\)]/g, '');
         
-        // Check if this looks like a phone number (more strict validation)
-        if (cleanCandidate.match(/^\+?\d{7,15}$/) && !cleanCandidate.startsWith('0')) {
+        // Check if this looks like a phone number (preserve full length)
+        if (cleanCandidate.match(/^\+?\d{7,15}$/)) {
           phoneNumber = candidate;
           console.log('Phone found in parts:', phoneNumber);
           break;
