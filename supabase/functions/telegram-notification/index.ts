@@ -495,79 +495,58 @@ function extractPhoneAndMessage(data: NotificationData): {
   };
 }
 
-// Function to extract phone number from text - FIXED to not truncate numbers
+// FIXED function to extract phone number from text - now preserves complete numbers
 function extractPhoneNumber(text: string): string {
   if (!text) return '';
   
   console.log('Extracting phone number from text:', text);
   
-  // Phone number patterns for international formats (preserving full length)
-  const phonePatterns = [
-    // International format with + and country code - allowing longer numbers
-    /(\+\d{1,4}[\s\-]?\d{7,15})/g,
-    // Without + but with country code pattern - allowing longer numbers
-    /(\d{3,4}[\s\-]?\d{7,15})/g,
-    // Just digits (7-15 characters) - full range
-    /(\d{7,15})/g,
-  ];
+  // First, try to find international format numbers with country codes
+  const internationalPattern = /(\+\d{1,4}[\s\-]?\d{8,15})/g;
+  let matches = text.match(internationalPattern);
   
-  let phoneNumber = '';
-  
-  // Try each pattern
-  for (const pattern of phonePatterns) {
-    const matches = text.match(pattern);
-    if (matches) {
-      // Look for the longest match that looks like a phone number
-      let bestMatch = '';
-      for (const match of matches) {
-        const cleanMatch = match.replace(/[\s\-]/g, '');
-        // Check if it's a reasonable phone number length (7-15 digits)
-        if (cleanMatch.length >= 7 && cleanMatch.length <= 15) {
-          // Take the longest match (preserve full number)
-          if (match.length > bestMatch.length) {
-            bestMatch = match;
-          }
-        }
-      }
-      if (bestMatch) {
-        phoneNumber = bestMatch;
-        console.log('Phone number found with pattern:', phoneNumber);
-        break;
-      }
-    }
+  if (matches) {
+    // Return the longest match (most complete number)
+    const longestMatch = matches.reduce((longest, current) => 
+      current.length > longest.length ? current : longest
+    );
+    console.log('International format phone found:', longestMatch);
+    return longestMatch;
   }
   
-  // If no phone found with patterns, try to extract from different positions
-  if (!phoneNumber) {
-    // Split by spaces and look for phone-like sequences
-    const parts = text.split(/\s+/);
+  // If no international format, try to find numbers without country code
+  const localPattern = /(\d{8,15})/g;
+  matches = text.match(localPattern);
+  
+  if (matches) {
+    // Return the longest match and add + if it seems like a full number
+    const longestMatch = matches.reduce((longest, current) => 
+      current.length > longest.length ? current : longest
+    );
     
-    for (let i = 0; i < parts.length; i++) {
-      // Try 1-5 consecutive parts as potential phone number (increased from 3)
-      for (let j = 1; j <= Math.min(5, parts.length - i); j++) {
-        const candidate = parts.slice(i, i + j).join(' ');
-        const cleanCandidate = candidate.replace(/[\s\-\(\)]/g, '');
-        
-        // Check if this looks like a phone number (preserve full length)
-        if (cleanCandidate.match(/^\+?\d{7,15}$/)) {
-          phoneNumber = candidate;
-          console.log('Phone found in parts:', phoneNumber);
-          break;
-        }
+    // If it's a reasonably long number, assume it needs a country code
+    if (longestMatch.length >= 8) {
+      const result = '+' + longestMatch;
+      console.log('Local format phone found (added +):', result);
+      return result;
+    }
+  }
+  
+  // Last resort: try to extract any sequence that looks like a phone number
+  const anyDigitPattern = /(\+?[\d\s\-\(\)]+)/g;
+  matches = text.match(anyDigitPattern);
+  
+  if (matches) {
+    for (const match of matches) {
+      const cleaned = match.replace(/[\s\-\(\)]/g, '');
+      if (cleaned.length >= 7 && cleaned.length <= 15 && /^\+?\d+$/.test(cleaned)) {
+        const result = cleaned.startsWith('+') ? cleaned : '+' + cleaned;
+        console.log('Fallback phone extraction:', result);
+        return result;
       }
-      if (phoneNumber) break;
     }
   }
   
-  // Normalize phone number - add + if missing and it looks international
-  if (phoneNumber) {
-    const cleanPhone = phoneNumber.replace(/[\s\-\(\)]/g, '');
-    if (!cleanPhone.startsWith('+') && cleanPhone.length >= 10) {
-      phoneNumber = '+' + cleanPhone;
-    }
-  }
-  
-  console.log('Final extracted phone number:', phoneNumber);
-  
-  return phoneNumber;
+  console.log('No phone number found in text');
+  return '';
 }
