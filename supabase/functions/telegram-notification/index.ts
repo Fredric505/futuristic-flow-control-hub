@@ -33,43 +33,50 @@ serve(async (req) => {
       console.log('Content-Type header:', req.headers.get('content-type'));
       
       if (!body || body.trim() === '') {
-        console.log('Empty request body, using default test data');
-        requestData = {
-          NotificationTitle: '+505 8889 7925',
-          NotificationMessage: 'Este es un mensaje de prueba'
-        };
-      } else {
-        // Try to parse as JSON first
-        try {
-          requestData = JSON.parse(body);
-          console.log('Successfully parsed as JSON:', requestData);
-        } catch (jsonError) {
-          console.log('Failed to parse as JSON, trying text format...');
-          
-          // Check if it's the IFTTT format with variables that weren't replaced
-          if (body.includes('{{NotificationTitle}}') || body.includes('{{NotificationMessage}}')) {
-            console.log('Detected IFTTT template variables that weren\'t replaced');
-            return new Response(
-              JSON.stringify({ 
-                success: false, 
-                error: 'IFTTT template error',
-                message: 'Las variables de IFTTT no se reemplazaron correctamente. Verifica tu configuración de IFTTT.',
-                received_body: body
-              }), 
-              { 
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 400
-              }
-            );
+        console.log('Empty request body received');
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Empty request body',
+            message: 'No se recibió contenido en la solicitud'
+          }), 
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400
           }
-          
-          // Try to parse as text format
-          requestData = {
-            NotificationTitle: 'Mensaje de texto',
-            NotificationMessage: body
-          };
-          console.log('Parsed as text format:', requestData);
+        );
+      }
+
+      // Try to parse as JSON first
+      try {
+        requestData = JSON.parse(body);
+        console.log('Successfully parsed as JSON:', requestData);
+      } catch (jsonError) {
+        console.log('Failed to parse as JSON, trying text format...');
+        
+        // Check if it's the IFTTT format with variables that weren't replaced
+        if (body.includes('{{NotificationTitle}}') || body.includes('{{NotificationMessage}}')) {
+          console.log('Detected IFTTT template variables that weren\'t replaced');
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'IFTTT template error',
+              message: 'Las variables de IFTTT no se reemplazaron correctamente. Verifica tu configuración de IFTTT.',
+              received_body: body
+            }), 
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 400
+            }
+          );
         }
+        
+        // Try to parse as text format
+        requestData = {
+          NotificationTitle: 'Mensaje de texto',
+          NotificationMessage: body
+        };
+        console.log('Parsed as text format:', requestData);
       }
     } catch (parseError) {
       console.error('Error parsing request body:', parseError);
@@ -115,14 +122,28 @@ serve(async (req) => {
         if (title.match(/\d{4,}/)) {
           phoneNumber = title;
           messageText = fullMessage;
-        } else {
-          phoneNumber = 'Número desconocido';
-          messageText = fullMessage;
         }
       }
     }
 
     console.log('Final extracted data:', { phoneNumber, messageText });
+
+    // If no valid phone number found, return error instead of test mode
+    if (!phoneNumber || phoneNumber.length < 4) {
+      console.log('No valid phone number found in message');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'No phone number found',
+          message: 'No se encontró un número de teléfono válido en el mensaje',
+          received_data: requestData
+        }), 
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400
+        }
+      );
+    }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -130,130 +151,6 @@ serve(async (req) => {
     console.log('Connecting to Supabase...');
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     const supabase = createClient(supabaseUrl, supabaseKey);
-
-    if (!phoneNumber || phoneNumber === 'Número desconocido') {
-      console.log('No valid phone number provided, will try to find any process for testing');
-      
-      const { data: processes, error: queryError } = await supabase
-        .from('processes')
-        .select(`
-          id,
-          user_id,
-          client_name,
-          iphone_model,
-          imei,
-          serial_number,
-          owner_name,
-          country_code,
-          phone_number,
-          profiles!inner(telegram_bot_token, telegram_chat_id)
-        `)
-        .not('profiles.telegram_bot_token', 'is', null)
-        .not('profiles.telegram_chat_id', 'is', null)
-        .limit(1);
-
-      if (queryError) {
-        console.error('Database query error:', queryError);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: 'Database error',
-            details: queryError.message 
-          }), 
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 500
-          }
-        );
-      }
-
-      if (!processes || processes.length === 0) {
-        console.log('No processes with Telegram configured found');
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: 'No processes found',
-            message: 'No se encontraron procesos con Telegram configurado'
-          }), 
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 404
-          }
-        );
-      }
-
-      const process = processes[0];
-      const profile = process.profiles;
-
-      console.log('Found test process:', process.id, 'for user:', process.user_id);
-
-      const notificationMessage = `🔔 Alerta de proceso de WhatsApp (PRUEBA)
-
-👩🏽‍💻 Servidor Astro
-
-📊 INFORMACIÓN DEL PROCESO:
-👤 Cliente: ${process.client_name || 'Cliente de prueba'}
-📱 Modelo: ${process.iphone_model || 'iPhone de prueba'}
-📞 IMEI: ${process.imei || 'IMEI de prueba'}
-🔢 Serie: ${process.serial_number || 'Serie de prueba'}
-${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
-
-📞 Remitente: ${phoneNumber || 'Número de prueba'}
-📥 Respuesta o código: ${messageText || 'Mensaje de prueba'}
-
-🤖 Bot Astro en línea 🟢
-
-⚠️ Este es un mensaje de PRUEBA`;
-
-      console.log('Sending test notification to Telegram...');
-      
-      const telegramUrl = `https://api.telegram.org/bot${profile.telegram_bot_token}/sendMessage`;
-      
-      const telegramResponse = await fetch(telegramUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id: profile.telegram_chat_id,
-          text: notificationMessage,
-          parse_mode: 'HTML'
-        }),
-      });
-
-      const telegramResult = await telegramResponse.json();
-      
-      if (!telegramResponse.ok) {
-        console.error('Telegram API error:', telegramResult);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: 'Failed to send Telegram message',
-            details: telegramResult
-          }), 
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 500
-          }
-        );
-      }
-
-      console.log('Test notification sent successfully to user:', process.user_id);
-
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'Test notification sent successfully',
-          process_id: process.id,
-          user_id: process.user_id,
-          test_mode: true
-        }), 
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200
-        }
-      );
-    }
 
     // Clean and normalize phone number for search
     const cleanPhoneNumber = phoneNumber.replace(/[\s\-\(\)]/g, '');
