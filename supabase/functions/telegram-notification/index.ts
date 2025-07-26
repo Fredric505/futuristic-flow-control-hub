@@ -72,8 +72,8 @@ serve(async (req) => {
         }
         
         // Try to extract phone number and message from text format
-        // Expected format: "+505 8889 7925 mensaje aquí"
-        const phoneRegex = /^(\+?\d{1,4}[\s\-]?\d{4}[\s\-]?\d{4})(?:\s+(.*))?$/;
+        // Updated regex to handle international numbers better
+        const phoneRegex = /^(\+?\d{1,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4}[\s\-]?\d{0,4})(?:\s+(.*))?$/;
         const match = body.trim().match(phoneRegex);
         
         if (match) {
@@ -158,33 +158,77 @@ serve(async (req) => {
     const cleanPhoneNumber = phoneNumber.replace(/[\s\-\(\)]/g, '');
     console.log('Searching for process with phone number:', cleanPhoneNumber);
 
-    // Patrones de búsqueda mejorados
-    const searchPatterns = [
-      cleanPhoneNumber,
-      phoneNumber,
-      cleanPhoneNumber.startsWith('+') ? cleanPhoneNumber : `+${cleanPhoneNumber}`,
-      cleanPhoneNumber.replace('+', ''),
-      // Para números +505, probar sin código de país
-      cleanPhoneNumber.replace(/^\+505/, ''),
-      cleanPhoneNumber.replace(/^505/, ''),
-      // Probar con código de país de Nicaragua
-      cleanPhoneNumber.replace(/^\+505/, '+505'),
-      cleanPhoneNumber.replace(/^505/, '+505'),
-      // Extraer solo la parte del número local (últimos 8 dígitos para Nicaragua)
-      cleanPhoneNumber.slice(-8),
-      cleanPhoneNumber.slice(-7),
-    ];
+    // Generar patrones de búsqueda más inteligentes para cualquier país
+    const generateSearchPatterns = (phone: string) => {
+      const patterns = new Set<string>();
+      const clean = phone.replace(/[\s\-\(\)]/g, '');
+      
+      // Agregar el número original y limpio
+      patterns.add(phone);
+      patterns.add(clean);
+      
+      // Si tiene +, agregar sin +
+      if (clean.startsWith('+')) {
+        patterns.add(clean.substring(1));
+      } else {
+        // Si no tiene +, agregar con +
+        patterns.add('+' + clean);
+      }
+      
+      // Patrones de longitud variable para números internacionales
+      if (clean.length >= 10) {
+        // Últimos 10 dígitos (números locales largos)
+        patterns.add(clean.slice(-10));
+        // Últimos 9 dígitos
+        patterns.add(clean.slice(-9));
+        // Últimos 8 dígitos
+        patterns.add(clean.slice(-8));
+        // Últimos 7 dígitos
+        patterns.add(clean.slice(-7));
+      }
+      
+      // Para números con códigos de país conocidos, generar variantes
+      const countryPatterns = {
+        '+1': [10], // USA/Canada - 10 digits
+        '+52': [10, 11], // Mexico - 10-11 digits  
+        '+54': [10, 11], // Argentina - 10-11 digits
+        '+55': [10, 11], // Brazil - 10-11 digits
+        '+57': [10], // Colombia - 10 digits
+        '+34': [9], // Spain - 9 digits
+        '+505': [8], // Nicaragua - 8 digits
+        '+506': [8], // Costa Rica - 8 digits
+        '+507': [8], // Panama - 8 digits
+        '+51': [9], // Peru - 9 digits
+        '+56': [9], // Chile - 9 digits
+      };
+      
+      // Detectar código de país y generar patrones específicos
+      for (const [countryCode, lengths] of Object.entries(countryPatterns)) {
+        if (clean.startsWith(countryCode.replace('+', ''))) {
+          const withoutCountry = clean.substring(countryCode.length - 1);
+          patterns.add(withoutCountry);
+          patterns.add(countryCode + withoutCountry);
+          
+          // Generar patrones de longitud específica para el país
+          for (const len of lengths) {
+            if (withoutCountry.length >= len) {
+              patterns.add(withoutCountry.slice(-len));
+            }
+          }
+        }
+      }
+      
+      return Array.from(patterns).filter(p => p && p.length > 0);
+    };
 
-    // Eliminar duplicados y patrones vacíos
-    const uniquePatterns = [...new Set(searchPatterns)].filter(p => p && p.length > 0);
-    
-    console.log('Trying search patterns:', uniquePatterns);
+    const searchPatterns = generateSearchPatterns(cleanPhoneNumber);
+    console.log('Generated search patterns:', searchPatterns);
 
     let matchedProcess = null;
     let matchedPattern = '';
 
-    // Buscar el proceso
-    for (const pattern of uniquePatterns) {
+    // Buscar el proceso con patrones mejorados
+    for (const pattern of searchPatterns) {
       console.log(`Searching with pattern: "${pattern}"`);
       
       // Buscar en el campo phone_number
@@ -240,20 +284,22 @@ serve(async (req) => {
         `)
         .not('profiles.telegram_bot_token', 'is', null)
         .not('profiles.telegram_chat_id', 'is', null)
-        .limit(10);
+        .limit(20);
 
       if (!combinedError && combinedProcesses) {
         for (const proc of combinedProcesses) {
-          const fullNumber = `${proc.country_code}${proc.phone_number}`;
-          const fullNumberClean = fullNumber.replace(/[\s\-\(\)]/g, '');
+          const fullNumber = `${proc.country_code}${proc.phone_number}`.replace(/[\s\-\(\)]/g, '');
+          const fullNumberWithPlus = `+${fullNumber}`;
           
-          if (fullNumberClean === pattern || 
-              fullNumberClean === pattern.replace('+', '') ||
-              fullNumber === pattern ||
-              proc.phone_number === pattern) {
+          // Comparaciones más flexibles
+          if (fullNumber === pattern || 
+              fullNumberWithPlus === pattern ||
+              fullNumber === pattern.replace('+', '') ||
+              proc.phone_number === pattern ||
+              proc.phone_number.replace(/[\s\-\(\)]/g, '') === pattern) {
             matchedProcess = proc;
             matchedPattern = pattern;
-            console.log('Match found with combined pattern:', pattern, 'matching:', fullNumber);
+            console.log('Match found with combined pattern:', pattern, 'matching full number:', fullNumber);
             break;
           }
         }
@@ -270,7 +316,7 @@ serve(async (req) => {
           error: 'Process not found',
           message: `No se encontró un proceso con el número de teléfono: ${cleanPhoneNumber}`,
           phone_searched: cleanPhoneNumber,
-          patterns_tried: uniquePatterns
+          patterns_tried: searchPatterns
         }), 
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
