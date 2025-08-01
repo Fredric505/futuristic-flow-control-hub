@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,6 @@ import { toast } from '@/hooks/use-toast';
 import { Trash2, Send, RefreshCw, Edit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { getIphoneImageUrl } from '@/utils/iphoneImages';
-import { getAllCountries } from '@/utils/countries';
 
 interface Process {
   id: string;
@@ -22,7 +20,7 @@ interface Process {
   imei: string;
   serial_number: string;
   url: string | null;
-  lost_mode?: boolean;
+  lost_mode?: boolean; // Made optional to fix compilation error
   status: string;
   created_at: string;
   updated_at: string;
@@ -36,7 +34,7 @@ interface ProcessListProps {
 const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
   const [processes, setProcesses] = useState<Process[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sendingMessage, setSendingMessage] = useState<string | null>(null);
+  const [sendingMessage, setSendingMessage] = useState<{ id: string; language: string } | null>(null);
   const [userCredits, setUserCredits] = useState(0);
 
   useEffect(() => {
@@ -162,21 +160,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     }
   };
 
-  // Función para detectar el idioma basado en el código de país
-  const detectLanguageByCountryCode = (countryCode: string): 'spanish' | 'english' => {
-    const allCountries = getAllCountries();
-    
-    // Buscar en países de habla hispana
-    const isSpanishSpeaking = allCountries.spanish.some(country => country.code === countryCode);
-    
-    if (isSpanishSpeaking) {
-      return 'spanish';
-    }
-    
-    // Por defecto, asumir inglés si no está en la lista de español
-    return 'english';
-  };
-
   // Función para verificar si una imagen existe
   const checkImageExists = async (url: string): Promise<boolean> => {
     try {
@@ -188,7 +171,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     }
   };
 
-  const sendWhatsAppMessage = async (process: Process) => {
+  const sendWhatsAppMessage = async (process: Process, language: 'spanish' | 'english') => {
     try {
       // Verificar créditos antes de enviar
       if (userCredits <= 0) {
@@ -200,13 +183,10 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         return;
       }
 
-      // Detectar idioma automáticamente
-      const language = detectLanguageByCountryCode(process.country_code);
-      
-      setSendingMessage(process.id);
-      console.log(`Sending WhatsApp message for process: ${process.id} in ${language} (auto-detected)`);
+      setSendingMessage({ id: process.id, language });
+      console.log(`Sending WhatsApp message for process: ${process.id} in ${language}`);
 
-      // Obtener configuración según el idioma detectado
+      // Obtener configuración según el idioma
       const settingsKeys = language === 'spanish' 
         ? ['whatsapp_instance', 'whatsapp_token']
         : ['whatsapp_instance_en', 'whatsapp_token_en'];
@@ -229,7 +209,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         ? (config?.whatsapp_token || '4ecj8581tubua7ry')
         : (config?.whatsapp_token_en || 'token_en_default');
 
-      // Verificar que existan las configuraciones para el idioma detectado
+      // Verificar que existan las configuraciones para el idioma seleccionado
       if (!instanceId || !token || instanceId.includes('default') || token.includes('default')) {
         toast({
           title: "Configuración faltante",
@@ -504,10 +484,9 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
         const messageType = imageExists ? 'con imagen' : 'solo texto (imagen no disponible)';
         const languageText = language === 'spanish' ? 'español' : 'inglés';
-        const languageIcon = language === 'spanish' ? '🇪🇸' : '🇺🇸';
         toast({
           title: "Mensaje enviado",
-          description: `Mensaje ${messageType} enviado en ${languageText} ${languageIcon} a ${process.client_name}. Créditos restantes: ${userCredits - 1}`,
+          description: `Mensaje ${messageType} enviado en ${languageText} a ${process.client_name}. Créditos restantes: ${userCredits - 1}`,
         });
 
         // Recargar procesos
@@ -573,125 +552,132 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         </Card>
       ) : (
         <div className="space-y-4">
-          {processes.map((process) => {
-            const language = detectLanguageByCountryCode(process.country_code);
-            const languageIcon = language === 'spanish' ? '🇪🇸' : '🇺🇸';
-            const languageText = language === 'spanish' ? 'Español' : 'English';
-            
-            return (
-              <Card key={process.id} className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-blue-300">{process.client_name}</CardTitle>
-                      <p className="text-blue-200/70 text-sm">
-                        {process.country_code} {process.phone_number} ({process.contact_type})
-                      </p>
-                      {process.owner_name && (
-                        <p className="text-blue-200/60 text-xs mt-1">
-                          {process.contact_type === 'propietario' ? 'Propietario' : 'Contacto de emergencia de'}: {process.owner_name}
-                        </p>
-                      )}
-                      {process.lost_mode && (
-                        <p className="text-orange-400 text-xs mt-1 font-medium">
-                          📱 En modo perdido
-                        </p>
-                      )}
-                      <p className="text-blue-400 text-xs mt-1 font-medium">
-                        {languageIcon} Idioma: {languageText} (auto-detectado)
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge 
-                        variant={process.status === 'enviado' ? 'default' : 'secondary'}
-                        className={process.status === 'enviado' ? 'bg-green-600' : 'bg-yellow-600'}
-                      >
-                        {process.status}
-                      </Badge>
-                      <div className="flex space-x-1">
-                        {/* Botón de envío inteligente */}
-                        <Button
-                          size="sm"
-                          onClick={() => sendWhatsAppMessage(process)}
-                          disabled={sendingMessage === process.id || userCredits <= 0}
-                          className={`${
-                            userCredits <= 0 
-                              ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
-                              : 'bg-green-600/20 hover:bg-green-600/30 text-green-300'
-                          }`}
-                          title={userCredits <= 0 ? "Sin créditos suficientes" : `Enviar en ${languageText}`}
-                        >
-                          {sendingMessage === process.id ? (
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <>
-                              <Send className="h-4 w-4 mr-1" />
-                              {languageIcon}
-                            </>
-                          )}
-                        </Button>
-
-                        <Button
-                          size="sm"
-                          onClick={() => deleteProcess(process.id)}
-                          className="bg-red-600/20 hover:bg-red-600/30 text-red-300"
-                          title="Eliminar proceso"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <p className="text-blue-200/50">Modelo:</p>
-                      <p className="text-blue-200">{process.iphone_model}</p>
-                    </div>
-                    <div>
-                      <p className="text-blue-200/50">Almacenamiento:</p>
-                      <p className="text-blue-200">{process.storage}</p>
-                    </div>
-                    <div>
-                      <p className="text-blue-200/50">Color:</p>
-                      <p className="text-blue-200">{process.color}</p>
-                    </div>
-                    <div>
-                      <p className="text-blue-200/50">IMEI:</p>
-                      <p className="text-blue-200">{process.imei}</p>
-                    </div>
-                    <div>
-                      <p className="text-blue-200/50">Número de Serie:</p>
-                      <p className="text-blue-200">{process.serial_number}</p>
-                    </div>
-                    <div>
-                      <p className="text-blue-200/50">Tipo de Contacto:</p>
-                      <p className="text-blue-200">{process.contact_type}</p>
-                    </div>
+          {processes.map((process) => (
+            <Card key={process.id} className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-blue-300">{process.client_name}</CardTitle>
+                    <p className="text-blue-200/70 text-sm">
+                      {process.country_code} {process.phone_number} ({process.contact_type})
+                    </p>
                     {process.owner_name && (
-                      <div>
-                        <p className="text-blue-200/50">
-                          {process.contact_type === 'propietario' ? 'Propietario:' : 'Contacto de emergencia de:'}
-                        </p>
-                        <p className="text-blue-200">{process.owner_name}</p>
-                      </div>
+                      <p className="text-blue-200/60 text-xs mt-1">
+                        {process.contact_type === 'propietario' ? 'Propietario' : 'Contacto de emergencia de'}: {process.owner_name}
+                      </p>
                     )}
-                    {process.url && (
-                      <div className="md:col-span-2 lg:col-span-3">
-                        <p className="text-blue-200/50">URL:</p>
-                        <p className="text-blue-200 break-all">{process.url}</p>
-                      </div>
+                    {process.lost_mode && (
+                      <p className="text-orange-400 text-xs mt-1 font-medium">
+                        📱 En modo perdido
+                      </p>
                     )}
-                    <div className="md:col-span-2 lg:col-span-3">
-                      <p className="text-blue-200/50">Creado:</p>
-                      <p className="text-blue-200">{new Date(process.created_at).toLocaleString()}</p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge 
+                      variant={process.status === 'enviado' ? 'default' : 'secondary'}
+                      className={process.status === 'enviado' ? 'bg-green-600' : 'bg-yellow-600'}
+                    >
+                      {process.status}
+                    </Badge>
+                    <div className="flex space-x-1">
+                      {/* Botón enviar en Español */}
+                      <Button
+                        size="sm"
+                        onClick={() => sendWhatsAppMessage(process, 'spanish')}
+                        disabled={sendingMessage?.id === process.id || userCredits <= 0}
+                        className={`${
+                          userCredits <= 0 
+                            ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
+                            : 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-300'
+                        }`}
+                        title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar en español"}
+                      >
+                        {sendingMessage?.id === process.id && sendingMessage?.language === 'spanish' ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>🇪🇸</>
+                        )}
+                      </Button>
+
+                      {/* Botón enviar en Inglés */}
+                      <Button
+                        size="sm"
+                        onClick={() => sendWhatsAppMessage(process, 'english')}
+                        disabled={sendingMessage?.id === process.id || userCredits <= 0}
+                        className={`${
+                          userCredits <= 0 
+                            ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
+                            : 'bg-green-600/20 hover:bg-green-600/30 text-green-300'
+                        }`}
+                        title={userCredits <= 0 ? "Sin créditos suficientes" : "Send in English"}
+                      >
+                        {sendingMessage?.id === process.id && sendingMessage?.language === 'english' ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>🇺🇸</>
+                        )}
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        onClick={() => deleteProcess(process.id)}
+                        className="bg-red-600/20 hover:bg-red-600/30 text-red-300"
+                        title="Eliminar proceso"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <p className="text-blue-200/50">Modelo:</p>
+                    <p className="text-blue-200">{process.iphone_model}</p>
+                  </div>
+                  <div>
+                    <p className="text-blue-200/50">Almacenamiento:</p>
+                    <p className="text-blue-200">{process.storage}</p>
+                  </div>
+                  <div>
+                    <p className="text-blue-200/50">Color:</p>
+                    <p className="text-blue-200">{process.color}</p>
+                  </div>
+                  <div>
+                    <p className="text-blue-200/50">IMEI:</p>
+                    <p className="text-blue-200">{process.imei}</p>
+                  </div>
+                  <div>
+                    <p className="text-blue-200/50">Número de Serie:</p>
+                    <p className="text-blue-200">{process.serial_number}</p>
+                  </div>
+                  <div>
+                    <p className="text-blue-200/50">Tipo de Contacto:</p>
+                    <p className="text-blue-200">{process.contact_type}</p>
+                  </div>
+                  {process.owner_name && (
+                    <div>
+                      <p className="text-blue-200/50">
+                        {process.contact_type === 'propietario' ? 'Propietario:' : 'Contacto de emergencia de:'}
+                      </p>
+                      <p className="text-blue-200">{process.owner_name}</p>
+                    </div>
+                  )}
+                  {process.url && (
+                    <div className="md:col-span-2 lg:col-span-3">
+                      <p className="text-blue-200/50">URL:</p>
+                      <p className="text-blue-200 break-all">{process.url}</p>
+                    </div>
+                  )}
+                  <div className="md:col-span-2 lg:col-span-3">
+                    <p className="text-blue-200/50">Creado:</p>
+                    <p className="text-blue-200">{new Date(process.created_at).toLocaleString()}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
     </div>
