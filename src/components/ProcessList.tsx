@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,7 +21,7 @@ interface Process {
   imei: string;
   serial_number: string;
   url: string | null;
-  lost_mode?: boolean;
+  lost_mode?: boolean; // Made optional to fix compilation error
   status: string;
   created_at: string;
   updated_at: string;
@@ -82,6 +81,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       setLoading(true);
       console.log('Loading processes for userType:', userType);
       
+      // Verificar sesión del usuario
       const { data: { session } } = await supabase.auth.getSession();
       console.log('Current session:', session?.user?.email);
 
@@ -91,6 +91,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         return;
       }
 
+      // Todos los usuarios (incluido admin) solo ven sus propios procesos
       console.log('Loading processes for user:', session.user.id);
       const { data, error } = await supabase
         .from('processes')
@@ -106,9 +107,10 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       }
 
       console.log('Processes loaded:', data?.length || 0);
+      // Ensure lost_mode has a default value and handle cases where it doesn't exist in the database
       const processesWithDefaults = data?.map(process => ({
         ...process,
-        lost_mode: Boolean((process as any).lost_mode)
+        lost_mode: Boolean((process as any).lost_mode) // Use type assertion to safely access lost_mode
       })) || [];
       
       setProcesses(processesWithDefaults);
@@ -147,6 +149,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         description: "El proceso ha sido eliminado exitosamente",
       });
 
+      // Recargar procesos después de eliminar
       await loadProcesses();
     } catch (error: any) {
       console.error('Error deleting process:', error);
@@ -158,6 +161,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     }
   };
 
+  // Función para verificar si una imagen existe
   const checkImageExists = async (url: string): Promise<boolean> => {
     try {
       const response = await fetch(url, { method: 'HEAD' });
@@ -170,6 +174,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
   const sendWhatsAppMessage = async (process: Process) => {
     try {
+      // Verificar créditos antes de enviar
       if (userCredits <= 0) {
         toast({
           title: "Sin créditos suficientes",
@@ -211,17 +216,19 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
       console.log('Using instance:', instanceId, 'for language:', language);
 
+      // Obtener la URL de la imagen del iPhone basada en modelo y color
       const imageUrl = getIphoneImageUrl(process.iphone_model, process.color);
       console.log('Generated iPhone image URL:', imageUrl);
 
+      // Verificar si la imagen existe
       const imageExists = await checkImageExists(imageUrl);
       console.log('Image exists:', imageExists);
 
-      // Crear el mensaje personalizado según el idioma
+      // Crear el mensaje personalizado según el idioma, tipo de contacto y modo perdido
       let message = '';
       
       if (language === 'en') {
-        // Mensajes en inglés - exactamente igual estructura que español pero traducido
+        // Mensajes en inglés
         const statusText = process.lost_mode 
           ? '✅ iPhone in lost mode successfully located' 
           : '✅ iPhone successfully located';
@@ -301,7 +308,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
           }
         }
       } else {
-        // Mensajes en español (mantener estructura existente)
+        // Mensajes en español (código existente)
         const statusText = process.lost_mode 
           ? '✅ iPhone en modo perdido localizado con éxito' 
           : '✅ iPhone localizado con éxito';
@@ -384,8 +391,10 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
       let result;
 
+      // Enviar mensaje con imagen si existe, solo texto si no existe
       if (imageExists) {
         console.log('Sending message with image');
+        // Enviar mensaje con imagen via WhatsApp API usando el endpoint de imagen
         const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/image`, {
           method: 'POST',
           headers: {
@@ -401,6 +410,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         result = await response.json();
       } else {
         console.log('Image not found, sending text only message');
+        // Enviar solo mensaje de texto si la imagen no existe
         const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/chat`, {
           method: 'POST',
           headers: {
@@ -417,13 +427,16 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
       console.log('WhatsApp API response:', result);
 
+      // VERIFICAR QUE EL MENSAJE SE ENVIÓ CORRECTAMENTE ANTES DE COBRAR
       if (result.sent === true || (result.sent === "true")) {
+        // Obtener el usuario actual
         const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
           throw new Error('Usuario no autenticado');
         }
 
+        // SOLO DESCONTAR CRÉDITO SI EL MENSAJE SE ENVIÓ EXITOSAMENTE
         const { error: creditError } = await supabase
           .from('profiles')
           .update({ 
@@ -437,8 +450,10 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
           throw new Error('Error al descontar créditos');
         }
 
+        // Actualizar el estado local de créditos
         setUserCredits(prev => prev - 1);
 
+        // Guardar mensaje en la base de datos
         const { error: messageError } = await supabase
           .from('messages')
           .insert({
@@ -453,6 +468,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
           console.error('Error saving message:', messageError);
         }
 
+        // Actualizar estado del proceso
         const { error: updateError } = await supabase
           .from('processes')
           .update({ 
@@ -472,8 +488,10 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
           description: `Mensaje ${messageType} enviado en ${languageText} a ${process.client_name}. Créditos restantes: ${userCredits - 1}`,
         });
 
+        // Recargar procesos
         await loadProcesses();
       } else {
+        // SI EL MENSAJE NO SE ENVIÓ, NO COBRAR Y MOSTRAR ERROR
         const errorMessage = result.message || result.error || 'La instancia de WhatsApp no está funcionando correctamente';
         throw new Error(`Error en la instancia: ${errorMessage}`);
       }
