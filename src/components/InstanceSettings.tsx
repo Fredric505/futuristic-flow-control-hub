@@ -8,8 +8,10 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 const InstanceSettings = () => {
-  const [instance, setInstance] = useState('');
-  const [token, setToken] = useState('');
+  const [instanceEs, setInstanceEs] = useState('');
+  const [tokenEs, setTokenEs] = useState('');
+  const [instanceEn, setInstanceEn] = useState('');
+  const [tokenEn, setTokenEn] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,7 +23,7 @@ const InstanceSettings = () => {
       const { data, error } = await supabase
         .from('system_settings')
         .select('*')
-        .in('setting_key', ['whatsapp_instance', 'whatsapp_token']);
+        .in('setting_key', ['whatsapp_instance_es', 'whatsapp_token_es', 'whatsapp_instance_en', 'whatsapp_token_en']);
 
       if (error) throw error;
 
@@ -30,8 +32,10 @@ const InstanceSettings = () => {
         return acc;
       }, {});
 
-      setInstance(settings?.whatsapp_instance || '');
-      setToken(settings?.whatsapp_token || '');
+      setInstanceEs(settings?.whatsapp_instance_es || '');
+      setTokenEs(settings?.whatsapp_token_es || '');
+      setInstanceEn(settings?.whatsapp_instance_en || '');
+      setTokenEn(settings?.whatsapp_token_en || '');
     } catch (error) {
       console.error('Error loading settings:', error);
       toast({
@@ -46,31 +50,51 @@ const InstanceSettings = () => {
 
   const handleSave = async () => {
     try {
-      // Update instance setting
-      const { error: instanceError } = await supabase
+      // Update Spanish settings
+      const { error: instanceEsError } = await supabase
         .from('system_settings')
         .upsert({
-          setting_key: 'whatsapp_instance',
-          setting_value: instance,
+          setting_key: 'whatsapp_instance_es',
+          setting_value: instanceEs,
           updated_at: new Date().toISOString()
         });
 
-      if (instanceError) throw instanceError;
+      if (instanceEsError) throw instanceEsError;
 
-      // Update token setting
-      const { error: tokenError } = await supabase
+      const { error: tokenEsError } = await supabase
         .from('system_settings')
         .upsert({
-          setting_key: 'whatsapp_token',
-          setting_value: token,
+          setting_key: 'whatsapp_token_es',
+          setting_value: tokenEs,
           updated_at: new Date().toISOString()
         });
 
-      if (tokenError) throw tokenError;
+      if (tokenEsError) throw tokenEsError;
+
+      // Update English settings
+      const { error: instanceEnError } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: 'whatsapp_instance_en',
+          setting_value: instanceEn,
+          updated_at: new Date().toISOString()
+        });
+
+      if (instanceEnError) throw instanceEnError;
+
+      const { error: tokenEnError } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: 'whatsapp_token_en',
+          setting_value: tokenEn,
+          updated_at: new Date().toISOString()
+        });
+
+      if (tokenEnError) throw tokenEnError;
 
       toast({
         title: "Configuración guardada",
-        description: "Instancia y token actualizados exitosamente",
+        description: "Configuraciones actualizadas exitosamente",
       });
     } catch (error: any) {
       console.error('Error saving settings:', error);
@@ -87,16 +111,18 @@ const InstanceSettings = () => {
       const { error } = await supabase
         .from('system_settings')
         .delete()
-        .in('setting_key', ['whatsapp_instance', 'whatsapp_token']);
+        .in('setting_key', ['whatsapp_instance_es', 'whatsapp_token_es', 'whatsapp_instance_en', 'whatsapp_token_en']);
 
       if (error) throw error;
 
-      setInstance('');
-      setToken('');
+      setInstanceEs('');
+      setTokenEs('');
+      setInstanceEn('');
+      setTokenEn('');
       
       toast({
         title: "Configuración eliminada",
-        description: "Instancia y token eliminados",
+        description: "Todas las configuraciones eliminadas",
         variant: "destructive",
       });
     } catch (error: any) {
@@ -120,59 +146,105 @@ const InstanceSettings = () => {
   }
 
   return (
-    <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-      <CardHeader>
-        <CardTitle className="text-blue-300">Configuraciones de Sistema</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="instance" className="text-blue-200">ID de Instancia</Label>
-            <Input
-              id="instance"
-              type="text"
-              value={instance}
-              onChange={(e) => setInstance(e.target.value)}
-              className="bg-white/5 border-blue-500/30 text-white"
-              placeholder="Ingresa el ID de instancia"
-            />
+    <div className="space-y-6">
+      {/* Configuraciones en Español */}
+      <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+        <CardHeader>
+          <CardTitle className="text-blue-300 flex items-center gap-2">
+            🇪🇸 Configuración para Español
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="instance-es" className="text-blue-200">ID de Instancia (Español)</Label>
+              <Input
+                id="instance-es"
+                type="text"
+                value={instanceEs}
+                onChange={(e) => setInstanceEs(e.target.value)}
+                className="bg-white/5 border-blue-500/30 text-white"
+                placeholder="Ingresa el ID de instancia para español"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="token-es" className="text-blue-200">Token (Español)</Label>
+              <Input
+                id="token-es"
+                type="text"
+                value={tokenEs}
+                onChange={(e) => setTokenEs(e.target.value)}
+                className="bg-white/5 border-blue-500/30 text-white"
+                placeholder="Ingresa el token para español"
+              />
+            </div>
+            
+            <div className="mt-4 p-3 bg-blue-950/30 rounded-lg border border-blue-500/20">
+              <p className="text-blue-200/70 text-sm">Instancia: {instanceEs || 'No configurada'}</p>
+              <p className="text-blue-200/70 text-sm">Token: {tokenEs || 'No configurado'}</p>
+            </div>
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="token" className="text-blue-200">Token</Label>
-            <Input
-              id="token"
-              type="text"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              className="bg-white/5 border-blue-500/30 text-white"
-              placeholder="Ingresa el token"
-            />
+        </CardContent>
+      </Card>
+
+      {/* Configuraciones en Inglés */}
+      <Card className="bg-black/20 backdrop-blur-xl border border-green-500/20">
+        <CardHeader>
+          <CardTitle className="text-green-300 flex items-center gap-2">
+            🇺🇸 Configuración para Inglés
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="instance-en" className="text-green-200">ID de Instancia (Inglés)</Label>
+              <Input
+                id="instance-en"
+                type="text"
+                value={instanceEn}
+                onChange={(e) => setInstanceEn(e.target.value)}
+                className="bg-white/5 border-green-500/30 text-white"
+                placeholder="Ingresa el ID de instancia para inglés"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="token-en" className="text-green-200">Token (Inglés)</Label>
+              <Input
+                id="token-en"
+                type="text"
+                value={tokenEn}
+                onChange={(e) => setTokenEn(e.target.value)}
+                className="bg-white/5 border-green-500/30 text-white"
+                placeholder="Ingresa el token para inglés"
+              />
+            </div>
+            
+            <div className="mt-4 p-3 bg-green-950/30 rounded-lg border border-green-500/20">
+              <p className="text-green-200/70 text-sm">Instancia: {instanceEn || 'No configurada'}</p>
+              <p className="text-green-200/70 text-sm">Token: {tokenEn || 'No configurado'}</p>
+            </div>
           </div>
-          
-          <div className="flex space-x-4">
-            <Button 
-              onClick={handleSave}
-              className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
-            >
-              Guardar Cambios
-            </Button>
-            <Button 
-              onClick={handleDelete}
-              className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30"
-            >
-              Eliminar
-            </Button>
-          </div>
-          
-          <div className="mt-6 p-4 bg-blue-950/30 rounded-lg border border-blue-500/20">
-            <h4 className="text-blue-300 font-semibold mb-2">Configuración Actual</h4>
-            <p className="text-blue-200/70 text-sm">Instancia: {instance || 'No configurada'}</p>
-            <p className="text-blue-200/70 text-sm">Token: {token || 'No configurado'}</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Botones de acción */}
+      <div className="flex space-x-4">
+        <Button 
+          onClick={handleSave}
+          className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+        >
+          Guardar Todas las Configuraciones
+        </Button>
+        <Button 
+          onClick={handleDelete}
+          className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30"
+        >
+          Eliminar Todas
+        </Button>
+      </div>
+    </div>
   );
 };
 

