@@ -1,399 +1,342 @@
-import React, { useState, useCallback } from 'react';
+
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { SelectItem } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import SafeSelect from '@/components/SafeSelect';
+import CustomSelect, { CustomSelectItem } from './CustomSelect';
+import { countries } from '@/utils/countries';
 
-interface ProcessFormProps {
-  userType?: 'admin' | 'user';
-}
-
-const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
+const ProcessForm = () => {
   const [formData, setFormData] = useState({
-    clientName: '',
-    countryCode: '',
-    phoneNumber: '',
-    contactType: '',
-    ownerName: '',
-    iphoneModel: '',
+    client_name: '',
+    country_code: '',
+    phone_number: '',
+    contact_type: 'propietario',
+    owner_name: '',
+    iphone_model: '',
     storage: '',
     color: '',
     imei: '',
-    serialNumber: '',
+    serial_number: '',
     url: '',
-    lostMode: false
+    lost_mode: false
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Solo países de habla hispana
-  const countryCodes = [
-    { code: '+54', country: 'Argentina' },
-    { code: '+591', country: 'Bolivia' },
-    { code: '+56', country: 'Chile' },
-    { code: '+57', country: 'Colombia' },
-    { code: '+506', country: 'Costa Rica' },
-    { code: '+53', country: 'Cuba' },
-    { code: '+593', country: 'Ecuador' },
-    { code: '+503', country: 'El Salvador' },
-    { code: '+34', country: 'España' },
-    { code: '+502', country: 'Guatemala' },
-    { code: '+240', country: 'Guinea Ecuatorial' },
-    { code: '+504', country: 'Honduras' },
-    { code: '+52', country: 'México' },
-    { code: '+505', country: 'Nicaragua' },
-    { code: '+507', country: 'Panamá' },
-    { code: '+595', country: 'Paraguay' },
-    { code: '+51', country: 'Perú' },
-    { code: '+1787', country: 'Puerto Rico' },
-    { code: '+1809', country: 'República Dominicana' },
-    { code: '+598', country: 'Uruguay' },
-    { code: '+58', country: 'Venezuela' }
-  ];
-
-  const iphoneModels = [
-    'iPhone 16 Pro Max', 'iPhone 16 Pro', 'iPhone 16 Plus', 'iPhone 16',
-    'iPhone 15 Pro Max', 'iPhone 15 Pro', 'iPhone 15 Plus', 'iPhone 15',
-    'iPhone 14 Pro Max', 'iPhone 14 Pro', 'iPhone 14 Plus', 'iPhone 14',
-    'iPhone 13 Pro Max', 'iPhone 13 Pro', 'iPhone 13 mini', 'iPhone 13',
-    'iPhone 12 Pro Max', 'iPhone 12 Pro', 'iPhone 12 mini', 'iPhone 12',
-    'iPhone 11 Pro Max', 'iPhone 11 Pro', 'iPhone 11',
-    'iPhone XS Max', 'iPhone XS', 'iPhone XR', 'iPhone X',
-    'iPhone 8 Plus', 'iPhone 8', 'iPhone 7 Plus', 'iPhone 7',
-    'iPhone 6s Plus', 'iPhone 6s', 'iPhone 6 Plus', 'iPhone 6',
-    'iPhone SE (3ra gen)', 'iPhone SE (2da gen)', 'iPhone SE (1ra gen)'
-  ];
-
-  const storageOptions = [
-    '16GB', '32GB', '64GB', '128GB', '256GB', '512GB', '1TB', '2TB'
-  ];
-
-  // Lista de colores limpia sin duplicados
-  const colorOptions = [
-    // Colores básicos
-    'Negro', 'Blanco', 'Azul', 'Verde', 'Rosa', 'Amarillo', 'Púrpura', 'Rojo',
-    // Colores específicos iPhone 16
-    'Ultramarino', 'Verde azulado',
-    // Colores Titanio
-    'Titanio Natural', 'Titanio Azul', 'Titanio Blanco', 'Titanio Negro',
-    // Colores especiales
-    'Medianoche', 'Luz de estrella', 'Oro', 'Plata', 'Grafito',
-    'Púrpura Intenso', 'Sierra Blue', 'Azul Pacífico', 'Verde Noche',
-    'Gris Espacial', 'Oro Rosa'
-  ];
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (isSubmitting) return;
-    
-    setIsSubmitting(true);
-    
+    if (!formData.client_name || !formData.country_code || !formData.phone_number || 
+        !formData.iphone_model || !formData.storage || !formData.color || 
+        !formData.imei || !formData.serial_number) {
+      toast({
+        title: "Campos requeridos",
+        description: "Por favor completa todos los campos obligatorios",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      console.log('Enviando formulario de proceso...');
+      setLoading(true);
+      console.log('Submitting process form:', formData);
+
+      const { data: { user } } = await supabase.auth.getUser();
       
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        setTimeout(() => {
-          toast({
-            title: "Error de Autenticación",
-            description: "Debes iniciar sesión para guardar un proceso",
-            variant: "destructive",
-          });
-        }, 100);
-        return;
+      if (!user) {
+        throw new Error('Usuario no autenticado');
       }
 
-      console.log('Usuario autenticado, guardando proceso...');
-
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('processes')
         .insert({
-          user_id: session.user.id,
-          client_name: formData.clientName,
-          country_code: formData.countryCode,
-          phone_number: formData.phoneNumber,
-          contact_type: formData.contactType,
-          owner_name: formData.ownerName || null,
-          iphone_model: formData.iphoneModel,
+          client_name: formData.client_name,
+          country_code: formData.country_code,
+          phone_number: formData.phone_number,
+          contact_type: formData.contact_type,
+          owner_name: formData.owner_name || null,
+          iphone_model: formData.iphone_model,
           storage: formData.storage,
           color: formData.color,
           imei: formData.imei,
-          serial_number: formData.serialNumber,
+          serial_number: formData.serial_number,
           url: formData.url || null,
-          lost_mode: formData.lostMode,
-          status: 'guardado'
-        });
+          lost_mode: formData.lost_mode,
+          status: 'pendiente',
+          user_id: user.id
+        })
+        .select()
+        .single();
 
       if (error) {
-        console.error('Error al guardar proceso:', error);
+        console.error('Error creating process:', error);
         throw error;
       }
 
-      console.log('Proceso guardado exitosamente');
+      console.log('Process created successfully:', data);
+      
+      toast({
+        title: "Proceso guardado",
+        description: "El proceso ha sido guardado exitosamente y está listo para enviar",
+      });
 
-      setTimeout(() => {
-        toast({
-          title: "Proceso guardado",
-          description: "El proceso se ha guardado exitosamente",
-        });
-      }, 100);
-
-      setTimeout(() => {
-        setFormData({
-          clientName: '',
-          countryCode: '',
-          phoneNumber: '',
-          contactType: '',
-          ownerName: '',
-          iphoneModel: '',
-          storage: '',
-          color: '',
-          imei: '',
-          serialNumber: '',
-          url: '',
-          lostMode: false
-        });
-      }, 200);
+      // Reset form
+      setFormData({
+        client_name: '',
+        country_code: '',
+        phone_number: '',
+        contact_type: 'propietario',
+        owner_name: '',
+        iphone_model: '',
+        storage: '',
+        color: '',
+        imei: '',
+        serial_number: '',
+        url: '',
+        lost_mode: false
+      });
 
     } catch (error: any) {
-      console.error('Error completo al guardar proceso:', error);
-      setTimeout(() => {
-        toast({
-          title: "Error",
-          description: error.message || "Error al guardar el proceso. Intenta nuevamente.",
-          variant: "destructive",
-        });
-      }, 100);
+      console.error('Error submitting process:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al guardar proceso",
+        variant: "destructive",
+      });
     } finally {
-      setTimeout(() => {
-        setIsSubmitting(false);
-      }, 300);
+      setLoading(false);
     }
   };
 
-  // Mejorado manejo de select con useCallback
-  const handleSelectChange = useCallback((field: string, value: string) => {
-    console.log(`${field} seleccionado:`, value);
-    setFormData(prev => ({...prev, [field]: value}));
-  }, []);
+  const handleInputChange = (field: string, value: string | boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
   return (
     <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
       <CardHeader>
-        <CardTitle className="text-blue-300">
-          {userType === 'admin' ? 'Agregar Proceso (Admin)' : 'Agregar Proceso'}
-        </CardTitle>
+        <CardTitle className="text-blue-300">Agregar Nuevo Proceso</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Información del Cliente */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="clientName" className="text-blue-200">Nombre del Cliente</Label>
+              <Label htmlFor="client_name" className="text-blue-200">Nombre del Cliente *</Label>
               <Input
-                id="clientName"
-                value={formData.clientName}
-                onChange={(e) => setFormData(prev => ({...prev, clientName: e.target.value}))}
+                id="client_name"
+                type="text"
+                value={formData.client_name}
+                onChange={(e) => handleInputChange('client_name', e.target.value)}
                 className="bg-white/5 border-blue-500/30 text-white"
+                placeholder="Ingresa el nombre del cliente"
                 required
-                disabled={isSubmitting}
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-blue-200">Código de País</Label>
-              <SafeSelect 
-                value={formData.countryCode} 
-                onValueChange={(value) => handleSelectChange('countryCode', value)}
-                placeholder="Selecciona código"
-                disabled={isSubmitting}
+              <Label htmlFor="country_code" className="text-blue-200">País *</Label>
+              <CustomSelect
+                value={formData.country_code}
+                onValueChange={(value) => handleInputChange('country_code', value)}
+                placeholder="Selecciona un país"
                 className="bg-white/5 border-blue-500/30 text-white"
               >
-                {countryCodes.map((country) => (
-                  <SelectItem 
-                    key={country.code} 
-                    value={country.code}
-                    className="hover:bg-blue-600/20 focus:bg-blue-600/20"
-                  >
-                    {country.code} - {country.country}
-                  </SelectItem>
+                {countries.map((country) => (
+                  <CustomSelectItem key={`${country.code}-${country.name}`} value={country.code}>
+                    <div className="flex items-center gap-2">
+                      <span>{country.flag}</span>
+                      <span>{country.name}</span>
+                      <span className="text-muted-foreground">({country.code})</span>
+                      <span className="text-xs">
+                        {country.language === 'en' ? '🇺🇸' : '🇪🇸'}
+                      </span>
+                    </div>
+                  </CustomSelectItem>
                 ))}
-              </SafeSelect>
+              </CustomSelect>
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="phoneNumber" className="text-blue-200">Número de Teléfono</Label>
+              <Label htmlFor="phone_number" className="text-blue-200">Número de Teléfono *</Label>
               <Input
-                id="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={(e) => setFormData(prev => ({...prev, phoneNumber: e.target.value}))}
+                id="phone_number"
+                type="tel"
+                value={formData.phone_number}
+                onChange={(e) => handleInputChange('phone_number', e.target.value)}
                 className="bg-white/5 border-blue-500/30 text-white"
+                placeholder="Solo números sin código de país"
                 required
-                disabled={isSubmitting}
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-blue-200">Tipo de Contacto</Label>
-              <SafeSelect 
-                value={formData.contactType} 
-                onValueChange={(value) => handleSelectChange('contactType', value)}
-                placeholder="Selecciona tipo"
-                disabled={isSubmitting}
+              <Label htmlFor="contact_type" className="text-blue-200">Tipo de Contacto *</Label>
+              <CustomSelect
+                value={formData.contact_type}
+                onValueChange={(value) => handleInputChange('contact_type', value)}
+                placeholder="Selecciona el tipo"
                 className="bg-white/5 border-blue-500/30 text-white"
               >
-                <SelectItem value="propietario" className="hover:bg-blue-600/20 focus:bg-blue-600/20">Propietario</SelectItem>
-                <SelectItem value="emergencia" className="hover:bg-blue-600/20 focus:bg-blue-600/20">Emergencia</SelectItem>
-              </SafeSelect>
+                <CustomSelectItem value="propietario">Propietario</CustomSelectItem>
+                <CustomSelectItem value="emergencia">Contacto de Emergencia</CustomSelectItem>
+              </CustomSelect>
             </div>
+          </div>
 
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="ownerName" className="text-blue-200">
-                {formData.contactType === 'propietario' ? 'Nombre del Propietario (Opcional)' : 'Nombre del Contacto de Emergencia (Opcional)'}
-              </Label>
+          {formData.contact_type === 'emergencia' && (
+            <div className="space-y-2">
+              <Label htmlFor="owner_name" className="text-blue-200">Nombre del Propietario</Label>
               <Input
-                id="ownerName"
-                value={formData.ownerName}
-                onChange={(e) => setFormData(prev => ({...prev, ownerName: e.target.value}))}
+                id="owner_name"
+                type="text"
+                value={formData.owner_name}
+                onChange={(e) => handleInputChange('owner_name', e.target.value)}
                 className="bg-white/5 border-blue-500/30 text-white"
-                placeholder={formData.contactType === 'propietario' ? 'Nombre del propietario del iPhone' : 'Nombre de la persona para quien es contacto de emergencia'}
-                disabled={isSubmitting}
+                placeholder="Nombre del propietario del iPhone"
               />
             </div>
+          )}
 
-            <div className="space-y-2">
-              <Label className="text-blue-200">Modelo de iPhone</Label>
-              <SafeSelect 
-                value={formData.iphoneModel} 
-                onValueChange={(value) => handleSelectChange('iphoneModel', value)}
-                placeholder="Selecciona modelo"
-                disabled={isSubmitting}
-                className="bg-white/5 border-blue-500/30 text-white"
-              >
-                {iphoneModels.map((model) => (
-                  <SelectItem 
-                    key={model} 
-                    value={model}
-                    className="hover:bg-blue-600/20 focus:bg-blue-600/20"
-                  >
-                    {model}
-                  </SelectItem>
-                ))}
-              </SafeSelect>
+          {/* Información del Dispositivo */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-blue-300">Información del iPhone</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="iphone_model" className="text-blue-200">Modelo *</Label>
+                <CustomSelect
+                  value={formData.iphone_model}
+                  onValueChange={(value) => handleInputChange('iphone_model', value)}
+                  placeholder="Selecciona el modelo"
+                  className="bg-white/5 border-blue-500/30 text-white"
+                >
+                  <CustomSelectItem value="iPhone 15 Pro Max">iPhone 15 Pro Max</CustomSelectItem>
+                  <CustomSelectItem value="iPhone 15 Pro">iPhone 15 Pro</CustomSelectItem>
+                  <CustomSelectItem value="iPhone 15 Plus">iPhone 15 Plus</CustomSelectItem>
+                  <CustomSelectItem value="iPhone 15">iPhone 15</CustomSelectItem>
+                  <CustomSelectItem value="iPhone 14 Pro Max">iPhone 14 Pro Max</CustomSelectItem>
+                  <CustomSelectItem value="iPhone 14 Pro">iPhone 14 Pro</CustomSelectItem>
+                  <CustomSelectItem value="iPhone 14 Plus">iPhone 14 Plus</CustomSelectItem>
+                  <CustomSelectItem value="iPhone 14">iPhone 14</CustomSelectItem>
+                  <CustomSelectItem value="iPhone 13 Pro Max">iPhone 13 Pro Max</CustomSelectItem>
+                  <CustomSelectItem value="iPhone 13 Pro">iPhone 13 Pro</CustomSelectItem>
+                  <CustomSelectItem value="iPhone 13 mini">iPhone 13 mini</CustomSelectItem>
+                  <CustomSelectItem value="iPhone 13">iPhone 13</CustomSelectItem>
+                  <CustomSelectItem value="iPhone 12 Pro Max">iPhone 12 Pro Max</CustomSelectItem>
+                  <CustomSelectItem value="iPhone 12 Pro">iPhone 12 Pro</CustomSelectItem>
+                  <CustomSelectItem value="iPhone 12 mini">iPhone 12 mini</CustomSelectItem>
+                  <CustomSelectItem value="iPhone 12">iPhone 12</CustomSelectItem>
+                </CustomSelect>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="storage" className="text-blue-200">Almacenamiento *</Label>
+                <CustomSelect
+                  value={formData.storage}
+                  onValueChange={(value) => handleInputChange('storage', value)}
+                  placeholder="Selecciona almacenamiento"
+                  className="bg-white/5 border-blue-500/30 text-white"
+                >
+                  <CustomSelectItem value="128GB">128GB</CustomSelectItem>
+                  <CustomSelectItem value="256GB">256GB</CustomSelectItem>
+                  <CustomSelectItem value="512GB">512GB</CustomSelectItem>
+                  <CustomSelectItem value="1TB">1TB</CustomSelectItem>
+                </CustomSelect>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="color" className="text-blue-200">Color *</Label>
+                <CustomSelect
+                  value={formData.color}
+                  onValueChange={(value) => handleInputChange('color', value)}
+                  placeholder="Selecciona color"
+                  className="bg-white/5 border-blue-500/30 text-white"
+                >
+                  <CustomSelectItem value="Negro">Negro</CustomSelectItem>
+                  <CustomSelectItem value="Blanco">Blanco</CustomSelectItem>
+                  <CustomSelectItem value="Azul">Azul</CustomSelectItem>
+                  <CustomSelectItem value="Rosa">Rosa</CustomSelectItem>
+                  <CustomSelectItem value="Amarillo">Amarillo</CustomSelectItem>
+                  <CustomSelectItem value="Verde">Verde</CustomSelectItem>
+                  <CustomSelectItem value="Morado">Morado</CustomSelectItem>
+                  <CustomSelectItem value="Rojo">Rojo</CustomSelectItem>
+                  <CustomSelectItem value="Titanio Natural">Titanio Natural</CustomSelectItem>
+                  <CustomSelectItem value="Titanio Azul">Titanio Azul</CustomSelectItem>
+                  <CustomSelectItem value="Titanio Blanco">Titanio Blanco</CustomSelectItem>
+                  <CustomSelectItem value="Titanio Negro">Titanio Negro</CustomSelectItem>
+                </CustomSelect>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="imei" className="text-blue-200">IMEI *</Label>
+                <Input
+                  id="imei"
+                  type="text"
+                  value={formData.imei}
+                  onChange={(e) => handleInputChange('imei', e.target.value)}
+                  className="bg-white/5 border-blue-500/30 text-white"
+                  placeholder="Ingresa el IMEI"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="serial_number" className="text-blue-200">Número de Serie *</Label>
+                <Input
+                  id="serial_number"
+                  type="text"
+                  value={formData.serial_number}
+                  onChange={(e) => handleInputChange('serial_number', e.target.value)}
+                  className="bg-white/5 border-blue-500/30 text-white"
+                  placeholder="Ingresa el número de serie"
+                  required
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-blue-200">Almacenamiento</Label>
-              <SafeSelect 
-                value={formData.storage} 
-                onValueChange={(value) => handleSelectChange('storage', value)}
-                placeholder="Selecciona almacenamiento"
-                disabled={isSubmitting}
-                className="bg-white/5 border-blue-500/30 text-white"
-              >
-                {storageOptions.map((storage) => (
-                  <SelectItem 
-                    key={storage} 
-                    value={storage}
-                    className="hover:bg-blue-600/20 focus:bg-blue-600/20"
-                  >
-                    {storage}
-                  </SelectItem>
-                ))}
-              </SafeSelect>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-blue-200">Color</Label>
-              <SafeSelect 
-                value={formData.color} 
-                onValueChange={(value) => handleSelectChange('color', value)}
-                placeholder="Selecciona color"
-                disabled={isSubmitting}
-                className="bg-white/5 border-blue-500/30 text-white"
-              >
-                {colorOptions.map((color) => (
-                  <SelectItem 
-                    key={color} 
-                    value={color}
-                    className="hover:bg-blue-600/20 focus:bg-blue-600/20"
-                  >
-                    {color}
-                  </SelectItem>
-                ))}
-              </SafeSelect>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="imei" className="text-blue-200">IMEI</Label>
-              <Input
-                id="imei"
-                value={formData.imei}
-                onChange={(e) => setFormData(prev => ({...prev, imei: e.target.value}))}
-                className="bg-white/5 border-blue-500/30 text-white"
-                required
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="serialNumber" className="text-blue-200">Número de Serie</Label>
-              <Input
-                id="serialNumber"
-                value={formData.serialNumber}
-                onChange={(e) => setFormData(prev => ({...prev, serialNumber: e.target.value}))}
-                className="bg-white/5 border-blue-500/30 text-white"
-                required
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="url" className="text-blue-200">URL (Opcional)</Label>
-              <Input
+              <Label htmlFor="url" className="text-blue-200">URL de Ubicación (Opcional)</Label>
+              <Textarea
                 id="url"
                 value={formData.url}
-                onChange={(e) => setFormData(prev => ({...prev, url: e.target.value}))}
+                onChange={(e) => handleInputChange('url', e.target.value)}
                 className="bg-white/5 border-blue-500/30 text-white"
-                placeholder="https://ejemplo.com"
-                disabled={isSubmitting}
+                placeholder="Ingresa la URL de ubicación si está disponible"
+                rows={2}
               />
             </div>
 
-            {/* Nuevo campo para modo perdido */}
-            <div className="space-y-2 md:col-span-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="lostMode"
-                  checked={formData.lostMode}
-                  onCheckedChange={(checked) => 
-                    setFormData(prev => ({...prev, lostMode: checked === true}))
-                  }
-                  disabled={isSubmitting}
-                  className="border-blue-500/30 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-                />
-                <Label htmlFor="lostMode" className="text-blue-200">
-                  iPhone en modo perdido
-                </Label>
-              </div>
-              <p className="text-xs text-blue-200/60">
-                Selecciona esta opción si el iPhone está en modo perdido para personalizar el mensaje
-              </p>
+            <div className="flex items-center space-x-2">
+              <input
+                id="lost_mode"
+                type="checkbox"
+                checked={formData.lost_mode}
+                onChange={(e) => handleInputChange('lost_mode', e.target.checked)}
+                className="rounded border-blue-500/30"
+              />
+              <Label htmlFor="lost_mode" className="text-blue-200">iPhone en modo perdido</Label>
             </div>
           </div>
 
           <Button 
-            type="submit"
+            type="submit" 
             className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
-            disabled={isSubmitting}
+            disabled={loading}
           >
-            {isSubmitting ? 'Guardando...' : 'Guardar Proceso'}
+            {loading ? 'Guardando...' : 'Guardar Proceso'}
           </Button>
         </form>
       </CardContent>
