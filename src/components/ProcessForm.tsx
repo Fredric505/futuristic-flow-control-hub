@@ -54,7 +54,6 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
     { code: '+1809', country: 'República Dominicana' },
     { code: '+598', country: 'Uruguay' },
     { code: '+58', country: 'Venezuela' }
-    { code: '+1', country: 'Estados Unidos' }
   ];
 
   const iphoneModels = [
