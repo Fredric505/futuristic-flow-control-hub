@@ -70,6 +70,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
   { code: '+503', country: 'El Salvador' },
   { code: '+502', country: 'Guatemala' },
   { code: '+504', country: 'Honduras' }
+  { code: '+505', country: 'Nicaragua' }
 ];
 
   const iphoneModels = [
