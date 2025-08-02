@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,11 @@ import { supabase } from '@/integrations/supabase/client';
 import CustomSelect, { CustomSelectItem } from './CustomSelect';
 import { countries } from '@/utils/countries';
 
-const ProcessForm = () => {
+interface ProcessFormProps {
+  userType?: string;
+}
+
+const ProcessForm: React.FC<ProcessFormProps> = ({ userType }) => {
   const [formData, setFormData] = useState({
     client_name: '',
     country_code: '',
