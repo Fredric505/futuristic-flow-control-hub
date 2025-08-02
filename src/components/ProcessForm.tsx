@@ -47,7 +47,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
   { code: '+64', country: 'Nueva Zelanda' },
   { code: '+91', country: 'India' },
   { code: '+240', country: 'Guinea Ecuatorial' },
-  { code: '+253', country: 'Yibuti' }, // Solo si quieres incluirlo
+  { code: '+253', country: 'Yibuti' },
   { code: '+254', country: 'Kenia' },
   { code: '+255', country: 'Tanzania' },
   { code: '+256', country: 'Uganda' },
@@ -69,7 +69,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
   { code: '+675', country: 'Papúa Nueva Guinea' },
   { code: '+503', country: 'El Salvador' },
   { code: '+502', country: 'Guatemala' },
-  { code: '+504', country: 'Honduras' }
+  { code: '+504', country: 'Honduras' },
   { code: '+505', country: 'Nicaragua' }
 ];
 
