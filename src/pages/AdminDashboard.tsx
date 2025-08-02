@@ -168,7 +168,7 @@ const AdminDashboard = () => {
         );
       
       case 'add-process':
-        return <ProcessForm userType="admin" />;
+        return <ProcessForm />;
       
       case 'view-processes':
         return <ProcessList userType="admin" />;

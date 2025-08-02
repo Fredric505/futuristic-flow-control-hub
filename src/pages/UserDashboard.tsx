@@ -141,7 +141,7 @@ const UserDashboard = () => {
         );
       
       case 'add-process':
-        return <ProcessForm userType="user" />;
+        return <ProcessForm />;
       
       case 'view-processes':
         return <ProcessList userType="user" />;
