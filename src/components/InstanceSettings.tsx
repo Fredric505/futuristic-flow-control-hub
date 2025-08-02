@@ -8,10 +8,10 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 const InstanceSettings = () => {
-  const [instanceEs, setInstanceEs] = useState('');
-  const [tokenEs, setTokenEs] = useState('');
-  const [instanceEn, setInstanceEn] = useState('');
-  const [tokenEn, setTokenEn] = useState('');
+  const [spanishInstance, setSpanishInstance] = useState('');
+  const [spanishToken, setSpanishToken] = useState('');
+  const [englishInstance, setEnglishInstance] = useState('');
+  const [englishToken, setEnglishToken] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,7 +23,7 @@ const InstanceSettings = () => {
       const { data, error } = await supabase
         .from('system_settings')
         .select('*')
-        .in('setting_key', ['whatsapp_instance_es', 'whatsapp_token_es', 'whatsapp_instance_en', 'whatsapp_token_en']);
+        .in('setting_key', ['whatsapp_instance', 'whatsapp_token', 'whatsapp_instance_en', 'whatsapp_token_en']);
 
       if (error) throw error;
 
@@ -32,10 +32,10 @@ const InstanceSettings = () => {
         return acc;
       }, {});
 
-      setInstanceEs(settings?.whatsapp_instance_es || '');
-      setTokenEs(settings?.whatsapp_token_es || '');
-      setInstanceEn(settings?.whatsapp_instance_en || '');
-      setTokenEn(settings?.whatsapp_token_en || '');
+      setSpanishInstance(settings?.whatsapp_instance || '');
+      setSpanishToken(settings?.whatsapp_token || '');
+      setEnglishInstance(settings?.whatsapp_instance_en || '');
+      setEnglishToken(settings?.whatsapp_token_en || '');
     } catch (error) {
       console.error('Error loading settings:', error);
       toast({
@@ -51,50 +51,50 @@ const InstanceSettings = () => {
   const handleSave = async () => {
     try {
       // Update Spanish settings
-      const { error: instanceEsError } = await supabase
+      const { error: spanishInstanceError } = await supabase
         .from('system_settings')
         .upsert({
-          setting_key: 'whatsapp_instance_es',
-          setting_value: instanceEs,
+          setting_key: 'whatsapp_instance',
+          setting_value: spanishInstance,
           updated_at: new Date().toISOString()
         });
 
-      if (instanceEsError) throw instanceEsError;
+      if (spanishInstanceError) throw spanishInstanceError;
 
-      const { error: tokenEsError } = await supabase
+      const { error: spanishTokenError } = await supabase
         .from('system_settings')
         .upsert({
-          setting_key: 'whatsapp_token_es',
-          setting_value: tokenEs,
+          setting_key: 'whatsapp_token',
+          setting_value: spanishToken,
           updated_at: new Date().toISOString()
         });
 
-      if (tokenEsError) throw tokenEsError;
+      if (spanishTokenError) throw spanishTokenError;
 
       // Update English settings
-      const { error: instanceEnError } = await supabase
+      const { error: englishInstanceError } = await supabase
         .from('system_settings')
         .upsert({
           setting_key: 'whatsapp_instance_en',
-          setting_value: instanceEn,
+          setting_value: englishInstance,
           updated_at: new Date().toISOString()
         });
 
-      if (instanceEnError) throw instanceEnError;
+      if (englishInstanceError) throw englishInstanceError;
 
-      const { error: tokenEnError } = await supabase
+      const { error: englishTokenError } = await supabase
         .from('system_settings')
         .upsert({
           setting_key: 'whatsapp_token_en',
-          setting_value: tokenEn,
+          setting_value: englishToken,
           updated_at: new Date().toISOString()
         });
 
-      if (tokenEnError) throw tokenEnError;
+      if (englishTokenError) throw englishTokenError;
 
       toast({
         title: "Configuración guardada",
-        description: "Configuraciones actualizadas exitosamente",
+        description: "Configuraciones de ambos idiomas actualizadas exitosamente",
       });
     } catch (error: any) {
       console.error('Error saving settings:', error);
@@ -107,18 +107,22 @@ const InstanceSettings = () => {
   };
 
   const handleDelete = async () => {
+    if (!confirm('¿Estás seguro de que quieres eliminar todas las configuraciones?')) {
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('system_settings')
         .delete()
-        .in('setting_key', ['whatsapp_instance_es', 'whatsapp_token_es', 'whatsapp_instance_en', 'whatsapp_token_en']);
+        .in('setting_key', ['whatsapp_instance', 'whatsapp_token', 'whatsapp_instance_en', 'whatsapp_token_en']);
 
       if (error) throw error;
 
-      setInstanceEs('');
-      setTokenEs('');
-      setInstanceEn('');
-      setTokenEn('');
+      setSpanishInstance('');
+      setSpanishToken('');
+      setEnglishInstance('');
+      setEnglishToken('');
       
       toast({
         title: "Configuración eliminada",
@@ -147,83 +151,69 @@ const InstanceSettings = () => {
 
   return (
     <div className="space-y-6">
-      {/* Configuraciones en Español */}
+      {/* Configuración en Español */}
       <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
         <CardHeader>
-          <CardTitle className="text-blue-300 flex items-center gap-2">
-            🇪🇸 Configuración para Español
-          </CardTitle>
+          <CardTitle className="text-blue-300">🇪🇸 Configuración Español/Castellano</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="instance-es" className="text-blue-200">ID de Instancia (Español)</Label>
+              <Label htmlFor="spanish-instance" className="text-blue-200">ID de Instancia (Español)</Label>
               <Input
-                id="instance-es"
+                id="spanish-instance"
                 type="text"
-                value={instanceEs}
-                onChange={(e) => setInstanceEs(e.target.value)}
+                value={spanishInstance}
+                onChange={(e) => setSpanishInstance(e.target.value)}
                 className="bg-white/5 border-blue-500/30 text-white"
                 placeholder="Ingresa el ID de instancia para español"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="token-es" className="text-blue-200">Token (Español)</Label>
+              <Label htmlFor="spanish-token" className="text-blue-200">Token (Español)</Label>
               <Input
-                id="token-es"
+                id="spanish-token"
                 type="text"
-                value={tokenEs}
-                onChange={(e) => setTokenEs(e.target.value)}
+                value={spanishToken}
+                onChange={(e) => setSpanishToken(e.target.value)}
                 className="bg-white/5 border-blue-500/30 text-white"
                 placeholder="Ingresa el token para español"
               />
-            </div>
-            
-            <div className="mt-4 p-3 bg-blue-950/30 rounded-lg border border-blue-500/20">
-              <p className="text-blue-200/70 text-sm">Instancia: {instanceEs || 'No configurada'}</p>
-              <p className="text-blue-200/70 text-sm">Token: {tokenEs || 'No configurado'}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Configuraciones en Inglés */}
+      {/* Configuración en Inglés */}
       <Card className="bg-black/20 backdrop-blur-xl border border-green-500/20">
         <CardHeader>
-          <CardTitle className="text-green-300 flex items-center gap-2">
-            🇺🇸 Configuración para Inglés
-          </CardTitle>
+          <CardTitle className="text-green-300">🇺🇸 Configuración Inglés/English</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="instance-en" className="text-green-200">ID de Instancia (Inglés)</Label>
+              <Label htmlFor="english-instance" className="text-green-200">Instance ID (English)</Label>
               <Input
-                id="instance-en"
+                id="english-instance"
                 type="text"
-                value={instanceEn}
-                onChange={(e) => setInstanceEn(e.target.value)}
+                value={englishInstance}
+                onChange={(e) => setEnglishInstance(e.target.value)}
                 className="bg-white/5 border-green-500/30 text-white"
-                placeholder="Ingresa el ID de instancia para inglés"
+                placeholder="Enter instance ID for English"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="token-en" className="text-green-200">Token (Inglés)</Label>
+              <Label htmlFor="english-token" className="text-green-200">Token (English)</Label>
               <Input
-                id="token-en"
+                id="english-token"
                 type="text"
-                value={tokenEn}
-                onChange={(e) => setTokenEn(e.target.value)}
+                value={englishToken}
+                onChange={(e) => setEnglishToken(e.target.value)}
                 className="bg-white/5 border-green-500/30 text-white"
-                placeholder="Ingresa el token para inglés"
+                placeholder="Enter token for English"
               />
-            </div>
-            
-            <div className="mt-4 p-3 bg-green-950/30 rounded-lg border border-green-500/20">
-              <p className="text-green-200/70 text-sm">Instancia: {instanceEn || 'No configurada'}</p>
-              <p className="text-green-200/70 text-sm">Token: {tokenEn || 'No configurado'}</p>
             </div>
           </div>
         </CardContent>
@@ -241,8 +231,24 @@ const InstanceSettings = () => {
           onClick={handleDelete}
           className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30"
         >
-          Eliminar Todas
+          Eliminar Todo
         </Button>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Estado actual Español */}
+        <div className="p-4 bg-blue-950/30 rounded-lg border border-blue-500/20">
+          <h4 className="text-blue-300 font-semibold mb-2">🇪🇸 Configuración Actual Español</h4>
+          <p className="text-blue-200/70 text-sm">Instancia: {spanishInstance || 'No configurada'}</p>
+          <p className="text-blue-200/70 text-sm">Token: {spanishToken || 'No configurado'}</p>
+        </div>
+        
+        {/* Estado actual Inglés */}
+        <div className="p-4 bg-green-950/30 rounded-lg border border-green-500/20">
+          <h4 className="text-green-300 font-semibold mb-2">🇺🇸 Current English Configuration</h4>
+          <p className="text-green-200/70 text-sm">Instance: {englishInstance || 'Not configured'}</p>
+          <p className="text-green-200/70 text-sm">Token: {englishToken || 'Not configured'}</p>
+        </div>
       </div>
     </div>
   );

@@ -31,44 +31,29 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Lista de códigos de país ordenada por número
+  // Solo países de habla hispana
   const countryCodes = [
-    { code: '+1', country: 'Estados Unidos' },
-    { code: '+34', country: 'España' },
-    { code: '+44', country: 'Reino Unido' },
-    { code: '+51', country: 'Perú' },
-    { code: '+52', country: 'México' },
-    { code: '+53', country: 'Cuba' },
     { code: '+54', country: 'Argentina' },
+    { code: '+591', country: 'Bolivia' },
     { code: '+56', country: 'Chile' },
     { code: '+57', country: 'Colombia' },
-    { code: '+58', country: 'Venezuela' },
-    { code: '+61', country: 'Australia' },
-    { code: '+64', country: 'Nueva Zelanda' },
-    { code: '+91', country: 'India' },
-    { code: '+240', country: 'Guinea Ecuatorial' },
-    { code: '+254', country: 'Kenia' },
-    { code: '+255', country: 'Tanzania' },
-    { code: '+256', country: 'Uganda' },
-    { code: '+263', country: 'Zimbabue' },
-    { code: '+268', country: 'Suazilandia (Esuatini)' },
-    { code: '+353', country: 'Irlanda' },
-    { code: '+357', country: 'Chipre' },
-    { code: '+501', country: 'Belice' },
-    { code: '+502', country: 'Guatemala' },
-    { code: '+503', country: 'El Salvador' },
-    { code: '+504', country: 'Honduras' },
     { code: '+506', country: 'Costa Rica' },
-    { code: '+507', country: 'Panamá' },
-    { code: '+591', country: 'Bolivia' },
-    { code: '+592', country: 'Guyana' },
+    { code: '+53', country: 'Cuba' },
     { code: '+593', country: 'Ecuador' },
+    { code: '+503', country: 'El Salvador' },
+    { code: '+34', country: 'España' },
+    { code: '+502', country: 'Guatemala' },
+    { code: '+240', country: 'Guinea Ecuatorial' },
+    { code: '+504', country: 'Honduras' },
+    { code: '+52', country: 'México' },
+    { code: '+505', country: 'Nicaragua' },
+    { code: '+507', country: 'Panamá' },
     { code: '+595', country: 'Paraguay' },
-    { code: '+598', country: 'Uruguay' },
-    { code: '+960', country: 'Maldivas' },
+    { code: '+51', country: 'Perú' },
     { code: '+1787', country: 'Puerto Rico' },
     { code: '+1809', country: 'República Dominicana' },
-    { code: '+675', country: 'Papúa Nueva Guinea' }
+    { code: '+598', country: 'Uruguay' },
+    { code: '+58', country: 'Venezuela' }
   ];
 
   const iphoneModels = [
@@ -104,11 +89,16 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (isSubmitting) return;
+    
     setIsSubmitting(true);
+    
     try {
       console.log('Enviando formulario de proceso...');
+      
       const { data: { session } } = await supabase.auth.getSession();
+      
       if (!session) {
         setTimeout(() => {
           toast({
@@ -119,7 +109,9 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
         }, 100);
         return;
       }
+
       console.log('Usuario autenticado, guardando proceso...');
+
       const { error } = await supabase
         .from('processes')
         .insert({
@@ -138,17 +130,21 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
           lost_mode: formData.lostMode,
           status: 'guardado'
         });
+
       if (error) {
         console.error('Error al guardar proceso:', error);
         throw error;
       }
+
       console.log('Proceso guardado exitosamente');
+
       setTimeout(() => {
         toast({
           title: "Proceso guardado",
           description: "El proceso se ha guardado exitosamente",
         });
       }, 100);
+
       setTimeout(() => {
         setFormData({
           clientName: '',
@@ -165,6 +161,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
           lostMode: false
         });
       }, 200);
+
     } catch (error: any) {
       console.error('Error completo al guardar proceso:', error);
       setTimeout(() => {
