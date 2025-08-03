@@ -41,6 +41,43 @@ const TelegramBotConfig = () => {
     }
   };
 
+  // Función para activar el bot automáticamente
+  const activateBot = async (token: string, chat: string) => {
+    try {
+      const activationMessage = `🤖 **Bot de Telegram Activado**
+
+✅ ¡Tu bot está ahora configurado y listo para recibir notificaciones!
+
+📅 Fecha de activación: ${new Date().toLocaleString('es-ES')}
+🔧 Sistema: Astro505
+👤 Estado: Activo
+
+Este mensaje confirma que tu bot de Telegram está correctamente configurado y puede recibir notificaciones de códigos de verificación automáticamente.
+
+🚀 **Tu bot ya está funcionando** - No necesitas hacer nada más.`;
+
+      const telegramUrl = `https://api.telegram.org/bot${token}/sendMessage`;
+      
+      const response = await fetch(telegramUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: chat,
+          text: activationMessage,
+          parse_mode: 'Markdown'
+        }),
+      });
+
+      const result = await response.json();
+      return response.ok;
+    } catch (error) {
+      console.error('Error activating bot:', error);
+      return false;
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -59,6 +96,20 @@ const TelegramBotConfig = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Primero activar el bot para establecer la comunicación
+      console.log('Activating Telegram bot for first-time setup...');
+      const botActivated = await activateBot(botToken.trim(), chatId.trim());
+
+      if (!botActivated) {
+        toast({
+          title: "Error de configuración",
+          description: "No se pudo conectar con tu bot de Telegram. Verifica tu token y Chat ID.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Si la activación fue exitosa, guardar la configuración
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -70,8 +121,8 @@ const TelegramBotConfig = () => {
       if (error) throw error;
 
       toast({
-        title: "Configuración guardada",
-        description: "Tu bot de Telegram ha sido configurado correctamente",
+        title: "¡Configuración guardada y bot activado!",
+        description: "Tu bot de Telegram ha sido configurado correctamente y está listo para recibir notificaciones automáticamente.",
       });
     } catch (error: any) {
       console.error('Error saving Telegram config:', error);
@@ -98,15 +149,17 @@ const TelegramBotConfig = () => {
     setIsTesting(true);
 
     try {
-      const testMessage = `🤖 **Prueba de Bot de Telegram**
+      const testMessage = `🧪 **Mensaje de Prueba Manual**
 
 ✅ ¡Tu bot está funcionando correctamente!
 
 📅 Fecha: ${new Date().toLocaleString('es-ES')}
 🔧 Sistema: Astro505
-👤 Usuario: Admin
+👤 Usuario: Prueba manual
 
-Este es un mensaje de prueba para verificar que tu bot de Telegram está configurado correctamente y puede recibir notificaciones.`;
+Este es un mensaje de prueba manual para verificar que tu bot de Telegram puede recibir mensajes correctamente.
+
+💡 **Nota**: Tu bot ya se activó automáticamente cuando guardaste la configuración, por lo que debería recibir notificaciones sin problemas.`;
 
       const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
       
@@ -211,13 +264,21 @@ Este es un mensaje de prueba para verificar que tu bot de Telegram está configu
             </ol>
           </div>
 
+          <div className="bg-green-950/30 p-4 rounded-lg border border-green-500/20">
+            <h4 className="text-green-300 font-semibold mb-2">✨ Activación Automática:</h4>
+            <p className="text-green-200/70 text-sm">
+              Cuando guardes tu configuración, el bot se activará automáticamente enviando un mensaje de confirmación. 
+              Esto garantiza que las futuras notificaciones lleguen sin problemas desde el primer uso.
+            </p>
+          </div>
+
           <div className="flex gap-2">
             <Button 
               type="submit"
               className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
               disabled={isSaving}
             >
-              {isSaving ? 'Guardando...' : 'Guardar Configuración'}
+              {isSaving ? 'Guardando y Activando...' : 'Guardar y Activar Bot'}
             </Button>
             
             <Button 
@@ -226,7 +287,7 @@ Este es un mensaje de prueba para verificar que tu bot de Telegram está configu
               className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
               disabled={isTesting || !botToken || !chatId}
             >
-              {isTesting ? 'Enviando...' : 'Probar Bot'}
+              {isTesting ? 'Enviando...' : 'Prueba Manual'}
             </Button>
           </div>
         </form>
