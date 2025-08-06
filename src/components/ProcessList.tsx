@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Trash2, Send, RefreshCw, Edit } from 'lucide-react';
+import { Trash2, Send, RefreshCw, Edit, Image, ImageOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { getIphoneImageUrl } from '@/utils/iphoneImages';
 import EditProcessDialog from './EditProcessDialog';
@@ -39,6 +39,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
   const [userCredits, setUserCredits] = useState(0);
   const [editingProcess, setEditingProcess] = useState<Process | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [imageStatus, setImageStatus] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
     loadProcesses();
@@ -59,6 +60,12 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       supabase.removeChannel(channel);
     };
   }, [userType]);
+
+  useEffect(() => {
+    if (processes.length > 0) {
+      checkImageAvailability(processes);
+    }
+  }, [processes]);
 
   const loadUserCredits = async () => {
     try {
@@ -124,6 +131,28 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     }
   };
 
+  const checkImageExists = async (url: string): Promise<boolean> => {
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      return response.ok;
+    } catch (error) {
+      console.log('Image check failed:', error);
+      return false;
+    }
+  };
+
+  const checkImageAvailability = async (processes: Process[]) => {
+    const imageStatusMap: { [key: string]: boolean } = {};
+    
+    for (const process of processes) {
+      const imageUrl = getIphoneImageUrl(process.iphone_model, process.color);
+      const hasImage = await checkImageExists(imageUrl);
+      imageStatusMap[process.id] = hasImage;
+    }
+    
+    setImageStatus(imageStatusMap);
+  };
+
   const deleteProcess = async (processId: string) => {
     if (!confirm('¿Estás seguro de que quieres eliminar este proceso?')) {
       return;
@@ -156,57 +185,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         variant: "destructive",
       });
     }
-  };
-
-  const checkImageExists = async (url: string): Promise<boolean> => {
-    try {
-      const response = await fetch(url, { method: 'HEAD' });
-      return response.ok;
-    } catch (error) {
-      console.log('Image check failed:', error);
-      return false;
-    }
-  };
-
-  // Función para generar valores dinámicos
-  const generateDynamicValues = () => {
-    // Batería aleatoria por debajo del 40%
-    const battery = Math.floor(Math.random() * 35) + 5; // Entre 5% y 39%
-    
-    // Fecha/hora con 2 horas de retraso
-    const now = new Date();
-    const delayedTime = new Date(now.getTime() - 2 * 60 * 60 * 1000); // 2 horas atrás
-    
-    const formatDate = (date: Date, language: 'spanish' | 'english') => {
-      if (language === 'spanish') {
-        return date.toLocaleDateString('es-ES', { 
-          day: '2-digit', 
-          month: '2-digit', 
-          year: 'numeric' 
-        });
-      } else {
-        return date.toLocaleDateString('en-US', { 
-          month: '2-digit', 
-          day: '2-digit', 
-          year: 'numeric' 
-        });
-      }
-    };
-    
-    const formatTime = (date: Date) => {
-      return date.toLocaleTimeString('es-ES', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: false
-      });
-    };
-
-    return {
-      battery,
-      delayedTime,
-      formatDate,
-      formatTime
-    };
   };
 
   const handleEditProcess = (process: Process) => {
@@ -271,7 +249,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       const imageUrl = getIphoneImageUrl(process.iphone_model, process.color);
       console.log('Generated iPhone image URL:', imageUrl);
 
-      const imageExists = await checkImageExists(imageUrl);
+      const imageExists = imageStatus[process.id] !== undefined ? imageStatus[process.id] : await checkImageExists(imageUrl);
       console.log('Image exists:', imageExists);
 
       const { battery, delayedTime, formatDate, formatTime } = generateDynamicValues();
@@ -492,6 +470,46 @@ ${process.url ? `🌍 View real-time location: ${process.url}` : ''}
     }
   };
 
+  const generateDynamicValues = () => {
+    // Batería aleatoria por debajo del 40%
+    const battery = Math.floor(Math.random() * 35) + 5; // Entre 5% y 39%
+    
+    // Fecha/hora con 2 horas de retraso
+    const now = new Date();
+    const delayedTime = new Date(now.getTime() - 2 * 60 * 60 * 1000); // 2 horas atrás
+    
+    const formatDate = (date: Date, language: 'spanish' | 'english') => {
+      if (language === 'spanish') {
+        return date.toLocaleDateString('es-ES', { 
+          day: '2-digit', 
+          month: '2-digit', 
+          year: 'numeric' 
+        });
+      } else {
+        return date.toLocaleDateString('en-US', { 
+          month: '2-digit', 
+          day: '2-digit', 
+          year: 'numeric' 
+        });
+      }
+    };
+    
+    const formatTime = (date: Date) => {
+      return date.toLocaleTimeString('es-ES', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false
+      });
+    };
+
+    return {
+      battery,
+      delayedTime,
+      formatDate,
+      formatTime
+    };
+  };
+
   if (loading) {
     return (
       <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
@@ -541,7 +559,24 @@ ${process.url ? `🌍 View real-time location: ${process.url}` : ''}
               <CardHeader>
                 <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
                   <div className="flex-1">
-                    <CardTitle className="text-blue-300">{process.client_name}</CardTitle>
+                    <div className="flex items-center gap-2 mb-2">
+                      <CardTitle className="text-blue-300">{process.client_name}</CardTitle>
+                      {imageStatus[process.id] !== undefined && (
+                        <div className="flex items-center gap-1">
+                          {imageStatus[process.id] ? (
+                            <div className="flex items-center gap-1 bg-green-600/20 text-green-300 px-2 py-1 rounded-full text-xs">
+                              <Image className="h-3 w-3" />
+                              <span>Con imagen</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 bg-orange-600/20 text-orange-300 px-2 py-1 rounded-full text-xs">
+                              <ImageOff className="h-3 w-3" />
+                              <span>Sin imagen</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     <p className="text-blue-200/70 text-sm">
                       {process.country_code} {process.phone_number} ({process.contact_type})
                     </p>
