@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageSquare, Smartphone } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageSquare, Smartphone, Bell } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
@@ -14,6 +14,7 @@ import InstanceSettings from '@/components/InstanceSettings';
 import MessageHistory from '@/components/MessageHistory';
 import AdminMessageHistory from '@/components/AdminMessageHistory';
 import TelegramBotConfig from '@/components/TelegramBotConfig';
+import BulkNotifications from '@/components/BulkNotifications';
 import MobileSidebar from '@/components/MobileSidebar';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -86,6 +87,7 @@ const AdminDashboard = () => {
     { id: 'history', icon: History, label: 'Historial', description: 'Mi historial de mensajes enviados' },
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
     { id: 'telegram-config', icon: MessageSquare, label: 'Config. Telegram', description: 'Configurar bot de notificaciones' },
+    { id: 'bulk-notifications', icon: Bell, label: 'Notificaciones Masivas', description: 'Enviar notificaciones a usuarios' },
     { id: 'ifttt-config', icon: Smartphone, label: 'Config. IFTTT', description: 'Configuración del dispositivo de reenvío' },
     { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Solo es texto' },
     { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },
@@ -181,6 +183,9 @@ const AdminDashboard = () => {
       
       case 'telegram-config':
         return <TelegramBotConfig />;
+      
+      case 'bulk-notifications':
+        return <BulkNotifications />;
       
       case 'ifttt-config':
         return (
