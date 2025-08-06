@@ -6,6 +6,7 @@ import { toast } from '@/hooks/use-toast';
 import { Trash2, Send, RefreshCw, Edit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { getIphoneImageUrl } from '@/utils/iphoneImages';
+import EditProcessDialog from './EditProcessDialog';
 
 interface Process {
   id: string;
@@ -36,6 +37,8 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
   const [loading, setLoading] = useState(true);
   const [sendingMessage, setSendingMessage] = useState<{ id: string; language: string } | null>(null);
   const [userCredits, setUserCredits] = useState(0);
+  const [editingProcess, setEditingProcess] = useState<Process | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     loadProcesses();
@@ -206,6 +209,20 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     };
   };
 
+  const handleEditProcess = (process: Process) => {
+    setEditingProcess(process);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleCloseEditDialog = () => {
+    setEditingProcess(null);
+    setIsEditDialogOpen(false);
+  };
+
+  const handleProcessUpdated = () => {
+    loadProcesses();
+  };
+
   const sendWhatsAppMessage = async (process: Process, language: 'spanish' | 'english') => {
     try {
       if (userCredits <= 0) {
@@ -257,7 +274,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       const imageExists = await checkImageExists(imageUrl);
       console.log('Image exists:', imageExists);
 
-      // Generar valores dinámicos
       const { battery, delayedTime, formatDate, formatTime } = generateDynamicValues();
 
       let message = '';
@@ -547,51 +563,64 @@ ${process.url ? `🌍 View real-time location: ${process.url}` : ''}
                     >
                       {process.status}
                     </Badge>
-                    <div className="flex space-x-1">
-                      <Button
-                        size="sm"
-                        onClick={() => sendWhatsAppMessage(process, 'spanish')}
-                        disabled={sendingMessage?.id === process.id || userCredits <= 0}
-                        className={`${
-                          userCredits <= 0 
-                            ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
-                            : 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-300'
-                        }`}
-                        title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar en español"}
-                      >
-                        {sendingMessage?.id === process.id && sendingMessage?.language === 'spanish' ? (
-                          <RefreshCw className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <>🇪🇸</>
-                        )}
-                      </Button>
+                    <div className="flex flex-col space-y-2">
+                      <div className="flex space-x-3">
+                        <Button
+                          size="sm"
+                          onClick={() => sendWhatsAppMessage(process, 'spanish')}
+                          disabled={sendingMessage?.id === process.id || userCredits <= 0}
+                          className={`${
+                            userCredits <= 0 
+                              ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
+                              : 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-300'
+                          } min-w-[80px] px-3`}
+                          title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar en español"}
+                        >
+                          {sendingMessage?.id === process.id && sendingMessage?.language === 'spanish' ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>Enviar ES 🇪🇸</>
+                          )}
+                        </Button>
 
-                      <Button
-                        size="sm"
-                        onClick={() => sendWhatsAppMessage(process, 'english')}
-                        disabled={sendingMessage?.id === process.id || userCredits <= 0}
-                        className={`${
-                          userCredits <= 0 
-                            ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
-                            : 'bg-green-600/20 hover:bg-green-600/30 text-green-300'
-                        }`}
-                        title={userCredits <= 0 ? "Sin créditos suficientes" : "Send in English"}
-                      >
-                        {sendingMessage?.id === process.id && sendingMessage?.language === 'english' ? (
-                          <RefreshCw className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <>🇺🇸</>
-                        )}
-                      </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => sendWhatsAppMessage(process, 'english')}
+                          disabled={sendingMessage?.id === process.id || userCredits <= 0}
+                          className={`${
+                            userCredits <= 0 
+                              ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
+                              : 'bg-green-600/20 hover:bg-green-600/30 text-green-300'
+                          } min-w-[80px] px-3`}
+                          title={userCredits <= 0 ? "Sin créditos suficientes" : "Send in English"}
+                        >
+                          {sendingMessage?.id === process.id && sendingMessage?.language === 'english' ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>Send EN 🇺🇸</>
+                          )}
+                        </Button>
+                      </div>
 
-                      <Button
-                        size="sm"
-                        onClick={() => deleteProcess(process.id)}
-                        className="bg-red-600/20 hover:bg-red-600/30 text-red-300"
-                        title="Eliminar proceso"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex space-x-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleEditProcess(process)}
+                          className="bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300"
+                          title="Editar proceso"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          onClick={() => deleteProcess(process.id)}
+                          className="bg-red-600/20 hover:bg-red-600/30 text-red-300"
+                          title="Eliminar proceso"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -646,6 +675,13 @@ ${process.url ? `🌍 View real-time location: ${process.url}` : ''}
           ))}
         </div>
       )}
+
+      <EditProcessDialog
+        process={editingProcess}
+        isOpen={isEditDialogOpen}
+        onClose={handleCloseEditDialog}
+        onProcessUpdated={handleProcessUpdated}
+      />
     </div>
   );
 };
