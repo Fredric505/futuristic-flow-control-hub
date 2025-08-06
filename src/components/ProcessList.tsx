@@ -539,8 +539,8 @@ ${process.url ? `🌍 View real-time location: ${process.url}` : ''}
           {processes.map((process) => (
             <Card key={process.id} className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
               <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
+                <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+                  <div className="flex-1">
                     <CardTitle className="text-blue-300">{process.client_name}</CardTitle>
                     <p className="text-blue-200/70 text-sm">
                       {process.country_code} {process.phone_number} ({process.contact_type})
@@ -556,71 +556,72 @@ ${process.url ? `🌍 View real-time location: ${process.url}` : ''}
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                     <Badge 
                       variant={process.status === 'enviado' ? 'default' : 'secondary'}
                       className={process.status === 'enviado' ? 'bg-green-600' : 'bg-yellow-600'}
                     >
                       {process.status}
                     </Badge>
-                    <div className="flex flex-col space-y-2">
-                      <div className="flex space-x-3">
-                        <Button
-                          size="sm"
-                          onClick={() => sendWhatsAppMessage(process, 'spanish')}
-                          disabled={sendingMessage?.id === process.id || userCredits <= 0}
-                          className={`${
-                            userCredits <= 0 
-                              ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
-                              : 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-300'
-                          } min-w-[80px] px-3`}
-                          title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar en español"}
-                        >
-                          {sendingMessage?.id === process.id && sendingMessage?.language === 'spanish' ? (
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <>Enviar ES 🇪🇸</>
-                          )}
-                        </Button>
+                    
+                    {/* Botones de envío */}
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                      <Button
+                        size="sm"
+                        onClick={() => sendWhatsAppMessage(process, 'spanish')}
+                        disabled={sendingMessage?.id === process.id || userCredits <= 0}
+                        className={`${
+                          userCredits <= 0 
+                            ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
+                            : 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-300'
+                        } w-full sm:w-auto min-w-[120px] text-xs sm:text-sm`}
+                        title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar en español"}
+                      >
+                        {sendingMessage?.id === process.id && sendingMessage?.language === 'spanish' ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>Enviar ES 🇪🇸</>
+                        )}
+                      </Button>
 
-                        <Button
-                          size="sm"
-                          onClick={() => sendWhatsAppMessage(process, 'english')}
-                          disabled={sendingMessage?.id === process.id || userCredits <= 0}
-                          className={`${
-                            userCredits <= 0 
-                              ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
-                              : 'bg-green-600/20 hover:bg-green-600/30 text-green-300'
-                          } min-w-[80px] px-3`}
-                          title={userCredits <= 0 ? "Sin créditos suficientes" : "Send in English"}
-                        >
-                          {sendingMessage?.id === process.id && sendingMessage?.language === 'english' ? (
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <>Send EN 🇺🇸</>
-                          )}
-                        </Button>
-                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => sendWhatsAppMessage(process, 'english')}
+                        disabled={sendingMessage?.id === process.id || userCredits <= 0}
+                        className={`${
+                          userCredits <= 0 
+                            ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
+                            : 'bg-green-600/20 hover:bg-green-600/30 text-green-300'
+                        } w-full sm:w-auto min-w-[120px] text-xs sm:text-sm`}
+                        title={userCredits <= 0 ? "Sin créditos suficientes" : "Send in English"}
+                      >
+                        {sendingMessage?.id === process.id && sendingMessage?.language === 'english' ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>Send EN 🇺🇸</>
+                        )}
+                      </Button>
+                    </div>
 
-                      <div className="flex space-x-2">
-                        <Button
-                          size="sm"
-                          onClick={() => handleEditProcess(process)}
-                          className="bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300"
-                          title="Editar proceso"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                    {/* Botones de acción */}
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => handleEditProcess(process)}
+                        className="bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300"
+                        title="Editar proceso"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
 
-                        <Button
-                          size="sm"
-                          onClick={() => deleteProcess(process.id)}
-                          className="bg-red-600/20 hover:bg-red-600/30 text-red-300"
-                          title="Eliminar proceso"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => deleteProcess(process.id)}
+                        className="bg-red-600/20 hover:bg-red-600/30 text-red-300"
+                        title="Eliminar proceso"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 </div>
