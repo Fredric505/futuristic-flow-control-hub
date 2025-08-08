@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
@@ -210,7 +209,7 @@ serve(async (req) => {
     const cleanPhoneNumber = phoneNumber.replace(/[\s\-\(\)\.]/g, '');
     console.log(`🧹 Cleaned phone number: "${cleanPhoneNumber}"`);
 
-    // Función mejorada para generar patrones de búsqueda
+    // Función MEJORADA para generar patrones de búsqueda específicos para países problemáticos
     const generateSearchPatterns = (phone: string) => {
       const patterns = new Set<string>();
       const clean = phone.replace(/[\s\-\(\)\.]/g, '');
@@ -226,55 +225,77 @@ serve(async (req) => {
         patterns.add('+' + clean);
       }
       
-      // Generar variantes de longitud (más agresivo para mejorar matching)
-      if (clean.length >= 7) {
-        for (let i = 7; i <= Math.min(clean.length, 15); i++) {
-          const suffix = clean.slice(-i);
-          patterns.add(suffix);
-          if (!suffix.startsWith('+')) {
-            patterns.add('+' + suffix);
-          }
-        }
-      }
-      
-      // Patrones específicos por país mejorados
+      // Patrones específicos mejorados para países problemáticos
       const countryMappings = {
-        '1': [10, 11],     // USA/Canadá
-        '52': [10, 11, 12], // México  
-        '54': [10, 11, 12], // Argentina
-        '55': [10, 11, 12], // Brasil
-        '57': [10, 11, 12], // Colombia
-        '34': [9],          // España
-        '505': [8],         // Nicaragua
-        '506': [8],         // Costa Rica
-        '507': [8],         // Panamá
-        '51': [9],          // Perú
-        '56': [9],          // Chile
-        '593': [9],         // Ecuador
-        '58': [10, 11],     // Venezuela
-        '503': [8],         // El Salvador
-        '502': [8],         // Guatemala
-        '504': [8],         // Honduras
+        '593': { lengths: [9], name: 'Ecuador' },      // Ecuador - ESPECÍFICO
+        '52': { lengths: [10, 11, 12], name: 'México' }, // México - ESPECÍFICO  
+        '57': { lengths: [10, 11, 12], name: 'Colombia' }, // Colombia - ESPECÍFICO
+        '1': { lengths: [10, 11], name: 'USA/Canadá' },
+        '54': { lengths: [10, 11, 12], name: 'Argentina' },
+        '55': { lengths: [10, 11, 12], name: 'Brasil' },
+        '34': { lengths: [9], name: 'España' },
+        '505': { lengths: [8], name: 'Nicaragua' },
+        '506': { lengths: [8], name: 'Costa Rica' },
+        '507': { lengths: [8], name: 'Panamá' },
+        '51': { lengths: [9], name: 'Perú' },
+        '56': { lengths: [9], name: 'Chile' },
+        '58': { lengths: [10, 11], name: 'Venezuela' },
+        '503': { lengths: [8], name: 'El Salvador' },
+        '502': { lengths: [8], name: 'Guatemala' },
+        '504': { lengths: [8], name: 'Honduras' },
       };
       
       // Detectar y generar variantes por país
       const cleanWithoutPlus = clean.startsWith('+') ? clean.substring(1) : clean;
       
-      for (const [countryCode, lengths] of Object.entries(countryMappings)) {
+      for (const [countryCode, config] of Object.entries(countryMappings)) {
         if (cleanWithoutPlus.startsWith(countryCode)) {
           const withoutCountry = cleanWithoutPlus.substring(countryCode.length);
+          console.log(`🏁 Detected country: ${config.name} (${countryCode}), processing number: ${withoutCountry}`);
+          
+          // Variantes básicas
           patterns.add(withoutCountry);
           patterns.add(countryCode + withoutCountry);
           patterns.add('+' + countryCode + withoutCountry);
           
           // Variantes de longitud específicas del país
-          for (const len of lengths) {
+          for (const len of config.lengths) {
             if (withoutCountry.length >= len) {
               const lengthVariant = withoutCountry.slice(-len);
               patterns.add(lengthVariant);
               patterns.add(countryCode + lengthVariant);
               patterns.add('+' + countryCode + lengthVariant);
+              
+              // Para países problemáticos, agregar más variantes
+              if (['593', '52', '57'].includes(countryCode)) {
+                // Variantes sin ceros iniciales
+                const withoutLeadingZero = lengthVariant.replace(/^0+/, '');
+                if (withoutLeadingZero && withoutLeadingZero !== lengthVariant) {
+                  patterns.add(withoutLeadingZero);
+                  patterns.add(countryCode + withoutLeadingZero);
+                  patterns.add('+' + countryCode + withoutLeadingZero);
+                }
+                
+                // Variantes con cero inicial
+                if (!lengthVariant.startsWith('0') && lengthVariant.length < 10) {
+                  const withLeadingZero = '0' + lengthVariant;
+                  patterns.add(withLeadingZero);
+                  patterns.add(countryCode + withLeadingZero);
+                  patterns.add('+' + countryCode + withLeadingZero);
+                }
+              }
             }
+          }
+        }
+      }
+      
+      // Generar variantes de longitud más agresivas (para casos edge)
+      if (clean.length >= 8) {
+        for (let i = 8; i <= Math.min(clean.length, 15); i++) {
+          const suffix = clean.slice(-i);
+          patterns.add(suffix);
+          if (!suffix.startsWith('+')) {
+            patterns.add('+' + suffix);
           }
         }
       }
@@ -288,7 +309,7 @@ serve(async (req) => {
     let matchedProcess = null;
     let matchedPattern = '';
 
-    // ESTRATEGIA 1: Búsqueda directa en phone_number
+    // ESTRATEGIA 1: Búsqueda directa en phone_number (MÁS AGRESIVA)
     console.log('🎯 STRATEGY 1: Direct phone_number search...');
     for (const pattern of searchPatterns) {
       console.log(`  🔍 Searching phone_number field with pattern: "${pattern}"`);
@@ -310,7 +331,7 @@ serve(async (req) => {
         .eq('phone_number', pattern)
         .not('profiles.telegram_bot_token', 'is', null)
         .not('profiles.telegram_chat_id', 'is', null)
-        .limit(1);
+        .limit(5);
 
       if (queryError) {
         console.error(`❌ Database query error for pattern "${pattern}":`, queryError);
@@ -325,7 +346,7 @@ serve(async (req) => {
       }
     }
 
-    // ESTRATEGIA 2: Búsqueda combinada country_code + phone_number
+    // ESTRATEGIA 2: Búsqueda combinada country_code + phone_number (MEJORADA)
     if (!matchedProcess) {
       console.log('🎯 STRATEGY 2: Combined country_code + phone_number search...');
       
@@ -345,7 +366,7 @@ serve(async (req) => {
         `)
         .not('profiles.telegram_bot_token', 'is', null)
         .not('profiles.telegram_chat_id', 'is', null)
-        .limit(100);
+        .limit(200);
 
       if (!combinedError && allProcesses) {
         console.log(`🔍 Checking ${allProcesses.length} processes for combined patterns...`);
@@ -360,16 +381,24 @@ serve(async (req) => {
             fullNumber,
             fullNumberWithPlus,
             proc.phone_number?.replace(/[\s\-\(\)\.]/g, ''),
+            // Variantes adicionales para países problemáticos
+            proc.country_code + proc.phone_number,
+            '+' + proc.country_code + proc.phone_number,
           ].filter(Boolean);
           
-          // Comprobar todas las combinaciones
+          // Comprobar todas las combinaciones de forma más flexible
           for (const pattern of searchPatterns) {
             for (const variant of procVariants) {
               if (variant === pattern || 
                   variant?.endsWith(pattern) || 
                   pattern.endsWith(variant || '') ||
                   variant?.includes(pattern) ||
-                  pattern.includes(variant || '')) {
+                  pattern.includes(variant || '') ||
+                  // Comparación sin espacios ni caracteres especiales
+                  variant?.replace(/[\s\-\(\)\.]/g, '') === pattern.replace(/[\s\-\(\)\.]/g, '') ||
+                  // Comparación de los últimos N dígitos
+                  (variant && pattern.length >= 8 && variant.slice(-8) === pattern.slice(-8)) ||
+                  (variant && pattern.length >= 9 && variant.slice(-9) === pattern.slice(-9))) {
                 matchedProcess = proc;
                 matchedPattern = pattern;
                 console.log(`✅ MATCH FOUND with combined pattern: "${pattern}" matching variant: "${variant}" -> Process: ${proc.client_name}`);
@@ -383,16 +412,20 @@ serve(async (req) => {
       }
     }
 
-    // ESTRATEGIA 3: Búsqueda flexible por similitud (últimos dígitos)
+    // ESTRATEGIA 3: Búsqueda ultra-flexible para países problemáticos
     if (!matchedProcess) {
-      console.log('🎯 STRATEGY 3: Flexible similarity search...');
+      console.log('🎯 STRATEGY 3: Ultra-flexible search for problematic countries...');
       
-      // Tomar los últimos 8 dígitos del número entrante para búsqueda flexible
+      // Extraer solo los dígitos del número entrante
       const incomingDigits = cleanPhoneNumber.replace(/\D/g, '');
-      const lastDigits = incomingDigits.slice(-8);
       
-      if (lastDigits.length >= 7) {
-        console.log(`🔍 Flexible search using last digits: "${lastDigits}"`);
+      // Identificar si es de países problemáticos
+      const isProblematicCountry = incomingDigits.startsWith('593') || // Ecuador
+                                  incomingDigits.startsWith('52') ||  // México
+                                  incomingDigits.startsWith('57');   // Colombia
+      
+      if (isProblematicCountry && incomingDigits.length >= 8) {
+        console.log(`🚨 Detected problematic country number: ${incomingDigits}, applying ultra-flexible search...`);
         
         const { data: flexibleProcesses, error: flexError } = await supabase
           .from('processes')
@@ -410,29 +443,41 @@ serve(async (req) => {
           `)
           .not('profiles.telegram_bot_token', 'is', null)
           .not('profiles.telegram_chat_id', 'is', null)
-          .limit(150);
+          .limit(300);
 
         if (!flexError && flexibleProcesses) {
-          console.log(`🔍 Flexible search checking ${flexibleProcesses.length} processes...`);
+          console.log(`🔍 Ultra-flexible search checking ${flexibleProcesses.length} processes...`);
+          
+          // Tomar diferentes variantes de los últimos dígitos
+          const lastDigitsVariants = [
+            incomingDigits.slice(-10), // Últimos 10
+            incomingDigits.slice(-9),  // Últimos 9
+            incomingDigits.slice(-8),  // Últimos 8
+            incomingDigits.slice(-7),  // Últimos 7
+          ].filter(v => v.length >= 7);
           
           for (const proc of flexibleProcesses) {
             const procDigits = `${proc.country_code || ''}${proc.phone_number || ''}`.replace(/\D/g, '');
             
-            if (procDigits.length >= 7 && lastDigits.length >= 7) {
-              // Comparar los últimos 7-8 dígitos
-              const procLast8 = procDigits.slice(-8);
-              const procLast7 = procDigits.slice(-7);
-              const incomingLast7 = lastDigits.slice(-7);
-              
-              if (procLast8 === lastDigits || 
-                  procLast7 === incomingLast7 ||
-                  procDigits.endsWith(lastDigits) ||
-                  incomingDigits.endsWith(procDigits.slice(-7))) {
-                matchedProcess = proc;
-                matchedPattern = `flexible-${lastDigits}`;
-                console.log(`✅ MATCH FOUND with flexible pattern - last digits: "${lastDigits}" matched process: ${proc.client_name}`);
-                break;
+            if (procDigits.length >= 7) {
+              // Comparar con las variantes de últimos dígitos
+              for (const variant of lastDigitsVariants) {
+                const procLastDigits = procDigits.slice(-variant.length);
+                
+                if (procLastDigits === variant ||
+                    procDigits.endsWith(variant) ||
+                    variant.endsWith(procLastDigits) ||
+                    // Comparación ultra-flexible de números similares
+                    (variant.length >= 8 && procLastDigits.length >= 8 && 
+                     Math.abs(variant.length - procLastDigits.length) <= 1 &&
+                     variant.slice(-7) === procLastDigits.slice(-7))) {
+                  matchedProcess = proc;
+                  matchedPattern = `ultra-flexible-${variant}`;
+                  console.log(`✅ ULTRA-FLEXIBLE MATCH FOUND: incoming="${variant}" matched process="${procLastDigits}" -> ${proc.client_name}`);
+                  break;
+                }
               }
+              if (matchedProcess) break;
             }
           }
         }
@@ -446,7 +491,10 @@ serve(async (req) => {
         original_phone: phoneNumber,
         cleaned_phone: cleanPhoneNumber,
         patterns_tried: searchPatterns.length,
-        message_preview: messageText.substring(0, 100)
+        message_preview: messageText.substring(0, 100),
+        is_problematic_country: cleanPhoneNumber.replace(/\D/g, '').startsWith('593') || 
+                               cleanPhoneNumber.replace(/\D/g, '').startsWith('52') || 
+                               cleanPhoneNumber.replace(/\D/g, '').startsWith('57')
       });
       
       return new Response(
@@ -459,7 +507,10 @@ serve(async (req) => {
           search_summary: {
             original: phoneNumber,
             cleaned: cleanPhoneNumber,
-            patterns_count: searchPatterns.length
+            patterns_count: searchPatterns.length,
+            is_problematic_country: cleanPhoneNumber.replace(/\D/g, '').startsWith('593') || 
+                                   cleanPhoneNumber.replace(/\D/g, '').startsWith('52') || 
+                                   cleanPhoneNumber.replace(/\D/g, '').startsWith('57')
           },
           timestamp
         }), 
@@ -479,7 +530,9 @@ serve(async (req) => {
       user_id: process.user_id,
       matched_pattern: matchedPattern,
       has_bot_token: !!profile.telegram_bot_token,
-      has_chat_id: !!profile.telegram_chat_id
+      has_chat_id: !!profile.telegram_chat_id,
+      country_code: process.country_code,
+      phone_number: process.phone_number
     });
 
     // Verificar configuración de Telegram
@@ -513,7 +566,7 @@ serve(async (req) => {
     console.log('🚀 Sending notification to Telegram...');
     
     const telegramUrl = `https://api.telegram.org/bot${profile.telegram_bot_token}/sendMessage`;
-    const maxRetries = 5; // Aumentado a 5 intentos
+    const maxRetries = 5;
     let attempt = 0;
     let telegramResult = null;
     let lastError = null;
@@ -545,7 +598,6 @@ serve(async (req) => {
           lastError = telegramResult;
           console.error(`❌ Telegram API error on attempt ${attempt}:`, telegramResult);
           
-          // Si es el último intento, fallar
           if (attempt === maxRetries) {
             console.error('❌ All Telegram send attempts failed');
             return new Response(
@@ -568,7 +620,6 @@ serve(async (req) => {
             );
           }
           
-          // Esperar antes del siguiente intento (exponential backoff)
           const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
           console.log(`⏳ Waiting ${waitTime}ms before retry...`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
@@ -599,7 +650,6 @@ serve(async (req) => {
           );
         }
         
-        // Esperar antes del siguiente intento
         const waitTime = Math.min(2000 * attempt, 10000);
         console.log(`⏳ Waiting ${waitTime}ms after network error...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
@@ -611,6 +661,8 @@ serve(async (req) => {
       user_id: process.user_id,
       process_id: process.id,
       client_name: process.client_name,
+      country_code: process.country_code,
+      phone_number: process.phone_number,
       message_type: messageAnalysis.type,
       matched_pattern: matchedPattern,
       attempts_needed: attempt,
@@ -625,6 +677,7 @@ serve(async (req) => {
         user_id: process.user_id,
         client_name: process.client_name,
         phone_number: cleanPhoneNumber,
+        country_code: process.country_code,
         matched_pattern: matchedPattern,
         message_content: messageText,
         message_type: messageAnalysis.type,
