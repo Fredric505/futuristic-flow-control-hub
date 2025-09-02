@@ -27,9 +27,16 @@ const MessageHistory = () => {
 
   const loadMessages = async () => {
     try {
+      console.log('Loading user messages...');
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.log('No user found');
+        return;
+      }
 
+      console.log('Loading messages for user:', user.id);
+
+      // Obtener TODOS los mensajes del usuario con información de procesos
       const { data, error } = await supabase
         .from('messages')
         .select(`
@@ -41,7 +48,13 @@ const MessageHistory = () => {
         .eq('user_id', user.id)
         .order('sent_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading messages:', error);
+        throw error;
+      }
+      
+      console.log('Messages loaded successfully:', data?.length || 0);
+      console.log('Sample messages:', data?.slice(0, 2));
       setMessages(data || []);
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -62,10 +75,16 @@ const MessageHistory = () => {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-semibold text-blue-300">
+          Mis Mensajes ({messages.length})
+        </h3>
+      </div>
+
       {messages.length === 0 ? (
         <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
           <CardContent className="p-6">
-            <p className="text-blue-200/70">No hay mensajes enviados aún.</p>
+            <p className="text-blue-200/70 text-center">No hay mensajes enviados aún.</p>
           </CardContent>
         </Card>
       ) : (
