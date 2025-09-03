@@ -185,9 +185,6 @@ const AdminMessageHistory = () => {
           *,
           processes (
             client_name
-          ),
-          profiles (
-            email
           )
         `)
         .order('sent_at', { ascending: false });

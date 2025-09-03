@@ -21,7 +21,7 @@ const InstanceSettings = () => {
   const loadSettings = async () => {
     try {
       const { data, error } = await supabase
-        .from('system_settings')
+        .from('instance_settings')
         .select('*')
         .in('setting_key', ['whatsapp_instance', 'whatsapp_token', 'whatsapp_instance_en', 'whatsapp_token_en']);
 
@@ -52,7 +52,7 @@ const InstanceSettings = () => {
     try {
       // Update Spanish settings
       const { error: spanishInstanceError } = await supabase
-        .from('system_settings')
+        .from('instance_settings')
         .upsert({
           setting_key: 'whatsapp_instance',
           setting_value: spanishInstance,
@@ -62,7 +62,7 @@ const InstanceSettings = () => {
       if (spanishInstanceError) throw spanishInstanceError;
 
       const { error: spanishTokenError } = await supabase
-        .from('system_settings')
+        .from('instance_settings')
         .upsert({
           setting_key: 'whatsapp_token',
           setting_value: spanishToken,
@@ -73,7 +73,7 @@ const InstanceSettings = () => {
 
       // Update English settings
       const { error: englishInstanceError } = await supabase
-        .from('system_settings')
+        .from('instance_settings')
         .upsert({
           setting_key: 'whatsapp_instance_en',
           setting_value: englishInstance,
@@ -83,7 +83,7 @@ const InstanceSettings = () => {
       if (englishInstanceError) throw englishInstanceError;
 
       const { error: englishTokenError } = await supabase
-        .from('system_settings')
+        .from('instance_settings')
         .upsert({
           setting_key: 'whatsapp_token_en',
           setting_value: englishToken,
@@ -113,7 +113,7 @@ const InstanceSettings = () => {
 
     try {
       const { error } = await supabase
-        .from('system_settings')
+        .from('instance_settings')
         .delete()
         .in('setting_key', ['whatsapp_instance', 'whatsapp_token', 'whatsapp_instance_en', 'whatsapp_token_en']);
 

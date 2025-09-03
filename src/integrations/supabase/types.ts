@@ -14,7 +14,158 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      instance_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          id: string
+          message_content: string
+          process_id: string | null
+          recipient_phone: string
+          sent_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          message_content: string
+          process_id?: string | null
+          recipient_phone: string
+          sent_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          message_content?: string
+          process_id?: string | null
+          recipient_phone?: string
+          sent_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      processes: {
+        Row: {
+          client_name: string
+          color: string
+          contact_type: string
+          country_code: string
+          created_at: string
+          id: string
+          imei: string
+          iphone_model: string
+          lost_mode: boolean
+          owner_name: string
+          phone_number: string
+          serial_number: string
+          storage: string
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          client_name: string
+          color: string
+          contact_type?: string
+          country_code: string
+          created_at?: string
+          id?: string
+          imei: string
+          iphone_model: string
+          lost_mode?: boolean
+          owner_name: string
+          phone_number: string
+          serial_number: string
+          storage: string
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          client_name?: string
+          color?: string
+          contact_type?: string
+          country_code?: string
+          created_at?: string
+          id?: string
+          imei?: string
+          iphone_model?: string
+          lost_mode?: boolean
+          owner_name?: string
+          phone_number?: string
+          serial_number?: string
+          storage?: string
+          updated_at?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          credits: number
+          email: string
+          expire_at: string
+          id: string
+          telegram_bot_token: string | null
+          telegram_chat_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits?: number
+          email: string
+          expire_at?: string
+          id?: string
+          telegram_bot_token?: string | null
+          telegram_chat_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits?: number
+          email?: string
+          expire_at?: string
+          id?: string
+          telegram_bot_token?: string | null
+          telegram_chat_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

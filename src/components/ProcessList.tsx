@@ -116,7 +116,8 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       console.log('Processes loaded:', data?.length || 0);
       const processesWithDefaults = data?.map(process => ({
         ...process,
-        lost_mode: Boolean((process as any).lost_mode)
+        lost_mode: Boolean((process as any).lost_mode),
+        status: (process as any).status || 'nuevo'
       })) || [];
       
       setProcesses(processesWithDefaults);
@@ -221,7 +222,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         : ['whatsapp_instance_en', 'whatsapp_token_en'];
 
       const { data: settings } = await supabase
-        .from('system_settings')
+        .from('instance_settings')
         .select('*')
         .in('setting_key', settingsKeys);
 
