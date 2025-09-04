@@ -13,5 +13,22 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true,
   }
 });
+
+// Clear any corrupted session on initialization
+const clearCorruptedSession = async () => {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error && error.message.includes('Invalid Refresh Token')) {
+      await supabase.auth.signOut();
+      console.log('Cleared corrupted session');
+    }
+  } catch (e) {
+    console.log('Session check failed, clearing...', e);
+    await supabase.auth.signOut();
+  }
+};
+
+clearCorruptedSession();
