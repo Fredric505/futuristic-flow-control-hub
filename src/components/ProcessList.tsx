@@ -65,6 +65,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
   useEffect(() => {
     if (processes.length > 0) {
       checkImageAvailability(processes);
+      loadUserCredits(); // Reload credits when processes change
     }
   }, [processes]);
 
@@ -73,11 +74,20 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const { data: profile } = await supabase
+      console.log('Loading credits for user:', session.user.id);
+      
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select('credits')
-        .eq('id', session.user.id)
-        .single();
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      console.log('Credits query result:', { profile, error });
+
+      if (error) {
+        console.error('Error loading user credits:', error);
+        return;
+      }
 
       setUserCredits(profile?.credits || 0);
     } catch (error) {
@@ -307,7 +317,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
             credits: userCredits - 1,
             updated_at: new Date().toISOString()
           })
-          .eq('id', user.id);
+          .eq('user_id', user.id);
 
         if (creditError) {
           console.error('Error updating credits:', creditError);
