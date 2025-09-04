@@ -137,19 +137,6 @@ const Login = () => {
               {isLoading ? "Autenticando..." : "ACCEDER AL SISTEMA"}
             </Button>
             
-            <Button 
-              type="button"
-              variant="outline" 
-              className="w-full mt-2 bg-red-600/20 border-red-500/50 text-red-300 hover:bg-red-600/30"
-              onClick={async () => {
-                await supabase.auth.signOut();
-                localStorage.clear();
-                sessionStorage.clear();
-                window.location.reload();
-              }}
-            >
-              Limpiar Sesión Corrupta
-            </Button>
           </form>
         </CardContent>
       </Card>

@@ -87,6 +87,7 @@ export type Database = {
           owner_name: string
           phone_number: string
           serial_number: string
+          status: string
           storage: string
           updated_at: string
           url: string
@@ -105,6 +106,7 @@ export type Database = {
           owner_name: string
           phone_number: string
           serial_number: string
+          status?: string
           storage: string
           updated_at?: string
           url: string
@@ -123,6 +125,7 @@ export type Database = {
           owner_name?: string
           phone_number?: string
           serial_number?: string
+          status?: string
           storage?: string
           updated_at?: string
           url?: string
