@@ -14,158 +14,176 @@ export type Database = {
   }
   public: {
     Tables: {
-      instance_settings: {
-        Row: {
-          id: string
-          setting_key: string
-          setting_value: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          setting_key: string
-          setting_value: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          setting_key?: string
-          setting_value?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       messages: {
         Row: {
           id: string
-          message_content: string
-          process_id: string | null
-          recipient_phone: string
-          sent_at: string
-          status: string
+          message_content: string | null
+          process_id: string
+          recipient_phone: string | null
+          sent_at: string | null
+          status: string | null
           user_id: string
         }
         Insert: {
           id?: string
-          message_content: string
-          process_id?: string | null
-          recipient_phone: string
-          sent_at?: string
-          status?: string
+          message_content?: string | null
+          process_id: string
+          recipient_phone?: string | null
+          sent_at?: string | null
+          status?: string | null
           user_id: string
         }
         Update: {
           id?: string
-          message_content?: string
-          process_id?: string | null
-          recipient_phone?: string
-          sent_at?: string
-          status?: string
+          message_content?: string | null
+          process_id?: string
+          recipient_phone?: string | null
+          sent_at?: string | null
+          status?: string | null
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "messages_process_id_fkey"
+            foreignKeyName: "messages_process_fkey"
             columns: ["process_id"]
             isOneToOne: false
             referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_user_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
       }
       processes: {
         Row: {
-          client_name: string
-          color: string
-          contact_type: string
-          country_code: string
+          client_name: string | null
+          client_subdomain: string | null
+          color: string | null
+          contact_type: string | null
+          country_code: string | null
           created_at: string
           id: string
-          imei: string
-          iphone_model: string
-          lost_mode: boolean
-          owner_name: string
-          phone_number: string
-          serial_number: string
-          status: string
-          storage: string
+          imei: string | null
+          iphone_model: string | null
+          lost_mode: boolean | null
+          owner_name: string | null
+          phone_number: string | null
+          serial_number: string | null
+          status: string | null
+          storage: string | null
           updated_at: string
-          url: string
+          url: string | null
           user_id: string
         }
         Insert: {
-          client_name: string
-          color: string
-          contact_type?: string
-          country_code: string
+          client_name?: string | null
+          client_subdomain?: string | null
+          color?: string | null
+          contact_type?: string | null
+          country_code?: string | null
           created_at?: string
           id?: string
-          imei: string
-          iphone_model: string
-          lost_mode?: boolean
-          owner_name: string
-          phone_number: string
-          serial_number: string
-          status?: string
-          storage: string
+          imei?: string | null
+          iphone_model?: string | null
+          lost_mode?: boolean | null
+          owner_name?: string | null
+          phone_number?: string | null
+          serial_number?: string | null
+          status?: string | null
+          storage?: string | null
           updated_at?: string
-          url: string
+          url?: string | null
           user_id: string
         }
         Update: {
-          client_name?: string
-          color?: string
-          contact_type?: string
-          country_code?: string
+          client_name?: string | null
+          client_subdomain?: string | null
+          color?: string | null
+          contact_type?: string | null
+          country_code?: string | null
           created_at?: string
           id?: string
-          imei?: string
-          iphone_model?: string
-          lost_mode?: boolean
-          owner_name?: string
-          phone_number?: string
-          serial_number?: string
-          status?: string
-          storage?: string
+          imei?: string | null
+          iphone_model?: string | null
+          lost_mode?: boolean | null
+          owner_name?: string | null
+          phone_number?: string | null
+          serial_number?: string | null
+          status?: string | null
+          storage?: string | null
           updated_at?: string
-          url?: string
+          url?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "processes_user_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
           created_at: string
           credits: number
           email: string
-          expire_at: string
+          expiration_date: string | null
           id: string
           telegram_bot_token: string | null
           telegram_chat_id: string | null
           updated_at: string
-          user_id: string
         }
         Insert: {
           created_at?: string
           credits?: number
           email: string
-          expire_at?: string
+          expiration_date?: string | null
           id?: string
           telegram_bot_token?: string | null
           telegram_chat_id?: string | null
           updated_at?: string
-          user_id: string
         }
         Update: {
           created_at?: string
           credits?: number
           email?: string
-          expire_at?: string
+          expiration_date?: string | null
           id?: string
           telegram_bot_token?: string | null
           telegram_chat_id?: string | null
           updated_at?: string
-          user_id?: string
+        }
+        Relationships: []
+      }
+      system_settings: {
+        Row: {
+          created_at: string
+          id: string
+          setting_key: string
+          setting_value: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          setting_key: string
+          setting_value?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          setting_key?: string
+          setting_value?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
