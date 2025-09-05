@@ -59,11 +59,11 @@ const Login = () => {
         if (email !== 'fredric@gmail.com') {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('expire_at')
+            .select('expiration_date')
             .eq('id', data.user.id)
             .single();
 
-          if (profile && profile.expire_at && new Date() > new Date(profile.expire_at)) {
+          if (profile && profile.expiration_date && new Date() > new Date(profile.expiration_date)) {
             await supabase.auth.signOut();
             toast({
               title: "Cuenta expirada",

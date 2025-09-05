@@ -79,7 +79,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('credits')
-        .eq('user_id', session.user.id)
+        .eq('id', session.user.id)
         .maybeSingle();
 
       console.log('Credits query result:', { profile, error });
@@ -232,7 +232,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         : ['whatsapp_instance_en', 'whatsapp_token_en'];
 
       const { data: settings } = await supabase
-        .from('instance_settings')
+        .from('system_settings')
         .select('*')
         .in('setting_key', settingsKeys);
 
@@ -317,7 +317,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
             credits: userCredits - 1,
             updated_at: new Date().toISOString()
           })
-          .eq('user_id', user.id);
+          .eq('id', user.id);
 
         if (creditError) {
           console.error('Error updating credits:', creditError);
