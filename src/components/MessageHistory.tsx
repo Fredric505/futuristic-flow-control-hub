@@ -46,7 +46,7 @@ const MessageHistory = () => {
           )
         `)
         .eq('user_id', user.id)
-        .order('sent_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error loading messages:', error);
@@ -100,10 +100,10 @@ const MessageHistory = () => {
                     Para: {message.recipient_phone}
                   </p>
                   <p className="text-blue-200/70 text-xs">
-                    {formatDistanceToNow(new Date(message.sent_at), { 
+                    {message.sent_at ? formatDistanceToNow(new Date(message.sent_at), { 
                       addSuffix: true, 
                       locale: es 
-                    })}
+                    }) : 'Fecha no disponible'}
                   </p>
                 </div>
                 <Badge 
