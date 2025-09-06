@@ -333,7 +333,8 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
             process_id: process.id,
             message_content: message,
             recipient_phone: `${process.country_code}${process.phone_number}`,
-            status: 'sent'
+            status: 'sent',
+            sent_at: new Date().toISOString()
           });
 
         if (messageError) {
