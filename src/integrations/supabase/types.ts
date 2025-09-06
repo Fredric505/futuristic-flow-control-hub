@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       messages: {
         Row: {
+          created_at: string
           id: string
           message_content: string | null
           process_id: string
@@ -25,6 +26,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          created_at?: string
           id?: string
           message_content?: string | null
           process_id: string
@@ -34,6 +36,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          created_at?: string
           id?: string
           message_content?: string | null
           process_id?: string
@@ -192,7 +195,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin_user: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
