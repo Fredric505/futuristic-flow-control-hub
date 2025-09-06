@@ -185,12 +185,9 @@ const AdminMessageHistory = () => {
           *,
           processes (
             client_name
-          ),
-          profiles (
-            email
           )
         `)
-        .order('created_at', { ascending: false });
+        .order('sent_at', { ascending: false });
 
       if (error) {
         console.error('Error loading messages:', error);
@@ -330,10 +327,10 @@ const AdminMessageHistory = () => {
                       Usuario: {message.profiles?.email || 'Usuario desconocido'}
                     </p>
                     <p className="text-blue-200/70 text-xs">
-                      {message.sent_at ? formatDistanceToNow(new Date(message.sent_at), { 
+                      {formatDistanceToNow(new Date(message.sent_at), { 
                         addSuffix: true, 
                         locale: es 
-                      }) : 'Fecha no disponible'}
+                      })}
                     </p>
                   </div>
                   <Badge 
