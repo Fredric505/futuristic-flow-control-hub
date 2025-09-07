@@ -58,10 +58,10 @@ serve(async (req) => {
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
       .insert({
-        user_id: authData.user.id,
+        id: authData.user.id,
         email: email,
         credits: parseInt(credits) || 0,
-        expire_at: expirationDate || null,
+        expiration_date: expirationDate || null,
       });
 
     if (profileError) {

