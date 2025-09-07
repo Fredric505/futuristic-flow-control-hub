@@ -34,6 +34,8 @@ serve(async (req) => {
       console.log(`📋 Content-Type: ${req.headers.get('content-type')}`);
       console.log(`🌐 User-Agent: ${req.headers.get('user-agent')}`);
       console.log(`🔍 Request URL: ${req.url}`);
+      console.log(`🔑 Authorization header: ${req.headers.get('authorization') ? 'Present' : 'Missing'}`);
+      console.log(`📏 Body length: ${body.length} characters`);
       
       if (!body || body.trim() === '') {
         console.error('❌ Empty request body received');
@@ -578,13 +580,26 @@ serve(async (req) => {
     const process = matchedProcess;
     const profile = process.profiles;
 
+    
     console.log('✅ PROCESS FOUND:', {
       process_id: process.id,
       client_name: process.client_name,
+      iphone_model: process.iphone_model,
+      imei: process.imei,
+      serial_number: process.serial_number,
+      owner_name: process.owner_name,
       user_id: process.user_id,
       matched_pattern: matchedPattern,
       has_bot_token: !!profile.telegram_bot_token,
-      has_chat_id: !!profile.telegram_chat_id
+      has_chat_id: !!profile.telegram_chat_id,
+      full_process: process
+    });
+
+    console.log('📞 PARSED PHONE AND MESSAGE:', {
+      original_phone: phoneNumber,
+      original_message: messageText,
+      phone_length: phoneNumber.length,
+      message_length: messageText.length
     });
 
     // Verificar configuración de Telegram
