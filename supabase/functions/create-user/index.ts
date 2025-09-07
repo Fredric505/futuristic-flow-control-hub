@@ -54,15 +54,14 @@ serve(async (req) => {
 
     console.log("User created successfully:", authData.user.id);
 
-    // Create profile with credits and expiration
+    // Update profile with credits and expiration (profile already created by trigger)
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
-      .insert({
-        id: authData.user.id,
-        email: email,
+      .update({
         credits: parseInt(credits) || 0,
         expiration_date: expirationDate || null,
-      });
+      })
+      .eq('id', authData.user.id);
 
     if (profileError) {
       console.error("Profile error:", profileError);
