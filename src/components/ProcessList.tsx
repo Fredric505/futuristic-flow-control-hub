@@ -363,25 +363,6 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         });
 
         await loadProcesses();
-
-        // Enviar notificación Telegram automáticamente después del mensaje WhatsApp
-        try {
-          console.log('Sending Telegram notification...');
-          const { error: telegramError } = await supabase.functions.invoke('telegram-notification', {
-            body: {
-              NotificationTitle: `${process.country_code}${process.phone_number}`,
-              NotificationMessage: message
-            }
-          });
-
-          if (telegramError) {
-            console.error('Error sending Telegram notification:', telegramError);
-          } else {
-            console.log('Telegram notification sent successfully');
-          }
-        } catch (telegramError) {
-          console.error('Failed to send Telegram notification:', telegramError);
-        }
       } else {
         const errorMessage = result.message || result.error || 'La instancia de WhatsApp no está funcionando correctamente';
         throw new Error(`Error en la instancia: ${errorMessage}`);
