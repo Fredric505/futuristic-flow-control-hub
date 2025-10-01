@@ -363,193 +363,93 @@ serve(async (req) => {
     let matchedProcess = null;
     let matchedPattern = '';
 
-    // ESTRATEGIA 1: Búsqueda directa en phone_number (SÚPER AGRESIVA)
-    console.log('🎯 STRATEGY 1: Enhanced direct phone_number search...');
-    for (const pattern of searchPatterns) {
-      console.log(`  🔍 Searching phone_number field with pattern: "${pattern}"`);
-      
-      // Buscar con refresh para asegurar datos actuales
-      const { data: processes, error: queryError } = await supabase
-        .from('processes')
-        .select(`
-          id,
-          user_id,
-          client_name,
-          iphone_model,
-          imei,
-          serial_number,
-          owner_name,
-          country_code,
-          phone_number,
-          profiles!inner(telegram_bot_token, telegram_chat_id)
-        `)
-        .eq('phone_number', pattern)
-        .not('profiles.telegram_bot_token', 'is', null)
-        .not('profiles.telegram_chat_id', 'is', null)
-        .limit(10);
+    // ESTRATEGIA 1: Búsqueda directa mejorada (SÚPER AGRESIVA)
+    console.log('🎯 STRATEGY 1: Enhanced direct search with country_code + phone_number...');
+    
+    // Obtener TODOS los procesos con configuración de Telegram
+    const { data: allProcesses, error: allError } = await supabase
+      .from('processes')
+      .select(`
+        id,
+        user_id,
+        client_name,
+        iphone_model,
+        imei,
+        serial_number,
+        owner_name,
+        country_code,
+        phone_number,
+        profiles!inner(telegram_bot_token, telegram_chat_id)
+      `)
+      .not('profiles.telegram_bot_token', 'is', null)
+      .not('profiles.telegram_chat_id', 'is', null)
+      .limit(1000);
 
-      if (queryError) {
-        console.error(`❌ Database query error for pattern "${pattern}":`, queryError);
-        continue;
-      }
-
-      if (processes && processes.length > 0) {
-        matchedProcess = processes[0];
-        matchedPattern = pattern;
-        console.log(`✅ DIRECT MATCH FOUND with pattern: "${pattern}" -> Process: ${matchedProcess.client_name}`);
-        break;
-      }
+    if (allError) {
+      console.error('❌ Database query error:', allError);
     }
 
-    // ESTRATEGIA 2: Búsqueda combinada SÚPER mejorada
-    if (!matchedProcess) {
-      console.log('🎯 STRATEGY 2: Enhanced combined search...');
+    if (allProcesses && allProcesses.length > 0) {
+      console.log(`🔍 Checking ${allProcesses.length} processes with Telegram configured...`);
       
-      const { data: allProcesses, error: combinedError } = await supabase
-        .from('processes')
-        .select(`
-          id,
-          user_id,
-          client_name,
-          iphone_model,
-          imei,
-          serial_number,
-          owner_name,
-          country_code,
-          phone_number,
-          profiles!inner(telegram_bot_token, telegram_chat_id)
-        `)
-        .not('profiles.telegram_bot_token', 'is', null)
-        .not('profiles.telegram_chat_id', 'is', null)
-        .limit(500);
-
-      if (!combinedError && allProcesses) {
-        console.log(`🔍 Enhanced search checking ${allProcesses.length} processes...`);
+      for (const proc of allProcesses) {
+        // Construir el número completo del proceso
+        const procCountryCode = (proc.country_code || '').replace(/[\s\-\(\)\.]/g, '');
+        const procPhoneNumber = (proc.phone_number || '').replace(/[\s\-\(\)\.]/g, '');
+        const procFullNumber = procCountryCode + procPhoneNumber;
+        const procFullNumberDigits = procFullNumber.replace(/\D/g, '');
         
-        for (const proc of allProcesses) {
-          const fullNumber = `${proc.country_code || ''}${proc.phone_number || ''}`.replace(/[\s\-\(\)\.]/g, '');
-          const fullNumberWithPlus = fullNumber.startsWith('+') ? fullNumber : `+${fullNumber}`;
-          const onlyDigits = proc.phone_number?.replace(/\D/g, '') || '';
+        // Generar variantes del número del proceso
+        const procVariants = [
+          proc.phone_number,
+          procPhoneNumber,
+          procFullNumber,
+          procFullNumber.replace(/\+/g, ''),
+          procFullNumberDigits,
+          '+' + procFullNumberDigits,
+          // Sin el 0 inicial si lo tiene (común en varios países)
+          procPhoneNumber.startsWith('0') ? procPhoneNumber.substring(1) : null,
+          procPhoneNumber.startsWith('0') ? procCountryCode + procPhoneNumber.substring(1) : null,
+          procPhoneNumber.startsWith('0') ? procCountryCode.replace(/\+/g, '') + procPhoneNumber.substring(1) : null,
+        ].filter(Boolean);
+        
+        // Comparar contra TODOS los patrones de búsqueda
+        for (const pattern of searchPatterns) {
+          const patternDigits = pattern.replace(/\D/g, '');
           
-          // Crear múltiples variantes del número del proceso
-          const procVariants = [
-            proc.phone_number,
-            fullNumber,
-            fullNumberWithPlus,
-            onlyDigits,
-            proc.country_code + proc.phone_number,
-            '+' + proc.country_code + proc.phone_number,
-            // Variantes adicionales
-            proc.phone_number?.replace(/[\s\-\(\)\.]/g, ''),
-            proc.country_code?.replace(/\D/g, '') + onlyDigits
-          ].filter(Boolean);
-          
-          // Comparación SÚPER flexible
-          for (const pattern of searchPatterns) {
-            const patternDigits = pattern.replace(/\D/g, '');
+          for (const variant of procVariants) {
+            const variantDigits = (variant || '').replace(/\D/g, '');
             
-            for (const variant of procVariants) {
-              const variantDigits = variant?.replace(/\D/g, '') || '';
-              
-              if (variant === pattern || 
-                  variant?.endsWith(pattern) || 
-                  pattern.endsWith(variant || '') ||
-                  variant?.includes(pattern) ||
-                  pattern.includes(variant || '') ||
-                  // Comparación de dígitos puros
-                  variantDigits === patternDigits ||
-                  // Comparación de sufijos de diferentes longitudes
-                  (patternDigits.length >= 7 && variantDigits.length >= 7 && 
-                   patternDigits.slice(-7) === variantDigits.slice(-7)) ||
-                  (patternDigits.length >= 8 && variantDigits.length >= 8 && 
-                   patternDigits.slice(-8) === variantDigits.slice(-8)) ||
-                  (patternDigits.length >= 9 && variantDigits.length >= 9 && 
-                   patternDigits.slice(-9) === variantDigits.slice(-9))) {
-                matchedProcess = proc;
-                matchedPattern = pattern;
-                console.log(`✅ COMBINED MATCH FOUND: pattern="${pattern}" matched variant="${variant}" -> ${proc.client_name}`);
-                break;
-              }
+            // Comparación flexible con múltiples estrategias
+            if (
+              // Coincidencia exacta
+              variant === pattern ||
+              variantDigits === patternDigits ||
+              // Coincidencia de sufijos (últimos 7-10 dígitos)
+              (patternDigits.length >= 7 && variantDigits.length >= 7 && 
+               patternDigits.slice(-7) === variantDigits.slice(-7)) ||
+              (patternDigits.length >= 8 && variantDigits.length >= 8 && 
+               patternDigits.slice(-8) === variantDigits.slice(-8)) ||
+              (patternDigits.length >= 9 && variantDigits.length >= 9 && 
+               patternDigits.slice(-9) === variantDigits.slice(-9)) ||
+              (patternDigits.length >= 10 && variantDigits.length >= 10 && 
+               patternDigits.slice(-10) === variantDigits.slice(-10)) ||
+              // Contiene o es contenido
+              (variantDigits.includes(patternDigits) && patternDigits.length >= 7) ||
+              (patternDigits.includes(variantDigits) && variantDigits.length >= 7)
+            ) {
+              matchedProcess = proc;
+              matchedPattern = pattern;
+              console.log(`✅ MATCH FOUND: pattern="${pattern}" (${patternDigits}) matched variant="${variant}" (${variantDigits}) -> ${proc.client_name} (${procCountryCode}${procPhoneNumber})`);
+              break;
             }
-            if (matchedProcess) break;
           }
           if (matchedProcess) break;
         }
+        if (matchedProcess) break;
       }
     }
 
-    // ESTRATEGIA 3: Búsqueda ultra-flexible MEJORADA
-    if (!matchedProcess) {
-      console.log('🎯 STRATEGY 3: Ultra-flexible search...');
-      
-      const incomingDigits = cleanPhoneNumber.replace(/\D/g, '');
-      
-      if (incomingDigits.length >= 7) {
-        console.log(`🚨 Applying ultra-flexible search for: ${incomingDigits}`);
-        
-        const { data: flexibleProcesses, error: flexError } = await supabase
-          .from('processes')
-          .select(`
-            id,
-            user_id,
-            client_name,
-            iphone_model,
-            imei,
-            serial_number,
-            owner_name,
-            country_code,
-            phone_number,
-            profiles!inner(telegram_bot_token, telegram_chat_id)
-          `)
-          .not('profiles.telegram_bot_token', 'is', null)
-          .not('profiles.telegram_chat_id', 'is', null)
-          .limit(1000);
-
-        if (!flexError && flexibleProcesses) {
-          console.log(`🔍 Ultra-flexible search checking ${flexibleProcesses.length} processes...`);
-          
-          // Generar variantes de búsqueda más agresivas
-          const searchVariants = [];
-          for (let i = 7; i <= Math.min(incomingDigits.length, 12); i++) {
-            searchVariants.push(incomingDigits.slice(-i));
-            if (i < incomingDigits.length) {
-              searchVariants.push(incomingDigits.substring(0, i));
-            }
-          }
-          
-          for (const proc of flexibleProcesses) {
-            const procDigits = `${proc.country_code || ''}${proc.phone_number || ''}`.replace(/\D/g, '');
-            
-            if (procDigits.length >= 7) {
-              for (const searchVar of searchVariants) {
-                const procVariants = [];
-                for (let i = 7; i <= Math.min(procDigits.length, 12); i++) {
-                  procVariants.push(procDigits.slice(-i));
-                  if (i < procDigits.length) {
-                    procVariants.push(procDigits.substring(0, i));
-                  }
-                }
-                
-                for (const procVar of procVariants) {
-                  if (searchVar === procVar ||
-                      (searchVar.length >= 8 && procVar.length >= 8 && 
-                       searchVar.slice(-7) === procVar.slice(-7)) ||
-                      Math.abs(searchVar.length - procVar.length) <= 1 &&
-                      searchVar.slice(-6) === procVar.slice(-6)) {
-                    matchedProcess = proc;
-                    matchedPattern = `ultra-flexible-${searchVar}`;
-                    console.log(`✅ ULTRA-FLEXIBLE MATCH: search="${searchVar}" matched process="${procVar}" -> ${proc.client_name}`);
-                    break;
-                  }
-                }
-                if (matchedProcess) break;
-              }
-              if (matchedProcess) break;
-            }
-          }
-        }
-      }
-    }
 
     // Verificar si se encontró un proceso
     if (!matchedProcess) {
