@@ -225,7 +225,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       }
 
       setSendingMessage({ id: process.id, language });
-      console.log(`Sending WhatsApp message for process: ${process.id} in ${language}`);
+      console.log(`Adding message to queue for process: ${process.id} in ${language}`);
 
       const settingsKeys = language === 'spanish' 
         ? ['whatsapp_instance', 'whatsapp_token']
@@ -269,104 +269,53 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       // Usar el generador de mensajes aleatorios
       const message = generateRandomMessage(process, language, battery, delayedTime, formatDate, formatTime);
 
-      let result;
-
-      if (imageExists) {
-        console.log('Sending message with image');
-        const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/image`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            token: token,
-            to: `${process.country_code}${process.phone_number}`,
-            image: imageUrl,
-            caption: message,
-          }),
-        });
-        result = await response.json();
-      } else {
-        console.log('Image not found, sending text only message');
-        const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/chat`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            token: token,
-            to: `${process.country_code}${process.phone_number}`,
-            body: message,
-          }),
-        });
-        result = await response.json();
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('Usuario no autenticado');
       }
 
-      console.log('WhatsApp API response:', result);
-
-      if (result.sent === true || (result.sent === "true")) {
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          throw new Error('Usuario no autenticado');
-        }
-
-        const { error: creditError } = await supabase
-          .from('profiles')
-          .update({ 
-            credits: userCredits - 1,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id);
-
-        if (creditError) {
-          console.error('Error updating credits:', creditError);
-          throw new Error('Error al descontar créditos');
-        }
-
-        setUserCredits(prev => prev - 1);
-
-        const { error: messageError } = await supabase
-          .from('messages')
-          .insert({
-            user_id: user.id,
-            process_id: process.id,
-            message_content: message,
-            recipient_phone: `${process.country_code}${process.phone_number}`,
-            status: 'sent',
-            sent_at: new Date().toISOString()
-          });
-
-        if (messageError) {
-          console.error('Error saving message:', messageError);
-        }
-
-        const { error: updateError } = await supabase
-          .from('processes')
-          .update({ 
-            status: 'enviado',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', process.id);
-
-        if (updateError) {
-          console.error('Error updating process status:', updateError);
-        }
-
-        const messageType = imageExists ? 'con imagen' : 'solo texto (imagen no disponible)';
-        const languageText = language === 'spanish' ? 'español' : 'inglés';
-        const contactTypeText = process.contact_type === 'propietario' ? 'propietario' : 'contacto de emergencia';
-        
-        toast({
-          title: "Mensaje enviado",
-          description: `Mensaje ${messageType} enviado en ${languageText} a ${process.client_name} (${contactTypeText}). Batería: ${battery}%. Créditos restantes: ${userCredits - 1}. Variación anti-spam aplicada.`,
+      // Add message to queue instead of sending directly
+      const { error: queueError } = await supabase
+        .from('message_queue')
+        .insert({
+          user_id: user.id,
+          process_id: process.id,
+          message_content: message,
+          recipient_phone: `${process.country_code}${process.phone_number}`,
+          language: language,
+          image_url: imageExists ? imageUrl : null,
+          status: 'pending'
         });
 
-        await loadProcesses();
-      } else {
-        const errorMessage = result.message || result.error || 'La instancia de WhatsApp no está funcionando correctamente';
-        throw new Error(`Error en la instancia: ${errorMessage}`);
+      if (queueError) {
+        console.error('Error adding to queue:', queueError);
+        throw new Error('Error al agregar mensaje a la cola');
       }
+
+      const { error: updateError } = await supabase
+        .from('processes')
+        .update({ 
+          status: 'en cola',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', process.id);
+
+      if (updateError) {
+        console.error('Error updating process status:', updateError);
+      }
+
+      const messageType = imageExists ? 'con imagen' : 'solo texto (imagen no disponible)';
+      const languageText = language === 'spanish' ? 'español' : 'inglés';
+      const contactTypeText = process.contact_type === 'propietario' ? 'propietario' : 'contacto de emergencia';
+      
+      toast({
+        title: "Mensaje agregado a la cola",
+        description: `Mensaje ${messageType} en ${languageText} para ${process.client_name} (${contactTypeText}). Se enviará automáticamente en 5 minutos. Batería: ${battery}%.`,
+      });
+
+      await loadProcesses();
     } catch (error: any) {
       console.error('Error sending WhatsApp message:', error);
       toast({

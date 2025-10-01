@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageSquare, Smartphone, Bell } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageSquare, Smartphone, Bell, Clock } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
@@ -15,6 +15,7 @@ import MessageHistory from '@/components/MessageHistory';
 import AdminMessageHistory from '@/components/AdminMessageHistory';
 import TelegramBotConfig from '@/components/TelegramBotConfig';
 import BulkNotifications from '@/components/BulkNotifications';
+import MessageQueue from '@/components/MessageQueue';
 import MobileSidebar from '@/components/MobileSidebar';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -84,6 +85,7 @@ const AdminDashboard = () => {
     { id: 'dashboard', icon: Home, label: 'Dashboard', description: 'Pantalla de inicio' },
     { id: 'add-process', icon: Plus, label: 'Agregar Proceso', description: 'Agregar formulario para luego guardar' },
     { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Mis procesos guardados y listos para enviar' },
+    { id: 'message-queue', icon: Clock, label: 'Cola de Mensajes', description: 'Ver y gestionar mensajes pendientes' },
     { id: 'history', icon: History, label: 'Historial', description: 'Mi historial de mensajes enviados' },
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
     { id: 'telegram-config', icon: MessageSquare, label: 'Config. Telegram', description: 'Configurar bot de notificaciones' },
@@ -174,6 +176,9 @@ const AdminDashboard = () => {
       
       case 'view-processes':
         return <ProcessList userType="admin" />;
+      
+      case 'message-queue':
+        return <MessageQueue />;
       
       case 'history':
         return <MessageHistory />;

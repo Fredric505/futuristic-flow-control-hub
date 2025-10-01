@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      message_queue: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string | null
+          language: string
+          message_content: string
+          process_id: string
+          recipient_phone: string
+          scheduled_for: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          language?: string
+          message_content: string
+          process_id: string
+          recipient_phone: string
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          language?: string
+          message_content?: string
+          process_id?: string
+          recipient_phone?: string
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_queue_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           created_at: string
@@ -187,6 +240,48 @@ export type Database = {
           setting_key?: string
           setting_value?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_telegram_log: {
+        Row: {
+          forwarded_at: string
+          id: number
+          sender_phone: string | null
+          telegram_message_id: number | null
+          whatsapp_payload: Json
+        }
+        Insert: {
+          forwarded_at?: string
+          id?: never
+          sender_phone?: string | null
+          telegram_message_id?: number | null
+          whatsapp_payload: Json
+        }
+        Update: {
+          forwarded_at?: string
+          id?: never
+          sender_phone?: string | null
+          telegram_message_id?: number | null
+          whatsapp_payload?: Json
+        }
+        Relationships: []
+      }
+      whatsapp_telegram_map: {
+        Row: {
+          created_at: string | null
+          telegram_user_id: number
+          whatsapp_phone: string
+        }
+        Insert: {
+          created_at?: string | null
+          telegram_user_id: number
+          whatsapp_phone: string
+        }
+        Update: {
+          created_at?: string | null
+          telegram_user_id?: number
+          whatsapp_phone?: string
         }
         Relationships: []
       }
