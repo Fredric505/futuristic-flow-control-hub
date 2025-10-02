@@ -17,8 +17,11 @@ Deno.serve(async (req) => {
 
     console.log('Starting message queue processing...');
 
-    // Get the next pending message (oldest first)
-    const { data: queuedMessage, error: fetchError } = await supabase
+    // Check if a specific message ID was provided
+    const body = await req.json().catch(() => ({}));
+    const messageId = body.messageId;
+
+    let query = supabase
       .from('message_queue')
       .select(`
         *,
@@ -34,16 +37,18 @@ Deno.serve(async (req) => {
           imei,
           serial_number,
           url
-        ),
-        profiles (
-          email,
-          credits
         )
       `)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
+      .eq('status', 'pending');
+
+    // If specific message ID provided, get that one, otherwise get oldest
+    if (messageId) {
+      query = query.eq('id', messageId);
+    } else {
+      query = query.order('created_at', { ascending: true }).limit(1);
+    }
+
+    const { data: queuedMessage, error: fetchError } = await query.maybeSingle();
 
     if (fetchError) {
       console.error('Error fetching queued message:', fetchError);
@@ -60,8 +65,20 @@ Deno.serve(async (req) => {
 
     console.log('Processing message:', queuedMessage.id);
 
+    // Get user profile separately
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('credits, email, telegram_bot_token, telegram_chat_id')
+      .eq('id', queuedMessage.user_id)
+      .single();
+
+    if (profileError) {
+      console.error('Error fetching user profile:', profileError);
+      throw profileError;
+    }
+
     // Check if user has credits
-    const userCredits = queuedMessage.profiles?.credits || 0;
+    const userCredits = userProfile?.credits || 0;
     if (userCredits <= 0) {
       console.log('User has no credits, marking as failed');
       await supabase
@@ -200,6 +217,28 @@ Deno.serve(async (req) => {
         .eq('id', queuedMessage.id);
 
       console.log('Message sent successfully');
+
+      // Send Telegram notification if configured
+      if (userProfile.telegram_bot_token && userProfile.telegram_chat_id) {
+        try {
+          const telegramMessage = `✅ *Mensaje Enviado*\n\nCliente: ${queuedMessage.processes?.client_name}\nTeléfono: ${queuedMessage.recipient_phone}\nIdioma: ${queuedMessage.language}\n\nCréditos restantes: ${userCredits - 1}`;
+          
+          await fetch(`https://api.telegram.org/bot${userProfile.telegram_bot_token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: userProfile.telegram_chat_id,
+              text: telegramMessage,
+              parse_mode: 'Markdown'
+            })
+          });
+          
+          console.log('Telegram notification sent');
+        } catch (telegramError) {
+          console.error('Error sending Telegram notification:', telegramError);
+          // Don't fail the whole process if Telegram notification fails
+        }
+      }
 
       return new Response(
         JSON.stringify({ 
