@@ -27,6 +27,7 @@ interface Process {
   created_at: string;
   updated_at: string;
   user_id: string;
+  template_id?: string | null;
 }
 
 interface ProcessListProps {
@@ -264,10 +265,40 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       const imageExists = imageStatus[process.id] !== undefined ? imageStatus[process.id] : await checkImageExists(imageUrl);
       console.log('Image exists:', imageExists);
 
-      const { battery, delayedTime, formatDate, formatTime } = generateDynamicValues();
+      const fullPhoneNumber = `${process.country_code}${process.phone_number}`;
+      
+      let messageContent: string;
 
-      // Usar el generador de mensajes aleatorios
-      const message = generateRandomMessage(process, language, battery, delayedTime, formatDate, formatTime);
+      // Check if process has a custom template
+      if (process.template_id) {
+        const { data: template } = await supabase
+          .from('message_templates')
+          .select('template_content')
+          .eq('id', process.template_id)
+          .single();
+
+        if (template) {
+          // Replace variables in template
+          messageContent = template.template_content
+            .replace(/\{client_name\}/g, process.client_name || '')
+            .replace(/\{phone_number\}/g, process.phone_number || '')
+            .replace(/\{iphone_model\}/g, process.iphone_model || '')
+            .replace(/\{storage\}/g, process.storage || '')
+            .replace(/\{color\}/g, process.color || '')
+            .replace(/\{imei\}/g, process.imei || '')
+            .replace(/\{serial_number\}/g, process.serial_number || '')
+            .replace(/\{owner_name\}/g, process.owner_name || '')
+            .replace(/\{url\}/g, process.url || '');
+        } else {
+          // Fallback to random message if template not found
+          const { battery, delayedTime, formatDate, formatTime } = generateDynamicValues();
+          messageContent = generateRandomMessage(process, language, battery, delayedTime, formatDate, formatTime);
+        }
+      } else {
+        // Use random message generation
+        const { battery, delayedTime, formatDate, formatTime } = generateDynamicValues();
+        messageContent = generateRandomMessage(process, language, battery, delayedTime, formatDate, formatTime);
+      }
 
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
@@ -282,10 +313,11 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         .insert({
           user_id: user.id,
           process_id: process.id,
-          message_content: message,
-          recipient_phone: `${process.country_code}${process.phone_number}`,
+          message_content: messageContent,
+          recipient_phone: fullPhoneNumber,
           language: language,
           image_url: imageExists ? imageUrl : null,
+          template_id: process.template_id || null,
           status: 'pending'
         });
 
@@ -306,13 +338,15 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         console.error('Error updating process status:', updateError);
       }
 
+      const { battery } = generateDynamicValues();
       const messageType = imageExists ? 'con imagen' : 'solo texto (imagen no disponible)';
       const languageText = language === 'spanish' ? 'español' : 'inglés';
       const contactTypeText = process.contact_type === 'propietario' ? 'propietario' : 'contacto de emergencia';
+      const templateText = process.template_id ? ' (usando plantilla personalizada)' : '';
       
       toast({
         title: "Mensaje agregado a la cola",
-        description: `Mensaje ${messageType} en ${languageText} para ${process.client_name} (${contactTypeText}). Se enviará automáticamente en 5 minutos. Batería: ${battery}%.`,
+        description: `Mensaje ${messageType} en ${languageText} para ${process.client_name} (${contactTypeText})${templateText}. Se enviará automáticamente en 5 minutos. Batería: ${battery}%.`,
       });
 
       await loadProcesses();

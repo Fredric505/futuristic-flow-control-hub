@@ -77,6 +77,36 @@ Deno.serve(async (req) => {
       throw profileError;
     }
 
+    // If message has a template_id but no content was generated yet, generate it now
+    if (queuedMessage.template_id && queuedMessage.message_content.includes('{')) {
+      console.log('Generating message from template:', queuedMessage.template_id);
+      
+      const { data: template } = await supabase
+        .from('message_templates')
+        .select('template_content')
+        .eq('id', queuedMessage.template_id)
+        .single();
+
+      if (template) {
+        // Replace variables in template with actual process data
+        queuedMessage.message_content = template.template_content
+          .replace(/\{client_name\}/g, queuedMessage.processes?.client_name || '')
+          .replace(/\{phone_number\}/g, queuedMessage.processes?.phone_number || '')
+          .replace(/\{iphone_model\}/g, queuedMessage.processes?.iphone_model || '')
+          .replace(/\{storage\}/g, queuedMessage.processes?.storage || '')
+          .replace(/\{color\}/g, queuedMessage.processes?.color || '')
+          .replace(/\{imei\}/g, queuedMessage.processes?.imei || '')
+          .replace(/\{serial_number\}/g, queuedMessage.processes?.serial_number || '')
+          .replace(/\{owner_name\}/g, queuedMessage.processes?.owner_name || '')
+          .replace(/\{url\}/g, queuedMessage.processes?.url || '');
+      }
+    }
+
+    if (profileError) {
+      console.error('Error fetching user profile:', profileError);
+      throw profileError;
+    }
+
     // Check if user has credits
     const userCredits = userProfile?.credits || 0;
     if (userCredits <= 0) {

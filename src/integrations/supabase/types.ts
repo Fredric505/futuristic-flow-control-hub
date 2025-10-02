@@ -26,6 +26,7 @@ export type Database = {
           scheduled_for: string | null
           sent_at: string | null
           status: string
+          template_id: string | null
           updated_at: string
           user_id: string
         }
@@ -40,6 +41,7 @@ export type Database = {
           scheduled_for?: string | null
           sent_at?: string | null
           status?: string
+          template_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -54,6 +56,7 @@ export type Database = {
           scheduled_for?: string | null
           sent_at?: string | null
           status?: string
+          template_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -65,7 +68,44 @@ export type Database = {
             referencedRelation: "processes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "message_queue_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "message_templates"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      message_templates: {
+        Row: {
+          created_at: string
+          id: string
+          language: string
+          name: string
+          template_content: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          language?: string
+          name: string
+          template_content: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          language?: string
+          name?: string
+          template_content?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       messages: {
         Row: {
@@ -132,6 +172,7 @@ export type Database = {
           serial_number: string | null
           status: string | null
           storage: string | null
+          template_id: string | null
           updated_at: string
           url: string | null
           user_id: string
@@ -152,6 +193,7 @@ export type Database = {
           serial_number?: string | null
           status?: string | null
           storage?: string | null
+          template_id?: string | null
           updated_at?: string
           url?: string | null
           user_id: string
@@ -172,11 +214,19 @@ export type Database = {
           serial_number?: string | null
           status?: string | null
           storage?: string | null
+          template_id?: string | null
           updated_at?: string
           url?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "processes_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "message_templates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "processes_user_fkey"
             columns: ["user_id"]

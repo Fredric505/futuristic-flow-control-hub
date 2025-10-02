@@ -26,10 +26,29 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
     imei: '',
     serialNumber: '',
     url: '',
-    lostMode: false
+    lostMode: false,
+    templateId: ''
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [templates, setTemplates] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  const fetchTemplates = async () => {
+    try {
+      const { data } = await supabase
+        .from('message_templates')
+        .select('id, name, language')
+        .order('name');
+      
+      setTemplates(data || []);
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+    }
+  };
 
   // Solo países de habla hispana
   const countryCodes = [
@@ -145,6 +164,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
           serial_number: formData.serialNumber,
           url: formData.url || null,
           lost_mode: formData.lostMode,
+          template_id: formData.templateId || null,
           status: 'guardado'
         });
 
@@ -175,7 +195,8 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
           imei: '',
           serialNumber: '',
           url: '',
-          lostMode: false
+          lostMode: false,
+          templateId: ''
         });
       }, 200);
 
@@ -401,6 +422,34 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
               </div>
               <p className="text-xs text-blue-200/60">
                 Selecciona esta opción si el iPhone está en modo perdido para personalizar el mensaje
+              </p>
+            </div>
+
+            {/* Campo opcional para plantilla personalizada */}
+            <div className="space-y-2 md:col-span-2">
+              <Label className="text-blue-200">Plantilla de Mensaje (Opcional)</Label>
+              <SafeSelect
+                value={formData.templateId}
+                onValueChange={(value) => handleSelectChange('templateId', value)}
+                placeholder="Usar mensaje aleatorio (predeterminado)"
+                disabled={isSubmitting}
+                className="bg-white/5 border-blue-500/30 text-white"
+              >
+                <SelectItem value="" className="hover:bg-blue-600/20 focus:bg-blue-600/20">
+                  Mensaje aleatorio (predeterminado)
+                </SelectItem>
+                {templates.map((template) => (
+                  <SelectItem
+                    key={template.id}
+                    value={template.id}
+                    className="hover:bg-blue-600/20 focus:bg-blue-600/20"
+                  >
+                    {template.name} ({template.language === 'spanish' ? 'ES' : 'EN'})
+                  </SelectItem>
+                ))}
+              </SafeSelect>
+              <p className="text-xs text-blue-200/60">
+                Si no seleccionas una plantilla, se enviará un mensaje aleatorio automático
               </p>
             </div>
           </div>

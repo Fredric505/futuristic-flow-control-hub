@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageSquare, Smartphone, Bell, Clock } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageSquare, Smartphone, Bell, Clock, FileEdit } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
@@ -16,6 +16,7 @@ import AdminMessageHistory from '@/components/AdminMessageHistory';
 import TelegramBotConfig from '@/components/TelegramBotConfig';
 import BulkNotifications from '@/components/BulkNotifications';
 import MessageQueue from '@/components/MessageQueue';
+import MessageTemplates from '@/components/MessageTemplates';
 import MobileSidebar from '@/components/MobileSidebar';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -88,6 +89,7 @@ const AdminDashboard = () => {
     { id: 'message-queue', icon: Clock, label: 'Cola de Mensajes', description: 'Ver y gestionar mensajes pendientes' },
     { id: 'history', icon: History, label: 'Historial', description: 'Mi historial de mensajes enviados' },
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
+    { id: 'templates', icon: FileEdit, label: 'Plantillas', description: 'Gestionar plantillas de mensajes' },
     { id: 'telegram-config', icon: MessageSquare, label: 'Config. Telegram', description: 'Configurar bot de notificaciones' },
     { id: 'bulk-notifications', icon: Bell, label: 'Notificaciones Masivas', description: 'Enviar notificaciones a usuarios' },
     { id: 'ifttt-config', icon: Smartphone, label: 'Config. IFTTT', description: 'Configuración del dispositivo de reenvío' },
@@ -191,6 +193,9 @@ const AdminDashboard = () => {
       
       case 'bulk-notifications':
         return <BulkNotifications />;
+      
+      case 'templates':
+        return <MessageTemplates />;
       
       case 'ifttt-config':
         return (
