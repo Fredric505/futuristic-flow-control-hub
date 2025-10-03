@@ -216,13 +216,17 @@ const MessageTemplates = () => {
                   Puedes usar estas variables: {'{client_name}'}, {'{phone_number}'}, {'{iphone_model}'}, {'{storage}'}, 
                   {'{color}'}, {'{imei}'}, {'{serial_number}'}, {'{owner_name}'}, {'{url}'}
                 </p>
+                <p className="text-xs text-blue-300/80 mb-2 bg-blue-500/10 p-2 rounded border border-blue-500/20">
+                  💡 <strong>Nota:</strong> La información del dispositivo (modelo, IMEI, serie, etc.) se agregará automáticamente 
+                  al final del mensaje. Esta plantilla es solo para personalizar el mensaje principal.
+                </p>
                 <Textarea
                   id="templateContent"
                   value={formData.template_content}
                   onChange={(e) => setFormData(prev => ({ ...prev, template_content: e.target.value }))}
                   className="bg-white/5 border-blue-500/30 text-white min-h-[200px]"
                   required
-                  placeholder="Escribe tu mensaje aquí..."
+                  placeholder="Ej: 🌐 Tu dispositivo fue rastreado el 02/10/2025 a las 12:08 al conectarse online.&#10;🎯 Confirmamos que el dispositivo está funcionando y ubicado correctamente."
                 />
               </div>
 

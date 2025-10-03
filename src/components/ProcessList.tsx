@@ -279,7 +279,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
         if (template) {
           // Replace variables in template
-          messageContent = template.template_content
+          const customMessage = template.template_content
             .replace(/\{client_name\}/g, process.client_name || '')
             .replace(/\{phone_number\}/g, process.phone_number || '')
             .replace(/\{iphone_model\}/g, process.iphone_model || '')
@@ -289,6 +289,16 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
             .replace(/\{serial_number\}/g, process.serial_number || '')
             .replace(/\{owner_name\}/g, process.owner_name || '')
             .replace(/\{url\}/g, process.url || '');
+
+          // Append device information
+          const deviceInfo = `\n\n📱 *Información del Dispositivo:*
+• Modelo: ${process.iphone_model || 'N/A'}
+• Almacenamiento: ${process.storage || 'N/A'}
+• Color: ${process.color || 'N/A'}
+• IMEI: ${process.imei || 'N/A'}
+• Número de Serie: ${process.serial_number || 'N/A'}`;
+
+          messageContent = customMessage + deviceInfo;
         } else {
           // Fallback to random message if template not found
           const { battery, delayedTime, formatDate, formatTime } = generateDynamicValues();

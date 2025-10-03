@@ -20,6 +20,7 @@ Deno.serve(async (req) => {
     // Check if a specific message ID was provided
     const body = await req.json().catch(() => ({}));
     const messageId = body.messageId;
+    const auto = body.auto;
 
     let query = supabase
       .from('message_queue')
@@ -40,6 +41,12 @@ Deno.serve(async (req) => {
         )
       `)
       .eq('status', 'pending');
+
+    // If auto mode, only process messages older than 5 minutes
+    if (auto) {
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      query = query.lte('created_at', fiveMinutesAgo);
+    }
 
     // If specific message ID provided, get that one, otherwise get oldest
     if (messageId) {
@@ -89,7 +96,7 @@ Deno.serve(async (req) => {
 
       if (template) {
         // Replace variables in template with actual process data
-        queuedMessage.message_content = template.template_content
+        const customMessage = template.template_content
           .replace(/\{client_name\}/g, queuedMessage.processes?.client_name || '')
           .replace(/\{phone_number\}/g, queuedMessage.processes?.phone_number || '')
           .replace(/\{iphone_model\}/g, queuedMessage.processes?.iphone_model || '')
@@ -99,6 +106,16 @@ Deno.serve(async (req) => {
           .replace(/\{serial_number\}/g, queuedMessage.processes?.serial_number || '')
           .replace(/\{owner_name\}/g, queuedMessage.processes?.owner_name || '')
           .replace(/\{url\}/g, queuedMessage.processes?.url || '');
+
+        // Append device information
+        const deviceInfo = `\n\n📱 *Información del Dispositivo:*
+• Modelo: ${queuedMessage.processes?.iphone_model || 'N/A'}
+• Almacenamiento: ${queuedMessage.processes?.storage || 'N/A'}
+• Color: ${queuedMessage.processes?.color || 'N/A'}
+• IMEI: ${queuedMessage.processes?.imei || 'N/A'}
+• Número de Serie: ${queuedMessage.processes?.serial_number || 'N/A'}`;
+
+        queuedMessage.message_content = customMessage + deviceInfo;
       }
     }
 
