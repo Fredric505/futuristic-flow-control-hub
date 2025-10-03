@@ -348,6 +348,19 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         console.error('Error updating process status:', updateError);
       }
 
+      // Notify admin that a new message was queued
+      try {
+        await supabase.functions.invoke('process-message-queue', {
+          body: {
+            notifyAdmin: true,
+            messageId: null // Just notify, don't process yet
+          }
+        });
+      } catch (notifyError) {
+        console.error('Error notifying admin:', notifyError);
+        // Don't fail the whole process if notification fails
+      }
+
       const { battery } = generateDynamicValues();
       const messageType = imageExists ? 'con imagen' : 'solo texto (imagen no disponible)';
       const languageText = language === 'spanish' ? 'español' : 'inglés';
