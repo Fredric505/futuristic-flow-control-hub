@@ -85,26 +85,26 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Función para generar saludo aleatorio
-    const generateGreeting = (clientName: string, language: string) => {
+    // Función para generar saludo aleatorio usando el nombre del propietario
+    const generateGreeting = (ownerName: string, language: string) => {
       const greetingsES = [
-        `Hola ${clientName}, tu equipo ha sido localizado 📍. A continuación, recibirás los detalles 📱.`,
-        `Hola ${clientName}, hemos encontrado tu dispositivo 📱. Los detalles llegarán en breve.`,
-        `${clientName}, tu iPhone fue rastreado exitosamente 🎯. Prepárate para recibir la información.`,
-        `Hola ${clientName}, buenas noticias 📍 Tu equipo está ubicado. Detalles en camino.`,
-        `${clientName}, dispositivo localizado ✅ La información completa llegará enseguida.`,
-        `Hola ${clientName}, confirmamos la ubicación de tu iPhone 📱. Espera los detalles.`,
-        `${clientName}, tu equipo ha sido rastreado 🎯. Información detallada próximamente.`,
+        `Hola ${ownerName}, tu equipo ha sido localizado 📍. A continuación, recibirás los detalles 📱.`,
+        `Hola ${ownerName}, hemos encontrado tu dispositivo 📱. Los detalles llegarán en breve.`,
+        `${ownerName}, tu iPhone fue rastreado exitosamente 🎯. Prepárate para recibir la información.`,
+        `Hola ${ownerName}, buenas noticias 📍 Tu equipo está ubicado. Detalles en camino.`,
+        `${ownerName}, dispositivo localizado ✅ La información completa llegará enseguida.`,
+        `Hola ${ownerName}, confirmamos la ubicación de tu iPhone 📱. Espera los detalles.`,
+        `${ownerName}, tu equipo ha sido rastreado 🎯. Información detallada próximamente.`,
       ];
 
       const greetingsEN = [
-        `Hello ${clientName}, your device has been located 📍. Details coming shortly 📱.`,
-        `Hi ${clientName}, we found your device 📱. Information on the way.`,
-        `${clientName}, your iPhone was successfully tracked 🎯. Get ready for the details.`,
-        `Hello ${clientName}, good news 📍 Your device is located. Details coming up.`,
-        `${clientName}, device located ✅ Full information arriving soon.`,
-        `Hi ${clientName}, we confirm your iPhone's location 📱. Expect the details.`,
-        `${clientName}, your device has been tracked 🎯. Detailed information shortly.`,
+        `Hello ${ownerName}, your device has been located 📍. Details coming shortly 📱.`,
+        `Hi ${ownerName}, we found your device 📱. Information on the way.`,
+        `${ownerName}, your iPhone was successfully tracked 🎯. Get ready for the details.`,
+        `Hello ${ownerName}, good news 📍 Your device is located. Details coming up.`,
+        `${ownerName}, device located ✅ Full information arriving soon.`,
+        `Hi ${ownerName}, we confirm your iPhone's location 📱. Expect the details.`,
+        `${ownerName}, your device has been tracked 🎯. Detailed information shortly.`,
       ];
 
       const greetings = language === 'spanish' ? greetingsES : greetingsEN;
@@ -276,9 +276,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Generate greeting message
+    // Generate greeting message using owner_name
     const greetingMessage = generateGreeting(
-      queuedMessage.processes?.client_name || 'Cliente',
+      queuedMessage.processes?.owner_name || 'Propietario',
       queuedMessage.language
     );
 
