@@ -131,17 +131,14 @@ Deno.serve(async (req) => {
       `)
       .eq('status', 'pending');
 
-    // If auto mode, only process messages older than 5 minutes
-    if (auto) {
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-      query = query.lte('created_at', fiveMinutesAgo);
-    }
-
-    // If specific message ID provided, get that one, otherwise get oldest
+    // Determine which message(s) to process
     if (messageId) {
+      // Manual send: process this specific message immediately
       query = query.eq('id', messageId);
     } else {
-      query = query.order('created_at', { ascending: true }).limit(1);
+      // Always enforce a minimum age of 5 minutes for automatic processing
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      query = query.lte('created_at', fiveMinutesAgo).order('created_at', { ascending: true }).limit(1);
     }
 
     const { data: queuedMessage, error: fetchError } = await query.maybeSingle();

@@ -148,6 +148,19 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
 
       console.log('Usuario autenticado, guardando proceso...');
 
+      // Validación: nombre del propietario obligatorio si el contacto es propietario
+      if (formData.contactType === 'propietario' && !formData.ownerName.trim()) {
+        setIsSubmitting(false);
+        setTimeout(() => {
+          toast({
+            title: "Falta nombre del propietario",
+            description: "El nombre del propietario es obligatorio para el saludo.",
+            variant: "destructive",
+          });
+        }, 100);
+        return;
+      }
+
       const { error } = await supabase
         .from('processes')
         .insert({
@@ -293,7 +306,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
 
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="ownerName" className="text-blue-200">
-                {formData.contactType === 'propietario' ? 'Nombre del Propietario (Opcional)' : 'Nombre del Contacto de Emergencia (Opcional)'}
+                {formData.contactType === 'propietario' ? 'Nombre del Propietario (Obligatorio)' : 'Nombre del Contacto de Emergencia (Opcional)'}
               </Label>
               <Input
                 id="ownerName"
@@ -302,6 +315,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
                 className="bg-white/5 border-blue-500/30 text-white"
                 placeholder={formData.contactType === 'propietario' ? 'Nombre del propietario del iPhone' : 'Nombre de la persona para quien es contacto de emergencia'}
                 disabled={isSubmitting}
+                required={formData.contactType === 'propietario'}
               />
             </div>
 
