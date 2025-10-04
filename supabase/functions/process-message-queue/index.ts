@@ -317,10 +317,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Wait 3-5 seconds before sending full message to break the ice
-    const waitTime = 3000 + Math.floor(Math.random() * 2000); // Random between 3-5 seconds
-    console.log(`Waiting ${waitTime}ms before sending full message...`);
-    await new Promise(resolve => setTimeout(resolve, waitTime));
+    // Wait 15 seconds before sending full message to break the ice and avoid spam detection
+    console.log('Waiting 15 seconds before sending full message...');
+    await new Promise(resolve => setTimeout(resolve, 15000));
 
     // Step 2: Send full message with details
     let result;

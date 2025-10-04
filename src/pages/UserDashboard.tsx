@@ -10,6 +10,7 @@ import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
 import MessageHistory from '@/components/MessageHistory';
 import TelegramBotConfig from '@/components/TelegramBotConfig';
+import MessageTemplates from '@/components/MessageTemplates';
 import MobileSidebar from '@/components/MobileSidebar';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -74,6 +75,7 @@ const UserDashboard = () => {
     { id: 'dashboard', icon: Home, label: 'Dashboard', description: 'Panel principal' },
     { id: 'add-process', icon: Plus, label: 'Agregar Proceso', description: 'Crear nuevo proceso' },
     { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Mis procesos guardados' },
+    { id: 'templates', icon: FileText, label: 'Plantillas', description: 'Gestionar plantillas de mensajes' },
     { id: 'history', icon: History, label: 'Historial', description: 'Mensajes enviados' },
     { id: 'telegram-config', icon: MessageSquare, label: 'Config. Bot Telegram', description: 'Configurar notificaciones' },
     { id: 'settings', icon: Settings, label: 'Configuración', description: 'Ajustes de cuenta' },
@@ -145,6 +147,9 @@ const UserDashboard = () => {
       
       case 'view-processes':
         return <ProcessList userType="user" />;
+      
+      case 'templates':
+        return <MessageTemplates />;
       
       case 'history':
         return <MessageHistory />;
