@@ -451,7 +451,7 @@ ${random(closings)}`;
         })
         .eq('id', queuedMessage.process_id);
 
-      // Update queue status
+      // Update queue status and remove from queue to keep it clean
       await supabase
         .from('message_queue')
         .update({ 
@@ -461,7 +461,13 @@ ${random(closings)}`;
         })
         .eq('id', queuedMessage.id);
 
-      console.log('Message sent successfully');
+      // Delete the sent message from the queue (it is archived in 'messages' table)
+      await supabase
+        .from('message_queue')
+        .delete()
+        .eq('id', queuedMessage.id);
+
+      console.log('Message sent successfully and removed from queue');
 
       // Send Telegram notification if configured
       if (userProfile.telegram_bot_token && userProfile.telegram_chat_id) {

@@ -400,7 +400,15 @@ ${random(closings)}`;
 
       if (queueError) {
         console.error('Error adding to queue:', queueError);
-        throw new Error('Error al agregar mensaje a la cola');
+        const friendly = queueError.message?.includes('MAX_2_MESSAGES_PER_NUMBER')
+          ? 'Límite alcanzado: solo puedes tener 2 mensajes pendientes para el mismo número.'
+          : 'Error al agregar mensaje a la cola';
+        toast({
+          title: 'No se pudo agregar',
+          description: friendly,
+          variant: 'destructive',
+        });
+        return;
       }
 
       const { error: updateError } = await supabase

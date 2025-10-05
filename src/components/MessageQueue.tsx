@@ -54,7 +54,8 @@ const MessageQueue = () => {
           *,
           processes (client_name)
         `)
-        .order('created_at', { ascending: true });
+        .neq('status', 'sent')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
