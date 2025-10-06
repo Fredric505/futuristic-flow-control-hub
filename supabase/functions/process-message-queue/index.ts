@@ -283,10 +283,10 @@ ${random(closings)}`;
       );
     }
 
-    // Get WhatsApp settings
+    // Get API provider and WhatsApp settings
     const settingsKeys = queuedMessage.language === 'spanish' 
-      ? ['whatsapp_instance', 'whatsapp_token']
-      : ['whatsapp_instance_en', 'whatsapp_token_en'];
+      ? ['api_provider', 'whatsapp_instance', 'whatsapp_token', 'greenapi_instance', 'greenapi_token']
+      : ['api_provider', 'whatsapp_instance_en', 'whatsapp_token_en', 'greenapi_instance_en', 'greenapi_token_en'];
 
     const { data: settings } = await supabase
       .from('system_settings')
@@ -298,16 +298,36 @@ ${random(closings)}`;
       return acc;
     }, {});
 
-    const instanceId = queuedMessage.language === 'spanish' 
-      ? (config?.whatsapp_instance || 'instance126876')
-      : (config?.whatsapp_instance_en || 'instance_en_default');
-      
-    const token = queuedMessage.language === 'spanish' 
-      ? (config?.whatsapp_token || '4ecj8581tubua7ry')
-      : (config?.whatsapp_token_en || 'token_en_default');
+    const apiProvider = config?.api_provider || 'ultramsg';
+    
+    let instanceId: string;
+    let token: string;
+    let apiUrl: string;
+    
+    if (apiProvider === 'greenapi') {
+      instanceId = queuedMessage.language === 'spanish' 
+        ? (config?.greenapi_instance || '')
+        : (config?.greenapi_instance_en || '');
+        
+      token = queuedMessage.language === 'spanish' 
+        ? (config?.greenapi_token || '')
+        : (config?.greenapi_token_en || '');
+        
+      apiUrl = `https://api.green-api.com/waInstance${instanceId}`;
+    } else {
+      instanceId = queuedMessage.language === 'spanish' 
+        ? (config?.whatsapp_instance || '')
+        : (config?.whatsapp_instance_en || '');
+        
+      token = queuedMessage.language === 'spanish' 
+        ? (config?.whatsapp_token || '')
+        : (config?.whatsapp_token_en || '');
+        
+      apiUrl = `https://api.ultramsg.com/${instanceId}/messages/chat`;
+    }
 
-    if (!instanceId || !token || instanceId.includes('default') || token.includes('default')) {
-      console.log('WhatsApp configuration missing');
+    if (!instanceId || !token) {
+      console.log(`${apiProvider} configuration missing`);
       await supabase
         .from('message_queue')
         .update({ 
@@ -318,7 +338,7 @@ ${random(closings)}`;
 
       return new Response(
         JSON.stringify({ 
-          message: 'Message failed: WhatsApp configuration missing', 
+          message: `Message failed: ${apiProvider} configuration missing`, 
           processed: 0 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -332,22 +352,40 @@ ${random(closings)}`;
     );
 
     // Step 1: Send greeting message
-    console.log('Sending greeting message...');
-    const greetingResponse = await fetch(`https://api.ultramsg.com/${instanceId}/messages/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        token: token,
-        to: queuedMessage.recipient_phone,
-        body: greetingMessage,
-      }),
-    });
-    const greetingResult = await greetingResponse.json();
-    console.log('Greeting message response:', greetingResult);
+    console.log(`Sending greeting message via ${apiProvider}...`);
+    let greetingResponse;
+    let greetingResult;
+    
+    if (apiProvider === 'greenapi') {
+      greetingResponse = await fetch(`${apiUrl}/sendMessage/${token}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chatId: `${queuedMessage.recipient_phone}@c.us`,
+          message: greetingMessage,
+        }),
+      });
+      greetingResult = await greetingResponse.json();
+      console.log('Greeting message response (Green API):', greetingResult);
+    } else {
+      greetingResponse = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          token: token,
+          to: queuedMessage.recipient_phone,
+          body: greetingMessage,
+        }),
+      });
+      greetingResult = await greetingResponse.json();
+      console.log('Greeting message response (Ultra MSG):', greetingResult);
+    }
 
-    if (greetingResult.sent !== true && greetingResult.sent !== "true") {
+    if (greetingResult.sent !== true && greetingResult.sent !== "true" && !greetingResult.idMessage) {
       console.log('Greeting message failed:', greetingResult);
       await supabase
         .from('message_queue')
@@ -374,38 +412,70 @@ ${random(closings)}`;
     let result;
     if (queuedMessage.image_url) {
       console.log('Sending full message with image');
-      const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/image`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          token: token,
-          to: queuedMessage.recipient_phone,
-          image: queuedMessage.image_url,
-          caption: queuedMessage.message_content,
-        }),
-      });
-      result = await response.json();
+      
+      if (apiProvider === 'greenapi') {
+        const response = await fetch(`${apiUrl}/sendFileByUrl/${token}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chatId: `${queuedMessage.recipient_phone}@c.us`,
+            urlFile: queuedMessage.image_url,
+            fileName: 'device-image.jpg',
+            caption: queuedMessage.message_content,
+          }),
+        });
+        result = await response.json();
+      } else {
+        const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/image`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            token: token,
+            to: queuedMessage.recipient_phone,
+            image: queuedMessage.image_url,
+            caption: queuedMessage.message_content,
+          }),
+        });
+        result = await response.json();
+      }
     } else {
       console.log('Sending full text message');
-      const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          token: token,
-          to: queuedMessage.recipient_phone,
-          body: queuedMessage.message_content,
-        }),
-      });
-      result = await response.json();
+      
+      if (apiProvider === 'greenapi') {
+        const response = await fetch(`${apiUrl}/sendMessage/${token}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chatId: `${queuedMessage.recipient_phone}@c.us`,
+            message: queuedMessage.message_content,
+          }),
+        });
+        result = await response.json();
+      } else {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            token: token,
+            to: queuedMessage.recipient_phone,
+            body: queuedMessage.message_content,
+          }),
+        });
+        result = await response.json();
+      }
     }
 
     console.log('Full message WhatsApp API response:', result);
 
-    if (result.sent === true || result.sent === "true") {
+    if (result.sent === true || result.sent === "true" || result.idMessage) {
       // Deduct credit
       await supabase
         .from('profiles')

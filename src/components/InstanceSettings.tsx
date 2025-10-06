@@ -5,12 +5,23 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const InstanceSettings = () => {
-  const [spanishInstance, setSpanishInstance] = useState('');
-  const [spanishToken, setSpanishToken] = useState('');
-  const [englishInstance, setEnglishInstance] = useState('');
-  const [englishToken, setEnglishToken] = useState('');
+  const [apiProvider, setApiProvider] = useState<'ultramsg' | 'greenapi'>('ultramsg');
+  
+  // Ultra MSG settings
+  const [ultraSpanishInstance, setUltraSpanishInstance] = useState('');
+  const [ultraSpanishToken, setUltraSpanishToken] = useState('');
+  const [ultraEnglishInstance, setUltraEnglishInstance] = useState('');
+  const [ultraEnglishToken, setUltraEnglishToken] = useState('');
+  
+  // Green API settings
+  const [greenSpanishInstance, setGreenSpanishInstance] = useState('');
+  const [greenSpanishToken, setGreenSpanishToken] = useState('');
+  const [greenEnglishInstance, setGreenEnglishInstance] = useState('');
+  const [greenEnglishToken, setGreenEnglishToken] = useState('');
+  
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,7 +33,11 @@ const InstanceSettings = () => {
       const { data, error } = await supabase
         .from('system_settings')
         .select('*')
-        .in('setting_key', ['whatsapp_instance', 'whatsapp_token', 'whatsapp_instance_en', 'whatsapp_token_en']);
+        .in('setting_key', [
+          'api_provider',
+          'whatsapp_instance', 'whatsapp_token', 'whatsapp_instance_en', 'whatsapp_token_en',
+          'greenapi_instance', 'greenapi_token', 'greenapi_instance_en', 'greenapi_token_en'
+        ]);
 
       if (error) throw error;
 
@@ -31,10 +46,19 @@ const InstanceSettings = () => {
         return acc;
       }, {});
 
-      setSpanishInstance(settings?.whatsapp_instance || '');
-      setSpanishToken(settings?.whatsapp_token || '');
-      setEnglishInstance(settings?.whatsapp_instance_en || '');
-      setEnglishToken(settings?.whatsapp_token_en || '');
+      setApiProvider((settings?.api_provider || 'ultramsg') as 'ultramsg' | 'greenapi');
+      
+      // Ultra MSG settings
+      setUltraSpanishInstance(settings?.whatsapp_instance || '');
+      setUltraSpanishToken(settings?.whatsapp_token || '');
+      setUltraEnglishInstance(settings?.whatsapp_instance_en || '');
+      setUltraEnglishToken(settings?.whatsapp_token_en || '');
+      
+      // Green API settings
+      setGreenSpanishInstance(settings?.greenapi_instance || '');
+      setGreenSpanishToken(settings?.greenapi_token || '');
+      setGreenEnglishInstance(settings?.greenapi_instance_en || '');
+      setGreenEnglishToken(settings?.greenapi_token_en || '');
     } catch (error) {
       console.error('Error loading settings:', error);
       toast({
@@ -49,47 +73,100 @@ const InstanceSettings = () => {
 
   const handleSave = async () => {
     try {
-      // Update Spanish settings
-      const { error: spanishInstanceError } = await supabase
+      // Save API provider selection
+      const { error: providerError } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: 'api_provider',
+          setting_value: apiProvider,
+          updated_at: new Date().toISOString()
+        });
+
+      if (providerError) throw providerError;
+
+      // Update Ultra MSG Spanish settings
+      const { error: ultraSpanishInstanceError } = await supabase
         .from('system_settings')
         .upsert({
           setting_key: 'whatsapp_instance',
-          setting_value: spanishInstance,
+          setting_value: ultraSpanishInstance,
           updated_at: new Date().toISOString()
         });
 
-      if (spanishInstanceError) throw spanishInstanceError;
+      if (ultraSpanishInstanceError) throw ultraSpanishInstanceError;
 
-      const { error: spanishTokenError } = await supabase
+      const { error: ultraSpanishTokenError } = await supabase
         .from('system_settings')
         .upsert({
           setting_key: 'whatsapp_token',
-          setting_value: spanishToken,
+          setting_value: ultraSpanishToken,
           updated_at: new Date().toISOString()
         });
 
-      if (spanishTokenError) throw spanishTokenError;
+      if (ultraSpanishTokenError) throw ultraSpanishTokenError;
 
-      // Update English settings
-      const { error: englishInstanceError } = await supabase
+      // Update Ultra MSG English settings
+      const { error: ultraEnglishInstanceError } = await supabase
         .from('system_settings')
         .upsert({
           setting_key: 'whatsapp_instance_en',
-          setting_value: englishInstance,
+          setting_value: ultraEnglishInstance,
           updated_at: new Date().toISOString()
         });
 
-      if (englishInstanceError) throw englishInstanceError;
+      if (ultraEnglishInstanceError) throw ultraEnglishInstanceError;
 
-      const { error: englishTokenError } = await supabase
+      const { error: ultraEnglishTokenError } = await supabase
         .from('system_settings')
         .upsert({
           setting_key: 'whatsapp_token_en',
-          setting_value: englishToken,
+          setting_value: ultraEnglishToken,
           updated_at: new Date().toISOString()
         });
 
-      if (englishTokenError) throw englishTokenError;
+      if (ultraEnglishTokenError) throw ultraEnglishTokenError;
+
+      // Update Green API Spanish settings
+      const { error: greenSpanishInstanceError } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: 'greenapi_instance',
+          setting_value: greenSpanishInstance,
+          updated_at: new Date().toISOString()
+        });
+
+      if (greenSpanishInstanceError) throw greenSpanishInstanceError;
+
+      const { error: greenSpanishTokenError } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: 'greenapi_token',
+          setting_value: greenSpanishToken,
+          updated_at: new Date().toISOString()
+        });
+
+      if (greenSpanishTokenError) throw greenSpanishTokenError;
+
+      // Update Green API English settings
+      const { error: greenEnglishInstanceError } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: 'greenapi_instance_en',
+          setting_value: greenEnglishInstance,
+          updated_at: new Date().toISOString()
+        });
+
+      if (greenEnglishInstanceError) throw greenEnglishInstanceError;
+
+      const { error: greenEnglishTokenError } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: 'greenapi_token_en',
+          setting_value: greenEnglishToken,
+          updated_at: new Date().toISOString()
+        });
+
+      if (greenEnglishTokenError) throw greenEnglishTokenError;
 
       toast({
         title: "Configuración guardada",
@@ -114,14 +191,23 @@ const InstanceSettings = () => {
       const { error } = await supabase
         .from('system_settings')
         .delete()
-        .in('setting_key', ['whatsapp_instance', 'whatsapp_token', 'whatsapp_instance_en', 'whatsapp_token_en']);
+        .in('setting_key', [
+          'api_provider',
+          'whatsapp_instance', 'whatsapp_token', 'whatsapp_instance_en', 'whatsapp_token_en',
+          'greenapi_instance', 'greenapi_token', 'greenapi_instance_en', 'greenapi_token_en'
+        ]);
 
       if (error) throw error;
 
-      setSpanishInstance('');
-      setSpanishToken('');
-      setEnglishInstance('');
-      setEnglishToken('');
+      setApiProvider('ultramsg');
+      setUltraSpanishInstance('');
+      setUltraSpanishToken('');
+      setUltraEnglishInstance('');
+      setUltraEnglishToken('');
+      setGreenSpanishInstance('');
+      setGreenSpanishToken('');
+      setGreenEnglishInstance('');
+      setGreenEnglishToken('');
       
       toast({
         title: "Configuración eliminada",
@@ -150,69 +236,159 @@ const InstanceSettings = () => {
 
   return (
     <div className="space-y-6">
-      {/* Configuración en Español */}
-      <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+      {/* API Provider Selector */}
+      <Card className="bg-black/20 backdrop-blur-xl border border-purple-500/20">
         <CardHeader>
-          <CardTitle className="text-blue-300">🇪🇸 Configuración Español/Castellano</CardTitle>
+          <CardTitle className="text-purple-300">⚙️ Proveedor de API / API Provider</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="spanish-instance" className="text-blue-200">ID de Instancia (Español)</Label>
-              <Input
-                id="spanish-instance"
-                type="text"
-                value={spanishInstance}
-                onChange={(e) => setSpanishInstance(e.target.value)}
-                className="bg-white/5 border-blue-500/30 text-white"
-                placeholder="Ingresa el ID de instancia para español"
-              />
+          <div className="space-y-2">
+            <Label htmlFor="api-provider" className="text-purple-200">
+              Selecciona el proveedor de API que usarán todos los usuarios
+            </Label>
+            <Select value={apiProvider} onValueChange={(value: 'ultramsg' | 'greenapi') => setApiProvider(value)}>
+              <SelectTrigger className="bg-white/5 border-purple-500/30 text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ultramsg">Ultra MSG</SelectItem>
+                <SelectItem value="greenapi">Green API</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-purple-200/60 text-sm mt-2">
+              Solo una API puede estar activa a la vez. Configura ambas pero selecciona cuál usar.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Ultra MSG Configuration */}
+      <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
+        <CardHeader>
+          <CardTitle className="text-blue-300">📱 Ultra MSG - Configuración</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Spanish */}
+            <div className="space-y-4 pb-4 border-b border-blue-500/20">
+              <h4 className="text-blue-200 font-semibold">🇪🇸 Español</h4>
+              <div className="space-y-2">
+                <Label htmlFor="ultra-spanish-instance" className="text-blue-200">ID de Instancia</Label>
+                <Input
+                  id="ultra-spanish-instance"
+                  type="text"
+                  value={ultraSpanishInstance}
+                  onChange={(e) => setUltraSpanishInstance(e.target.value)}
+                  className="bg-white/5 border-blue-500/30 text-white"
+                  placeholder="Ingresa el ID de instancia para español"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="ultra-spanish-token" className="text-blue-200">Token</Label>
+                <Input
+                  id="ultra-spanish-token"
+                  type="text"
+                  value={ultraSpanishToken}
+                  onChange={(e) => setUltraSpanishToken(e.target.value)}
+                  className="bg-white/5 border-blue-500/30 text-white"
+                  placeholder="Ingresa el token para español"
+                />
+              </div>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="spanish-token" className="text-blue-200">Token (Español)</Label>
-              <Input
-                id="spanish-token"
-                type="text"
-                value={spanishToken}
-                onChange={(e) => setSpanishToken(e.target.value)}
-                className="bg-white/5 border-blue-500/30 text-white"
-                placeholder="Ingresa el token para español"
-              />
+
+            {/* English */}
+            <div className="space-y-4">
+              <h4 className="text-blue-200 font-semibold">🇺🇸 English</h4>
+              <div className="space-y-2">
+                <Label htmlFor="ultra-english-instance" className="text-blue-200">Instance ID</Label>
+                <Input
+                  id="ultra-english-instance"
+                  type="text"
+                  value={ultraEnglishInstance}
+                  onChange={(e) => setUltraEnglishInstance(e.target.value)}
+                  className="bg-white/5 border-blue-500/30 text-white"
+                  placeholder="Enter instance ID for English"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="ultra-english-token" className="text-blue-200">Token</Label>
+                <Input
+                  id="ultra-english-token"
+                  type="text"
+                  value={ultraEnglishToken}
+                  onChange={(e) => setUltraEnglishToken(e.target.value)}
+                  className="bg-white/5 border-blue-500/30 text-white"
+                  placeholder="Enter token for English"
+                />
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Configuración en Inglés */}
+      {/* Green API Configuration */}
       <Card className="bg-black/20 backdrop-blur-xl border border-green-500/20">
         <CardHeader>
-          <CardTitle className="text-green-300">🇺🇸 Configuración Inglés/English</CardTitle>
+          <CardTitle className="text-green-300">🟢 Green API - Configuración</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="english-instance" className="text-green-200">Instance ID (English)</Label>
-              <Input
-                id="english-instance"
-                type="text"
-                value={englishInstance}
-                onChange={(e) => setEnglishInstance(e.target.value)}
-                className="bg-white/5 border-green-500/30 text-white"
-                placeholder="Enter instance ID for English"
-              />
+          <div className="space-y-6">
+            {/* Spanish */}
+            <div className="space-y-4 pb-4 border-b border-green-500/20">
+              <h4 className="text-green-200 font-semibold">🇪🇸 Español</h4>
+              <div className="space-y-2">
+                <Label htmlFor="green-spanish-instance" className="text-green-200">ID de Instancia</Label>
+                <Input
+                  id="green-spanish-instance"
+                  type="text"
+                  value={greenSpanishInstance}
+                  onChange={(e) => setGreenSpanishInstance(e.target.value)}
+                  className="bg-white/5 border-green-500/30 text-white"
+                  placeholder="Ingresa el ID de instancia para español"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="green-spanish-token" className="text-green-200">Token</Label>
+                <Input
+                  id="green-spanish-token"
+                  type="text"
+                  value={greenSpanishToken}
+                  onChange={(e) => setGreenSpanishToken(e.target.value)}
+                  className="bg-white/5 border-green-500/30 text-white"
+                  placeholder="Ingresa el token para español"
+                />
+              </div>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="english-token" className="text-green-200">Token (English)</Label>
-              <Input
-                id="english-token"
-                type="text"
-                value={englishToken}
-                onChange={(e) => setEnglishToken(e.target.value)}
-                className="bg-white/5 border-green-500/30 text-white"
-                placeholder="Enter token for English"
-              />
+
+            {/* English */}
+            <div className="space-y-4">
+              <h4 className="text-green-200 font-semibold">🇺🇸 English</h4>
+              <div className="space-y-2">
+                <Label htmlFor="green-english-instance" className="text-green-200">Instance ID</Label>
+                <Input
+                  id="green-english-instance"
+                  type="text"
+                  value={greenEnglishInstance}
+                  onChange={(e) => setGreenEnglishInstance(e.target.value)}
+                  className="bg-white/5 border-green-500/30 text-white"
+                  placeholder="Enter instance ID for English"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="green-english-token" className="text-green-200">Token</Label>
+                <Input
+                  id="green-english-token"
+                  type="text"
+                  value={greenEnglishToken}
+                  onChange={(e) => setGreenEnglishToken(e.target.value)}
+                  className="bg-white/5 border-green-500/30 text-white"
+                  placeholder="Enter token for English"
+                />
+              </div>
             </div>
           </div>
         </CardContent>
@@ -234,19 +410,45 @@ const InstanceSettings = () => {
         </Button>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Estado actual Español */}
-        <div className="p-4 bg-blue-950/30 rounded-lg border border-blue-500/20">
-          <h4 className="text-blue-300 font-semibold mb-2">🇪🇸 Configuración Actual Español</h4>
-          <p className="text-blue-200/70 text-sm">Instancia: {spanishInstance || 'No configurada'}</p>
-          <p className="text-blue-200/70 text-sm">Token: {spanishToken || 'No configurado'}</p>
+      <div className="space-y-4">
+        {/* Current API Provider */}
+        <div className="p-4 bg-purple-950/30 rounded-lg border border-purple-500/20">
+          <h4 className="text-purple-300 font-semibold mb-2">⚙️ API Activa / Active API</h4>
+          <p className="text-purple-200/70 text-lg font-bold">
+            {apiProvider === 'ultramsg' ? '📱 Ultra MSG' : '🟢 Green API'}
+          </p>
         </div>
-        
-        {/* Estado actual Inglés */}
-        <div className="p-4 bg-green-950/30 rounded-lg border border-green-500/20">
-          <h4 className="text-green-300 font-semibold mb-2">🇺🇸 Current English Configuration</h4>
-          <p className="text-green-200/70 text-sm">Instance: {englishInstance || 'Not configured'}</p>
-          <p className="text-green-200/70 text-sm">Token: {englishToken || 'Not configured'}</p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Ultra MSG Status */}
+          <div className="space-y-4">
+            <div className="p-4 bg-blue-950/30 rounded-lg border border-blue-500/20">
+              <h4 className="text-blue-300 font-semibold mb-2">📱 Ultra MSG - Español</h4>
+              <p className="text-blue-200/70 text-sm">Instancia: {ultraSpanishInstance || 'No configurada'}</p>
+              <p className="text-blue-200/70 text-sm">Token: {ultraSpanishToken || 'No configurado'}</p>
+            </div>
+            
+            <div className="p-4 bg-blue-950/30 rounded-lg border border-blue-500/20">
+              <h4 className="text-blue-300 font-semibold mb-2">📱 Ultra MSG - English</h4>
+              <p className="text-blue-200/70 text-sm">Instance: {ultraEnglishInstance || 'Not configured'}</p>
+              <p className="text-blue-200/70 text-sm">Token: {ultraEnglishToken || 'Not configured'}</p>
+            </div>
+          </div>
+
+          {/* Green API Status */}
+          <div className="space-y-4">
+            <div className="p-4 bg-green-950/30 rounded-lg border border-green-500/20">
+              <h4 className="text-green-300 font-semibold mb-2">🟢 Green API - Español</h4>
+              <p className="text-green-200/70 text-sm">Instancia: {greenSpanishInstance || 'No configurada'}</p>
+              <p className="text-green-200/70 text-sm">Token: {greenSpanishToken || 'No configurado'}</p>
+            </div>
+            
+            <div className="p-4 bg-green-950/30 rounded-lg border border-green-500/20">
+              <h4 className="text-green-300 font-semibold mb-2">🟢 Green API - English</h4>
+              <p className="text-green-200/70 text-sm">Instance: {greenEnglishInstance || 'Not configured'}</p>
+              <p className="text-green-200/70 text-sm">Token: {greenEnglishToken || 'Not configured'}</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
