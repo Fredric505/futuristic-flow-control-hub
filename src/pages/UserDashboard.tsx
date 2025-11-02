@@ -34,6 +34,19 @@ const UserDashboard = () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       navigate('/login');
+      return;
+    }
+    // Block expired non-admin users from accessing the panel
+    if (session.user.email !== 'fredric@gmail.com') {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('expiration_date')
+        .eq('id', session.user.id)
+        .single();
+      if (profile?.expiration_date && new Date() > new Date(profile.expiration_date)) {
+        await supabase.auth.signOut();
+        navigate('/login');
+      }
     }
   };
 

