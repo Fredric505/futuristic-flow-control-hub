@@ -139,6 +139,10 @@ Deno.serve(async (req) => {
       return input.charAt(0).toUpperCase() + input.slice(1);
     };
 
+    // Collapse 3+ newlines to 2 and trim
+    const collapse = (s: string) => s.replace(/\n{3,}/g, '\n\n').trim();
+
+
     let query = supabase
       .from('message_queue')
       .select(`
@@ -259,7 +263,7 @@ Deno.serve(async (req) => {
       customSection = `${customSection}\n\n${linkLabel}: ${url}`.trim();
     }
 
-    // Normalize custom section: remove duplicate openings, IDs, device blocks, and localize EN labels
+    // Normalize custom section: remove duplicate openings, IDs, device blocks, help/closing lines, and localize EN labels
     const openingPattern = /^(?:\s*)(?:🛡️ Alerta de seguridad del sistema|🔐 Notificación de seguridad|🔒 Sistema de protección activado|🛡️ System security alert|🔐 Security notification|🔒 Protection system activated)\s*\n*/i;
     customSection = customSection.replace(openingPattern, '').trim();
 
@@ -268,6 +272,12 @@ Deno.serve(async (req) => {
       .replace(/^(?:ID de caso|ID de cliente|Caso|Cliente|Referencia|Usuario|Case ID|Client ID|Case|Client|Reference|User)\s*:.*$/gmi, '')
       .replace(/^(?:Technical data|Device details|Equipment information|Datos técnicos|Detalles del dispositivo|Información del equipo)\s*:?.*$/gmi, '')
       .replace(/^\s*•\s.*$/gmi, '')
+      // Remove help lines (EN/ES)
+      .replace(/^(?:Need help\?|Require support\?|Looking for assistance\?).*$/gmi, '')
+      .replace(/^(?:¿?Necesit[aá]s ayuda\?|¿?Requer[ií]s soporte\?|¿?Busc[aá]s asistencia\?).*$/gmi, '')
+      // Remove closing lines (EN/ES)
+      .replace(/^(?:Automated service|Automatic system|Continuous monitoring).*$/gmi, '')
+      .replace(/^(?:Servicio automatizado|Sistema automático|Monitoreo continuo).*$/gmi, '')
       .trim();
 
     // Localize labels in EN and translate color inside custom section when present
@@ -286,6 +296,8 @@ Deno.serve(async (req) => {
       // Translate color value after the Color: label
       customSection = customSection.replace(/(Color:\s*)([^|\n]+)/gi, (_m, p1, p2) => `${p1}${translateColor(String(p2).trim())}`);
     }
+
+    customSection = collapse(customSection);
 
     // Generate IDs and battery only to enrich the final message
     const now = new Date();
@@ -353,6 +365,9 @@ Deno.serve(async (req) => {
 
       queuedMessage.message_content = `${random(openingsEN)}\n\n${customSection}\n\nCase ID: ${caseId}\nClient ID: ${clientId}\n\n${random(statusPhrasesEN)}\n${random(deviceSectionsEN)}\n\n${random(helpPhrasesEN)}\n${random(closingsEN)}`;
     }
+
+    // Final whitespace normalization
+    queuedMessage.message_content = collapse(queuedMessage.message_content);
 
     if (profileError) {
       console.error('Error fetching user profile:', profileError);
