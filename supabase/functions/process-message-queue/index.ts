@@ -259,6 +259,34 @@ Deno.serve(async (req) => {
       customSection = `${customSection}\n\n${linkLabel}: ${url}`.trim();
     }
 
+    // Normalize custom section: remove duplicate openings, IDs, device blocks, and localize EN labels
+    const openingPattern = /^(?:\s*)(?:🛡️ Alerta de seguridad del sistema|🔐 Notificación de seguridad|🔒 Sistema de protección activado|🛡️ System security alert|🔐 Security notification|🔒 Protection system activated)\s*\n*/i;
+    customSection = customSection.replace(openingPattern, '').trim();
+
+    // Remove any ID lines, section headings and bullet device lines from customSection
+    customSection = customSection
+      .replace(/^(?:ID de caso|ID de cliente|Caso|Cliente|Referencia|Usuario|Case ID|Client ID|Case|Client|Reference|User)\s*:.*$/gmi, '')
+      .replace(/^(?:Technical data|Device details|Equipment information|Datos técnicos|Detalles del dispositivo|Información del equipo)\s*:?.*$/gmi, '')
+      .replace(/^\s*•\s.*$/gmi, '')
+      .trim();
+
+    // Localize labels in EN and translate color inside custom section when present
+    if (queuedMessage.language !== 'spanish') {
+      customSection = customSection
+        .replace(/\bCapacidad\b/gi, 'Capacity')
+        .replace(/\bAlmacenamiento\b/gi, 'Storage')
+        .replace(/\bModelo\b/gi, 'Model')
+        .replace(/\bSerie\b/gi, 'Serial')
+        .replace(/\bEquipo\b/gi, 'Device')
+        .replace(/\bDispositivo\b/gi, 'Device')
+        .replace(/\bNivel de batería\b/gi, 'Battery level')
+        .replace(/\bBatería actual\b/gi, 'Current battery')
+        .replace(/\bCarga restante\b/gi, 'Battery level');
+
+      // Translate color value after the Color: label
+      customSection = customSection.replace(/(Color:\s*)([^|\n]+)/gi, (_m, p1, p2) => `${p1}${translateColor(String(p2).trim())}`);
+    }
+
     // Generate IDs and battery only to enrich the final message
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
