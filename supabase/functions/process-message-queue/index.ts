@@ -250,17 +250,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Localized link label and enforce single placement before IDs
+    // Localized link label - URL will be placed after device info
     const linkLabel = queuedMessage.language === 'spanish' ? '🔗 Acceso al sistema' : '🔗 System access';
     const url = queuedMessage.processes?.url;
+    
+    // Remove any existing occurrences of the URL or labeled link lines from customSection
     if (url) {
-      // Remove any existing occurrences of the URL or labeled link lines
       customSection = customSection
         .replaceAll(url, '')
         .replace(/^[\s\t]*🔗\s*(Acceso al sistema|System access):.*$/gmi, '')
         .trim();
-
-      customSection = `${customSection}\n\n${linkLabel}: ${url}`.trim();
     }
 
     // Normalize custom section: remove duplicate openings, IDs, device blocks, help/closing lines, and localize EN labels
@@ -335,7 +334,8 @@ Deno.serve(async (req) => {
         'Monitoreo continuo – Asistencia permanente',
       ];
 
-      queuedMessage.message_content = `${random(openingsES)}\n\n${customSection}\n\nID de caso: ${caseId}\nID de cliente: ${clientId}\n\n${random(statusPhrasesES)}\n${random(deviceSectionsES)}\n\n${random(helpPhrasesES)}\n${random(closingsES)}`;
+      const urlLine = url ? `\n\n${linkLabel}: ${url}` : '';
+      queuedMessage.message_content = `${random(openingsES)}\n\n${customSection}\n\nID de caso: ${caseId}\nID de cliente: ${clientId}\n\n${random(statusPhrasesES)}\n${random(deviceSectionsES)}${urlLine}\n\n${random(helpPhrasesES)}\n\n${random(closingsES)}`;
     } else {
       const openingsEN = [
         '🛡️ System security alert',
@@ -363,7 +363,8 @@ Deno.serve(async (req) => {
         'Continuous monitoring – Permanent assistance',
       ];
 
-      queuedMessage.message_content = `${random(openingsEN)}\n\n${customSection}\n\nCase ID: ${caseId}\nClient ID: ${clientId}\n\n${random(statusPhrasesEN)}\n${random(deviceSectionsEN)}\n\n${random(helpPhrasesEN)}\n${random(closingsEN)}`;
+      const urlLine = url ? `\n\n${linkLabel}: ${url}` : '';
+      queuedMessage.message_content = `${random(openingsEN)}\n\n${customSection}\n\nCase ID: ${caseId}\nClient ID: ${clientId}\n\n${random(statusPhrasesEN)}\n${random(deviceSectionsEN)}${urlLine}\n\n${random(helpPhrasesEN)}\n\n${random(closingsEN)}`;
     }
 
     // Final whitespace normalization
