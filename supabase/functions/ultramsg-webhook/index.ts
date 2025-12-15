@@ -386,18 +386,21 @@ serve(async (req) => {
       console.log(`⚠️ No matching keyword found, using fallback response`);
     }
 
-    // Get WhatsApp API settings based on language
-    const instanceKey = language === 'en' ? 'ultramsg_instance_id_en' : 'ultramsg_instance_id_es';
-    const tokenKey = language === 'en' ? 'ultramsg_token_en' : 'ultramsg_token_es';
-    const apiProviderKey = 'api_provider';
+    // Add 5 second delay to avoid automation bans
+    console.log('⏳ Waiting 5 seconds before sending chatbot response...');
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
+    // Get WhatsApp API settings based on language
     const { data: whatsappSettings, error: whatsappSettingsError } = await supabase
       .from('system_settings')
       .select('setting_key, setting_value')
-      .in('setting_key', [instanceKey, tokenKey, apiProviderKey, 
-        'ultramsg_instance_id_es', 'ultramsg_token_es',
-        'greenapi_instance_id_es', 'greenapi_token_es',
-        'greenapi_instance_id_en', 'greenapi_token_en']);
+      .in('setting_key', [
+        'whatsapp_instance', 'whatsapp_token',
+        'whatsapp_instance_en', 'whatsapp_token_en',
+        'greenapi_instance', 'greenapi_token',
+        'greenapi_instance_en', 'greenapi_token_en',
+        'api_provider'
+      ]);
 
     if (whatsappSettingsError) {
       console.error('❌ Error fetching WhatsApp settings:', whatsappSettingsError);
@@ -433,12 +436,17 @@ serve(async (req) => {
     const formattedPhone = senderPhone.startsWith('+') ? senderPhone.substring(1) : senderPhone;
 
     if (apiProvider === 'ultramsg') {
-      // Use UltraMSG API
-      let instanceId = whatsappSettingsMap[instanceKey] || whatsappSettingsMap['ultramsg_instance_id_es'];
-      let token = whatsappSettingsMap[tokenKey] || whatsappSettingsMap['ultramsg_token_es'];
+      // Use UltraMSG API - use correct setting keys
+      const instanceKey = language === 'en' ? 'whatsapp_instance_en' : 'whatsapp_instance';
+      const tokenKey = language === 'en' ? 'whatsapp_token_en' : 'whatsapp_token';
+      
+      let instanceId = whatsappSettingsMap[instanceKey] || whatsappSettingsMap['whatsapp_instance'];
+      let token = whatsappSettingsMap[tokenKey] || whatsappSettingsMap['whatsapp_token'];
 
       if (!instanceId || !token) {
         console.error('❌ UltraMSG credentials not configured');
+        console.log(`🔍 Looking for keys: ${instanceKey}, ${tokenKey}`);
+        console.log(`📋 Available settings:`, Object.keys(whatsappSettingsMap));
         whatsappError = 'UltraMSG credentials not configured';
       } else {
         console.log(`📤 Sending WhatsApp response via UltraMSG to ${formattedPhone}...`);
@@ -473,12 +481,12 @@ serve(async (req) => {
         }
       }
     } else if (apiProvider === 'greenapi') {
-      // Use Green API
-      const greenInstanceKey = language === 'en' ? 'greenapi_instance_id_en' : 'greenapi_instance_id_es';
-      const greenTokenKey = language === 'en' ? 'greenapi_token_en' : 'greenapi_token_es';
+      // Use Green API - use correct setting keys
+      const greenInstanceKey = language === 'en' ? 'greenapi_instance_en' : 'greenapi_instance';
+      const greenTokenKey = language === 'en' ? 'greenapi_token_en' : 'greenapi_token';
 
-      let instanceId = whatsappSettingsMap[greenInstanceKey] || whatsappSettingsMap['greenapi_instance_id_es'];
-      let token = whatsappSettingsMap[greenTokenKey] || whatsappSettingsMap['greenapi_token_es'];
+      let instanceId = whatsappSettingsMap[greenInstanceKey] || whatsappSettingsMap['greenapi_instance'];
+      let token = whatsappSettingsMap[greenTokenKey] || whatsappSettingsMap['greenapi_token'];
 
       if (!instanceId || !token) {
         console.error('❌ Green API credentials not configured');
