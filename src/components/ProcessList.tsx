@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getIphoneImageUrl } from '@/utils/iphoneImages';
 import { generateRandomMessage } from '@/utils/messageVariations';
 import EditProcessDialog from './EditProcessDialog';
+import { englishSpeakingCountries } from '@/utils/countries';
 
 interface Process {
   id: string;
@@ -37,11 +38,20 @@ interface ProcessListProps {
 const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
   const [processes, setProcesses] = useState<Process[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sendingMessage, setSendingMessage] = useState<{ id: string; language: string } | null>(null);
+  const [sendingMessage, setSendingMessage] = useState<string | null>(null);
   const [userCredits, setUserCredits] = useState(0);
   const [editingProcess, setEditingProcess] = useState<Process | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [imageStatus, setImageStatus] = useState<{ [key: string]: boolean }>({});
+
+  // English-speaking country codes
+  const englishCountryCodes = englishSpeakingCountries.map(c => c.code);
+
+  const getLanguageFromCountryCode = (countryCode: string): 'spanish' | 'english' => {
+    // Remove + if present for comparison
+    const code = countryCode.startsWith('+') ? countryCode : `+${countryCode}`;
+    return englishCountryCodes.includes(code) ? 'english' : 'spanish';
+  };
 
   useEffect(() => {
     loadProcesses();
@@ -225,7 +235,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
         return;
       }
 
-      setSendingMessage({ id: process.id, language });
+      setSendingMessage(process.id);
       console.log(`Adding message to queue for process: ${process.id} in ${language}`);
 
       const settingsKeys = language === 'spanish' 
@@ -589,44 +599,27 @@ ${random(closings)}`;
                       {process.status}
                     </Badge>
                     
-                    {/* Botones de envío */}
-                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                      <Button
-                        size="sm"
-                        onClick={() => sendWhatsAppMessage(process, 'spanish')}
-                        disabled={sendingMessage?.id === process.id || userCredits <= 0}
-                        className={`${
-                          userCredits <= 0 
-                            ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
-                            : 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-300'
-                        } w-full sm:w-auto min-w-[120px] text-xs sm:text-sm`}
-                        title={userCredits <= 0 ? "Sin créditos suficientes" : "Enviar en español"}
-                      >
-                        {sendingMessage?.id === process.id && sendingMessage?.language === 'spanish' ? (
-                          <RefreshCw className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <>Enviar ES 🇪🇸</>
-                        )}
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        onClick={() => sendWhatsAppMessage(process, 'english')}
-                        disabled={sendingMessage?.id === process.id || userCredits <= 0}
-                        className={`${
-                          userCredits <= 0 
-                            ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
-                            : 'bg-green-600/20 hover:bg-green-600/30 text-green-300'
-                        } w-full sm:w-auto min-w-[120px] text-xs sm:text-sm`}
-                        title={userCredits <= 0 ? "Sin créditos suficientes" : "Send in English"}
-                      >
-                        {sendingMessage?.id === process.id && sendingMessage?.language === 'english' ? (
-                          <RefreshCw className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <>Send EN 🇺🇸</>
-                        )}
-                      </Button>
-                    </div>
+                    {/* Botón de envío único */}
+                    <Button
+                      size="sm"
+                      onClick={() => sendWhatsAppMessage(process, getLanguageFromCountryCode(process.country_code))}
+                      disabled={sendingMessage === process.id || userCredits <= 0}
+                      className={`${
+                        userCredits <= 0 
+                          ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
+                          : 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-300'
+                      } w-full sm:w-auto min-w-[120px] text-xs sm:text-sm`}
+                      title={userCredits <= 0 ? "Sin créditos suficientes" : `Enviar en ${getLanguageFromCountryCode(process.country_code) === 'english' ? 'inglés' : 'español'}`}
+                    >
+                      {sendingMessage === process.id ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          Enviar {getLanguageFromCountryCode(process.country_code) === 'english' ? '🇺🇸' : '🇪🇸'}
+                        </>
+                      )}
+                    </Button>
 
                     {/* Botones de acción */}
                     <div className="flex gap-2">
