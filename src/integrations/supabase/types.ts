@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      chatbot_responses: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          is_menu: boolean | null
+          keyword: string
+          menu_order: number | null
+          response_en: string
+          response_es: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_menu?: boolean | null
+          keyword: string
+          menu_order?: number | null
+          response_en: string
+          response_es: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_menu?: boolean | null
+          keyword?: string
+          menu_order?: number | null
+          response_en?: string
+          response_es?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      chatbot_settings: {
+        Row: {
+          created_at: string
+          id: string
+          setting_key: string
+          setting_value: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          setting_key: string
+          setting_value?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          setting_key?: string
+          setting_value?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       message_queue: {
         Row: {
           created_at: string
