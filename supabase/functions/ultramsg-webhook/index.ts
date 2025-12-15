@@ -15,6 +15,14 @@ interface UltraMsgWebhookPayload {
   };
 }
 
+// English-speaking country codes
+const englishSpeakingCountries = [
+  '+1', '+44', '+61', '+64', '+27', '+353', '+1242', '+1246', '+1264', 
+  '+1268', '+1284', '+1340', '+1345', '+1441', '+1473', '+1649', '+1664', 
+  '+1670', '+1671', '+1684', '+1721', '+1758', '+1767', '+1784', '+1787', 
+  '+1809', '+1829', '+1849', '+1868', '+1869', '+1876', '+1939'
+];
+
 serve(async (req) => {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] 🚀 Starting UltraMsg webhook processing - ${req.method}`);
@@ -284,13 +292,241 @@ serve(async (req) => {
 
     console.log('✅ Notification sent successfully to Telegram');
 
+    // ========== CHATBOT FUNCTIONALITY ==========
+    console.log('🤖 Starting chatbot processing...');
+
+    // Check if chatbot is enabled
+    const { data: chatbotSettings, error: settingsError } = await supabase
+      .from('chatbot_settings')
+      .select('setting_key, setting_value');
+
+    if (settingsError) {
+      console.error('❌ Error fetching chatbot settings:', settingsError);
+    }
+
+    const settingsMap: Record<string, string> = {};
+    if (chatbotSettings) {
+      chatbotSettings.forEach((s: { setting_key: string; setting_value: string | null }) => {
+        settingsMap[s.setting_key] = s.setting_value || '';
+      });
+    }
+
+    const chatbotEnabled = settingsMap['chatbot_enabled'] === 'true';
+    console.log(`🤖 Chatbot enabled: ${chatbotEnabled}`);
+
+    if (!chatbotEnabled) {
+      console.log('⚠️ Chatbot is disabled, skipping auto-response');
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: 'Telegram notification sent, chatbot disabled',
+          notification_sent: true,
+          chatbot_response_sent: false,
+          process_id: matchedProcess.id,
+          client_name: matchedProcess.client_name
+        }), 
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
+      );
+    }
+
+    // Determine language based on country code
+    const processCountryCode = matchedProcess.country_code || '';
+    const isEnglish = englishSpeakingCountries.some(code => processCountryCode.startsWith(code));
+    const language = isEnglish ? 'en' : 'es';
+    console.log(`🌐 Detected language: ${language} (country code: ${processCountryCode})`);
+
+    // Fetch chatbot responses
+    const { data: chatbotResponses, error: responsesError } = await supabase
+      .from('chatbot_responses')
+      .select('*')
+      .eq('is_active', true);
+
+    if (responsesError) {
+      console.error('❌ Error fetching chatbot responses:', responsesError);
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: 'Telegram sent, but chatbot response failed',
+          notification_sent: true,
+          chatbot_response_sent: false,
+          process_id: matchedProcess.id
+        }), 
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
+      );
+    }
+
+    // Find matching response based on keyword
+    const normalizedMessage = messageBody.trim().toLowerCase();
+    let matchedResponse = null;
+
+    if (chatbotResponses) {
+      for (const response of chatbotResponses) {
+        if (response.keyword.toLowerCase() === normalizedMessage) {
+          matchedResponse = response;
+          break;
+        }
+      }
+    }
+
+    // If no match found, use fallback
+    let botResponseText: string;
+    if (matchedResponse) {
+      botResponseText = language === 'en' ? matchedResponse.response_en : matchedResponse.response_es;
+      console.log(`✅ Found matching response for keyword: "${normalizedMessage}"`);
+    } else {
+      botResponseText = language === 'en' 
+        ? (settingsMap['fallback_response_en'] || "🤖 I didn't understand your message. Type *menu* to see available options.")
+        : (settingsMap['fallback_response_es'] || '🤖 No entendí tu mensaje. Escribe *menu* para ver las opciones disponibles.');
+      console.log(`⚠️ No matching keyword found, using fallback response`);
+    }
+
+    // Get WhatsApp API settings based on language
+    const instanceKey = language === 'en' ? 'ultramsg_instance_id_en' : 'ultramsg_instance_id_es';
+    const tokenKey = language === 'en' ? 'ultramsg_token_en' : 'ultramsg_token_es';
+    const apiProviderKey = 'api_provider';
+
+    const { data: whatsappSettings, error: whatsappSettingsError } = await supabase
+      .from('system_settings')
+      .select('setting_key, setting_value')
+      .in('setting_key', [instanceKey, tokenKey, apiProviderKey, 
+        'ultramsg_instance_id_es', 'ultramsg_token_es',
+        'greenapi_instance_id_es', 'greenapi_token_es',
+        'greenapi_instance_id_en', 'greenapi_token_en']);
+
+    if (whatsappSettingsError) {
+      console.error('❌ Error fetching WhatsApp settings:', whatsappSettingsError);
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: 'Telegram sent, but WhatsApp settings not found',
+          notification_sent: true,
+          chatbot_response_sent: false,
+          process_id: matchedProcess.id
+        }), 
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
+      );
+    }
+
+    const whatsappSettingsMap: Record<string, string> = {};
+    if (whatsappSettings) {
+      whatsappSettings.forEach((s: { setting_key: string; setting_value: string | null }) => {
+        whatsappSettingsMap[s.setting_key] = s.setting_value || '';
+      });
+    }
+
+    const apiProvider = whatsappSettingsMap['api_provider'] || 'ultramsg';
+    console.log(`📡 Using API provider: ${apiProvider}`);
+
+    let whatsappSendSuccess = false;
+    let whatsappError = null;
+
+    // Format phone for WhatsApp
+    const formattedPhone = senderPhone.startsWith('+') ? senderPhone.substring(1) : senderPhone;
+
+    if (apiProvider === 'ultramsg') {
+      // Use UltraMSG API
+      let instanceId = whatsappSettingsMap[instanceKey] || whatsappSettingsMap['ultramsg_instance_id_es'];
+      let token = whatsappSettingsMap[tokenKey] || whatsappSettingsMap['ultramsg_token_es'];
+
+      if (!instanceId || !token) {
+        console.error('❌ UltraMSG credentials not configured');
+        whatsappError = 'UltraMSG credentials not configured';
+      } else {
+        console.log(`📤 Sending WhatsApp response via UltraMSG to ${formattedPhone}...`);
+        
+        try {
+          const ultramsgUrl = `https://api.ultramsg.com/${instanceId}/messages/chat`;
+          const ultramsgResponse = await fetch(ultramsgUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              token: token,
+              to: formattedPhone,
+              body: botResponseText,
+            }),
+          });
+
+          const ultramsgResult = await ultramsgResponse.json();
+          console.log('📬 UltraMSG API response:', ultramsgResult);
+
+          if (ultramsgResult.sent === 'true' || ultramsgResult.sent === true || ultramsgResult.id) {
+            whatsappSendSuccess = true;
+            console.log('✅ WhatsApp response sent successfully via UltraMSG');
+          } else {
+            whatsappError = JSON.stringify(ultramsgResult);
+            console.error('❌ UltraMSG send failed:', ultramsgResult);
+          }
+        } catch (e) {
+          whatsappError = e.message;
+          console.error('❌ Error sending UltraMSG message:', e);
+        }
+      }
+    } else if (apiProvider === 'greenapi') {
+      // Use Green API
+      const greenInstanceKey = language === 'en' ? 'greenapi_instance_id_en' : 'greenapi_instance_id_es';
+      const greenTokenKey = language === 'en' ? 'greenapi_token_en' : 'greenapi_token_es';
+
+      let instanceId = whatsappSettingsMap[greenInstanceKey] || whatsappSettingsMap['greenapi_instance_id_es'];
+      let token = whatsappSettingsMap[greenTokenKey] || whatsappSettingsMap['greenapi_token_es'];
+
+      if (!instanceId || !token) {
+        console.error('❌ Green API credentials not configured');
+        whatsappError = 'Green API credentials not configured';
+      } else {
+        console.log(`📤 Sending WhatsApp response via Green API to ${formattedPhone}...`);
+        
+        try {
+          const greenApiUrl = `https://api.green-api.com/waInstance${instanceId}/sendMessage/${token}`;
+          const greenApiResponse = await fetch(greenApiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              chatId: `${formattedPhone}@c.us`,
+              message: botResponseText,
+            }),
+          });
+
+          const greenApiResult = await greenApiResponse.json();
+          console.log('📬 Green API response:', greenApiResult);
+
+          if (greenApiResult.idMessage) {
+            whatsappSendSuccess = true;
+            console.log('✅ WhatsApp response sent successfully via Green API');
+          } else {
+            whatsappError = JSON.stringify(greenApiResult);
+            console.error('❌ Green API send failed:', greenApiResult);
+          }
+        } catch (e) {
+          whatsappError = e.message;
+          console.error('❌ Error sending Green API message:', e);
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: 'Notification sent',
+        message: 'Webhook processed',
         notification_sent: true,
+        chatbot_response_sent: whatsappSendSuccess,
+        chatbot_error: whatsappError,
         process_id: matchedProcess.id,
-        client_name: matchedProcess.client_name
+        client_name: matchedProcess.client_name,
+        detected_language: language,
+        matched_keyword: matchedResponse?.keyword || null
       }), 
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
