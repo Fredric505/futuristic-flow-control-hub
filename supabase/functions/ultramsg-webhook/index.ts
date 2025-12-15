@@ -426,7 +426,17 @@ serve(async (req) => {
       });
     }
 
-    const apiProvider = whatsappSettingsMap['api_provider'] || 'ultramsg';
+    // Decide provider intelligently based on available credentials
+    let apiProvider = whatsappSettingsMap['api_provider'] || 'ultramsg';
+    const hasUltraMsgCreds = !!(whatsappSettingsMap['whatsapp_instance'] && whatsappSettingsMap['whatsapp_token']);
+    const hasGreenApiCreds = !!(whatsappSettingsMap['greenapi_instance'] && whatsappSettingsMap['greenapi_token']);
+
+    if (hasUltraMsgCreds && !hasGreenApiCreds) {
+      apiProvider = 'ultramsg';
+    } else if (!hasUltraMsgCreds && hasGreenApiCreds) {
+      apiProvider = 'greenapi';
+    }
+
     console.log(`📡 Using API provider: ${apiProvider}`);
 
     let whatsappSendSuccess = false;
