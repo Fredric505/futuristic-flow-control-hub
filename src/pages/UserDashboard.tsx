@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, MessageSquare } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, MessageSquare, Link } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
@@ -12,6 +12,7 @@ import MessageHistory from '@/components/MessageHistory';
 import TelegramBotConfig from '@/components/TelegramBotConfig';
 import MessageTemplates from '@/components/MessageTemplates';
 import MobileSidebar from '@/components/MobileSidebar';
+import UserChatbotUrls from '@/components/UserChatbotUrls';
 import { supabase } from '@/integrations/supabase/client';
 
 const UserDashboard = () => {
@@ -91,6 +92,7 @@ const UserDashboard = () => {
     { id: 'templates', icon: FileText, label: 'Plantillas', description: 'Gestionar plantillas de mensajes' },
     { id: 'history', icon: History, label: 'Historial', description: 'Mensajes enviados' },
     { id: 'telegram-config', icon: MessageSquare, label: 'Config. Bot Telegram', description: 'Configurar notificaciones' },
+    { id: 'chatbot-urls', icon: Link, label: 'URLs Chatbot', description: 'Personalizar URLs del chatbot' },
     { id: 'settings', icon: Settings, label: 'Configuración', description: 'Ajustes de cuenta' },
   ];
 
@@ -194,6 +196,9 @@ const UserDashboard = () => {
             </Card>
           </div>
         );
+      
+      case 'chatbot-urls':
+        return <UserChatbotUrls />;
       
       case 'settings':
         return (
