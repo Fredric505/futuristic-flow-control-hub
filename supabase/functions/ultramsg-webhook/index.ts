@@ -386,6 +386,33 @@ serve(async (req) => {
       console.log(`⚠️ No matching keyword found, using fallback response`);
     }
 
+    // ========== REPLACE USER-SPECIFIC URLs ==========
+    // Fetch user's custom URLs and replace placeholders in the response
+    const userId = matchedProcess.user_id;
+    console.log(`🔗 Checking for user-specific URLs for user: ${userId}`);
+
+    const { data: userUrls, error: userUrlsError } = await supabase
+      .from('user_chatbot_urls')
+      .select('url_key, url_value')
+      .eq('user_id', userId);
+
+    if (userUrlsError) {
+      console.error('❌ Error fetching user URLs:', userUrlsError);
+    } else if (userUrls && userUrls.length > 0) {
+      console.log(`📋 Found ${userUrls.length} custom URLs for user`);
+      
+      // Replace each placeholder with user's custom URL
+      for (const userUrl of userUrls) {
+        const placeholder = `{{${userUrl.url_key}}}`;
+        if (botResponseText.includes(placeholder)) {
+          botResponseText = botResponseText.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), userUrl.url_value);
+          console.log(`✅ Replaced ${placeholder} with user's custom URL`);
+        }
+      }
+    } else {
+      console.log(`ℹ️ No custom URLs configured for user, using global defaults`);
+    }
+
     // Add 5 second delay to avoid automation bans
     console.log('⏳ Waiting 5 seconds before sending chatbot response...');
     await new Promise(resolve => setTimeout(resolve, 5000));

@@ -353,6 +353,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_chatbot_urls: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          url_key: string
+          url_value: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          url_key: string
+          url_value: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          url_key?: string
+          url_value?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       whatsapp_telegram_log: {
         Row: {
           forwarded_at: string
