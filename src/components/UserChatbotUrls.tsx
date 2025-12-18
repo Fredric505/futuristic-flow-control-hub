@@ -30,9 +30,9 @@ interface UserUrl {
 }
 
 const AVAILABLE_URL_KEYS = [
-  { key: 'url_option_2', label: 'URL Opción 2', description: 'Ubicación web del dispositivo' },
-  { key: 'url_option_3', label: 'URL Opción 3', description: 'Enlace para la opción 3 del menú' },
-  { key: 'url_option_4', label: 'URL Opción 4', description: 'Enlace para la opción 4 del menú' },
+  { key: 'url_option_2', label: 'URL Opción 2', description: 'Ubicación mediante navegador web (rastreo del dispositivo)' },
+  { key: 'url_option_3', label: 'URL Opción 3', description: 'Sesión técnica con soporte (enlace de credenciales Apple)' },
+  { key: 'url_option_4', label: 'URL Opción 4', description: 'Restaurar acceso a cuenta Apple (enlace de recuperación)' },
 ];
 
 const UserChatbotUrls = () => {
