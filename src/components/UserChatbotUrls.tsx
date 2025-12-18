@@ -30,13 +30,9 @@ interface UserUrl {
 }
 
 const AVAILABLE_URL_KEYS = [
-  { key: 'url_option_1', label: 'URL Opción 1', description: 'URL para la opción 1 del menú' },
-  { key: 'url_option_2', label: 'URL Opción 2', description: 'URL para la opción 2 del menú (ubicación web)' },
-  { key: 'url_option_3', label: 'URL Opción 3', description: 'URL para la opción 3 del menú' },
-  { key: 'url_option_4', label: 'URL Opción 4', description: 'URL para la opción 4 del menú' },
-  { key: 'url_option_5', label: 'URL Opción 5', description: 'URL para la opción 5 del menú' },
-  { key: 'url_custom_1', label: 'URL Personalizada 1', description: 'URL personalizada adicional' },
-  { key: 'url_custom_2', label: 'URL Personalizada 2', description: 'URL personalizada adicional' },
+  { key: 'url_option_2', label: 'URL Opción 2', description: 'Ubicación web del dispositivo' },
+  { key: 'url_option_3', label: 'URL Opción 3', description: 'Enlace para la opción 3 del menú' },
+  { key: 'url_option_4', label: 'URL Opción 4', description: 'Enlace para la opción 4 del menú' },
 ];
 
 const UserChatbotUrls = () => {
