@@ -410,7 +410,33 @@ serve(async (req) => {
         }
       }
     } else {
-      console.log(`ℹ️ No custom URLs configured for user, using global defaults`);
+      console.log(`ℹ️ No custom URLs configured for user`);
+    }
+
+    // ========== REPLACE REMAINING PLACEHOLDERS WITH GLOBAL URLs ==========
+    // Fetch global URLs from system_settings and replace any remaining placeholders
+    const { data: globalUrls, error: globalUrlsError } = await supabase
+      .from('system_settings')
+      .select('setting_key, setting_value')
+      .like('setting_key', 'global_url_option_%');
+
+    if (globalUrlsError) {
+      console.error('❌ Error fetching global URLs:', globalUrlsError);
+    } else if (globalUrls && globalUrls.length > 0) {
+      console.log(`🌐 Found ${globalUrls.length} global URLs for fallback`);
+      
+      // Replace remaining placeholders with global URLs
+      for (const globalUrl of globalUrls) {
+        // Convert 'global_url_option_2' to 'url_option_2'
+        const urlKey = globalUrl.setting_key.replace('global_', '');
+        const placeholder = `{{${urlKey}}}`;
+        if (botResponseText.includes(placeholder) && globalUrl.setting_value) {
+          botResponseText = botResponseText.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), globalUrl.setting_value);
+          console.log(`🌐 Replaced ${placeholder} with global URL`);
+        }
+      }
+    } else {
+      console.log(`⚠️ No global URLs configured`);
     }
 
     // Add 5 second delay to avoid automation bans
