@@ -49,6 +49,19 @@ serve(async (req) => {
 
     if (authError) {
       console.error("Auth error:", authError);
+      // Provide user-friendly error messages
+      if (authError.code === 'email_exists') {
+        return new Response(
+          JSON.stringify({ 
+            error: "Este email ya está registrado",
+            details: "Ya existe un usuario con este correo electrónico"
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 400,
+          }
+        );
+      }
       throw authError;
     }
 
