@@ -94,7 +94,7 @@ const AdminDashboard = () => {
     { id: 'telegram-config', icon: MessageSquare, label: 'Config. Telegram', description: 'Configurar bot de notificaciones' },
     { id: 'chatbot-config', icon: Bot, label: 'Chatbot WhatsApp', description: 'Configurar respuestas automáticas' },
     { id: 'bulk-notifications', icon: Bell, label: 'Notificaciones Masivas', description: 'Enviar notificaciones a usuarios' },
-    { id: 'ifttt-config', icon: Smartphone, label: 'Config. IFTTT', description: 'Configuración del dispositivo de reenvío' },
+    { id: 'webhook-config', icon: Smartphone, label: 'Config. Webhook', description: 'Configuración del webhook de UltraMSG' },
     { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Solo es texto' },
     { id: 'add-user', icon: User, label: 'Añadir Usuario', description: 'Asignar correo, contraseña y créditos' },
     { id: 'manage-users', icon: Users, label: 'Gestionar Usuarios', description: 'Editar, borrar y renovar usuarios' },
@@ -202,79 +202,45 @@ const AdminDashboard = () => {
       case 'templates':
         return <MessageTemplates />;
       
-      case 'ifttt-config':
+      case 'webhook-config':
         return (
           <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
             <CardHeader>
-              <CardTitle className="text-blue-300">📱 Configuración IFTTT - Dispositivo de Reenvío</CardTitle>
+              <CardTitle className="text-blue-300">🔗 Configuración Webhook - UltraMSG</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-6 text-blue-200/70">
-                <div className="p-4 bg-yellow-950/30 rounded-lg border border-yellow-500/20">
-                  <p className="text-yellow-200 font-semibold mb-2">⚠️ SOLO PARA ADMINISTRADOR:</p>
-                  <p className="text-yellow-200/80 text-sm">
-                    Esta configuración es únicamente para el dispositivo que manejará el reenvío de notificaciones. 
-                    Los usuarios solo necesitan configurar su bot de Telegram personal.
+                <div className="p-4 bg-green-950/30 rounded-lg border border-green-500/20">
+                  <p className="text-green-200 font-semibold mb-2">✅ Estado del Sistema:</p>
+                  <p className="text-green-200/80 text-sm">
+                    El webhook de UltraMSG está configurado y funcionando correctamente. 
+                    Las respuestas de WhatsApp se reciben automáticamente.
                   </p>
                 </div>
 
-                <h4 className="text-blue-300 font-semibold text-lg">📋 URL del Webhook para IFTTT:</h4>
+                <h4 className="text-blue-300 font-semibold text-lg">📋 URL del Webhook:</h4>
                 <div className="p-4 bg-blue-950/30 rounded-lg border border-blue-500/20">
                   <code className="text-blue-200 text-sm break-all font-mono">
-                    https://jclbkyyujtrpfqgrmdhl.supabase.co/functions/v1/telegram-notification
+                    https://bifqtxaigahdhejurzyb.supabase.co/functions/v1/ultramsg-webhook
                   </code>
                 </div>
                 
-                <div className="space-y-4">
-                  <h4 className="text-blue-300 font-semibold text-lg">🔧 Instrucciones IFTTT:</h4>
-                  <div className="bg-slate-950/50 p-4 rounded-lg border border-blue-500/20">
-                    <ol className="space-y-3 text-sm">
-                      <li className="flex items-start space-x-2">
-                        <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
-                        <span>Crea un nuevo applet en IFTTT</span>
-                      </li>
-                      <li className="flex items-start space-x-2">
-                        <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>
-                        <span>Como trigger usa <strong>"Android SMS"</strong> → <strong>"Any new SMS received"</strong></span>
-                      </li>
-                      <li className="flex items-start space-x-2">
-                        <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">3</span>
-                        <span>Como action usa <strong>"Webhooks"</strong> → <strong>"Make a web request"</strong></span>
-                      </li>
-                      <li className="flex items-start space-x-2">
-                        <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">4</span>
-                        <div className="space-y-2">
-                          <div><strong>URL:</strong> La URL de arriba</div>
-                          <div><strong>Method:</strong> POST</div>
-                          <div><strong>Content Type:</strong> application/json</div>
-                          <div><strong>Body:</strong></div>
-                          <div className="bg-gray-900 p-3 rounded text-xs font-mono mt-2 border border-gray-600">
-                            {`{"message": "{{Text}}", "sender": "{{FromNumber}}", "response": "{{Text}}"}`}
-                          </div>
-                        </div>
-                      </li>
-                    </ol>
-                  </div>
-                </div>
-                
-                <div className="p-4 bg-green-950/30 rounded-lg border border-green-500/20">
-                  <p className="text-green-200 font-semibold mb-2">✅ Funcionamiento:</p>
-                  <ul className="text-green-200/80 text-sm space-y-1">
-                    <li>• El dispositivo admin recibe SMS con respuestas de WhatsApp</li>
-                    <li>• IFTTT detecta el SMS y envía la información al webhook</li>
-                    <li>• El sistema identifica automáticamente el proceso por IMEI/Serie/Teléfono</li>
-                    <li>• Se envía la notificación al bot de Telegram del usuario correspondiente</li>
+                <div className="p-4 bg-blue-950/30 rounded-lg border border-blue-500/20">
+                  <p className="text-blue-200 font-semibold mb-2">🔧 Funcionamiento Automático:</p>
+                  <ul className="text-blue-200/80 text-sm space-y-1">
+                    <li>• UltraMSG recibe mensajes de WhatsApp</li>
+                    <li>• El webhook procesa automáticamente las respuestas</li>
+                    <li>• El sistema identifica el proceso por IMEI/Serie/Teléfono</li>
+                    <li>• Se envía la notificación al bot de Telegram del usuario</li>
                   </ul>
                 </div>
 
-                <div className="p-4 bg-blue-950/30 rounded-lg border border-blue-500/20">
-                  <p className="text-blue-200 font-semibold mb-2">📱 Requisitos del dispositivo:</p>
-                  <ul className="text-blue-200/80 text-sm space-y-1">
-                    <li>• Debe tener la app IFTTT instalada</li>
-                    <li>• Debe estar conectado a internet</li>
-                    <li>• Debe recibir los SMS de respuesta de WhatsApp</li>
-                    <li>• Solo se necesita UN dispositivo para todo el sistema</li>
-                  </ul>
+                <div className="p-4 bg-yellow-950/30 rounded-lg border border-yellow-500/20">
+                  <p className="text-yellow-200 font-semibold mb-2">⚠️ Configuración en UltraMSG:</p>
+                  <p className="text-yellow-200/80 text-sm">
+                    Esta URL ya está configurada en el panel de UltraMSG. 
+                    No es necesario realizar ningún cambio adicional.
+                  </p>
                 </div>
               </div>
             </CardContent>
