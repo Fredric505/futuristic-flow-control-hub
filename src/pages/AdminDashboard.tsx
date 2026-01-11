@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageSquare, Smartphone, Bell, Clock, FileEdit, Bot } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageSquare, Smartphone, Bell, Clock, FileEdit, Bot, Globe } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
@@ -19,6 +19,7 @@ import MessageQueue from '@/components/MessageQueue';
 import MessageTemplates from '@/components/MessageTemplates';
 import MobileSidebar from '@/components/MobileSidebar';
 import ChatbotConfig from '@/components/ChatbotConfig';
+import GlobalChatbotUrls from '@/components/GlobalChatbotUrls';
 import { supabase } from '@/integrations/supabase/client';
 
 const AdminDashboard = () => {
@@ -93,6 +94,7 @@ const AdminDashboard = () => {
     { id: 'templates', icon: FileEdit, label: 'Plantillas', description: 'Gestionar plantillas de mensajes' },
     { id: 'telegram-config', icon: MessageSquare, label: 'Config. Telegram', description: 'Configurar bot de notificaciones' },
     { id: 'chatbot-config', icon: Bot, label: 'Chatbot WhatsApp', description: 'Configurar respuestas automáticas' },
+    { id: 'global-urls', icon: Globe, label: 'URLs Globales', description: 'URLs por defecto del chatbot' },
     { id: 'bulk-notifications', icon: Bell, label: 'Notificaciones Masivas', description: 'Enviar notificaciones a usuarios' },
     { id: 'webhook-config', icon: Smartphone, label: 'Config. Webhook', description: 'Configuración del webhook de UltraMSG' },
     { id: 'admin-access', icon: Wrench, label: 'Accesos Admin', description: 'Solo es texto' },
@@ -198,6 +200,9 @@ const AdminDashboard = () => {
       
       case 'chatbot-config':
         return <ChatbotConfig />;
+      
+      case 'global-urls':
+        return <GlobalChatbotUrls />;
       
       case 'templates':
         return <MessageTemplates />;
