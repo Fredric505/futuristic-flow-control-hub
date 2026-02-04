@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageSquare, Smartphone, Bell, Clock, FileEdit, Bot, Globe } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageSquare, Smartphone, Bell, Clock, FileEdit, Bot, Globe, Send } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
@@ -20,6 +20,7 @@ import MessageTemplates from '@/components/MessageTemplates';
 import MobileSidebar from '@/components/MobileSidebar';
 import ChatbotConfig from '@/components/ChatbotConfig';
 import GlobalChatbotUrls from '@/components/GlobalChatbotUrls';
+import SmsSender from '@/components/SmsSender';
 import { supabase } from '@/integrations/supabase/client';
 
 const AdminDashboard = () => {
@@ -89,6 +90,7 @@ const AdminDashboard = () => {
     { id: 'add-process', icon: Plus, label: 'Agregar Proceso', description: 'Agregar formulario para luego guardar' },
     { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Mis procesos guardados y listos para enviar' },
     { id: 'message-queue', icon: Clock, label: 'Cola de Mensajes', description: 'Ver y gestionar mensajes pendientes' },
+    { id: 'sms-sender', icon: Send, label: 'SMS Sender', description: 'Enviar SMS via Senders Global' },
     { id: 'history', icon: History, label: 'Historial', description: 'Mi historial de mensajes enviados' },
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
     { id: 'templates', icon: FileEdit, label: 'Plantillas', description: 'Gestionar plantillas de mensajes' },
@@ -185,6 +187,9 @@ const AdminDashboard = () => {
       
       case 'message-queue':
         return <MessageQueue />;
+      
+      case 'sms-sender':
+        return <SmsSender />;
       
       case 'history':
         return <MessageHistory />;

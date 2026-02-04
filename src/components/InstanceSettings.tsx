@@ -21,6 +21,10 @@ const InstanceSettings = () => {
   const [greenSpanishToken, setGreenSpanishToken] = useState('');
   const [greenEnglishInstance, setGreenEnglishInstance] = useState('');
   const [greenEnglishToken, setGreenEnglishToken] = useState('');
+
+  // SMS API settings
+  const [smsApiKey, setSmsApiKey] = useState('');
+  const [smsApiToken, setSmsApiToken] = useState('');
   
   const [loading, setLoading] = useState(true);
 
@@ -36,7 +40,8 @@ const InstanceSettings = () => {
         .in('setting_key', [
           'api_provider',
           'whatsapp_instance', 'whatsapp_token', 'whatsapp_instance_en', 'whatsapp_token_en',
-          'greenapi_instance', 'greenapi_token', 'greenapi_instance_en', 'greenapi_token_en'
+          'greenapi_instance', 'greenapi_token', 'greenapi_instance_en', 'greenapi_token_en',
+          'sms_api_key', 'sms_api_token'
         ]);
 
       if (error) throw error;
@@ -59,6 +64,10 @@ const InstanceSettings = () => {
       setGreenSpanishToken(settings?.greenapi_token || '');
       setGreenEnglishInstance(settings?.greenapi_instance_en || '');
       setGreenEnglishToken(settings?.greenapi_token_en || '');
+
+      // SMS API settings
+      setSmsApiKey(settings?.sms_api_key || '');
+      setSmsApiToken(settings?.sms_api_token || '');
     } catch (error) {
       console.error('Error loading settings:', error);
       toast({
@@ -168,9 +177,30 @@ const InstanceSettings = () => {
 
       if (greenEnglishTokenError) throw greenEnglishTokenError;
 
+      // Save SMS API settings
+      const { error: smsApiKeyError } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: 'sms_api_key',
+          setting_value: smsApiKey,
+          updated_at: new Date().toISOString()
+        });
+
+      if (smsApiKeyError) throw smsApiKeyError;
+
+      const { error: smsApiTokenError } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: 'sms_api_token',
+          setting_value: smsApiToken,
+          updated_at: new Date().toISOString()
+        });
+
+      if (smsApiTokenError) throw smsApiTokenError;
+
       toast({
         title: "Configuración guardada",
-        description: "Configuraciones de ambos idiomas actualizadas exitosamente",
+        description: "Configuraciones de ambos idiomas y SMS actualizadas exitosamente",
       });
     } catch (error: any) {
       console.error('Error saving settings:', error);
@@ -194,7 +224,8 @@ const InstanceSettings = () => {
         .in('setting_key', [
           'api_provider',
           'whatsapp_instance', 'whatsapp_token', 'whatsapp_instance_en', 'whatsapp_token_en',
-          'greenapi_instance', 'greenapi_token', 'greenapi_instance_en', 'greenapi_token_en'
+          'greenapi_instance', 'greenapi_token', 'greenapi_instance_en', 'greenapi_token_en',
+          'sms_api_key', 'sms_api_token'
         ]);
 
       if (error) throw error;
@@ -208,6 +239,8 @@ const InstanceSettings = () => {
       setGreenSpanishToken('');
       setGreenEnglishInstance('');
       setGreenEnglishToken('');
+      setSmsApiKey('');
+      setSmsApiToken('');
       
       toast({
         title: "Configuración eliminada",
@@ -389,6 +422,46 @@ const InstanceSettings = () => {
                   placeholder="Enter token for English"
                 />
               </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* SMS API Configuration */}
+      <Card className="bg-black/20 backdrop-blur-xl border border-orange-500/20">
+        <CardHeader>
+          <CardTitle className="text-orange-300">📱 SMS API - Senders Global</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="p-4 bg-orange-950/30 rounded-lg border border-orange-500/20 mb-4">
+              <p className="text-orange-200/70 text-sm">
+                Configura las credenciales de la API de senders-global.com para enviar SMS.
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="sms-api-key" className="text-orange-200">API Key</Label>
+              <Input
+                id="sms-api-key"
+                type="text"
+                value={smsApiKey}
+                onChange={(e) => setSmsApiKey(e.target.value)}
+                className="bg-white/5 border-orange-500/30 text-white"
+                placeholder="Ingresa tu API Key de senders-global"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="sms-api-token" className="text-orange-200">API Token</Label>
+              <Input
+                id="sms-api-token"
+                type="text"
+                value={smsApiToken}
+                onChange={(e) => setSmsApiToken(e.target.value)}
+                className="bg-white/5 border-orange-500/30 text-white"
+                placeholder="Ingresa tu API Token de senders-global"
+              />
             </div>
           </div>
         </CardContent>
