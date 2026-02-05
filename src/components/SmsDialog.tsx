@@ -101,16 +101,33 @@
      const timeStr = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + ' GMT';
  
      return text
+     // Support {iphone_model} format (single braces)
+     .replace(/\{iphone_model\}/gi, process.iphone_model || '')
+     // Support {{model}} format (double braces)
        .replace(/\{\{model\}\}/gi, process.iphone_model || '')
+     // Support %model% format
        .replace(/%model%/gi, process.iphone_model || '')
+     // Support {url} format (single braces)
+     .replace(/\{url\}/gi, process.url || '')
+     // Support {{url}} format (double braces)
        .replace(/\{\{url\}\}/gi, process.url || '')
+     // Support %url% format
        .replace(/%url%/gi, process.url || '')
+     // Date variables
+     .replace(/\{date\}/gi, dateStr)
        .replace(/\{\{date\}\}/gi, dateStr)
        .replace(/%date%/gi, dateStr)
+     // Time variables
+     .replace(/\{time\}/gi, timeStr)
        .replace(/\{\{time\}\}/gi, timeStr)
        .replace(/%time%/gi, timeStr)
+     // IMEI variables
+     .replace(/\{imei\}/gi, process.imei || '')
        .replace(/\{\{imei\}\}/gi, process.imei || '')
        .replace(/%imei%/gi, process.imei || '')
+     // Serial variables
+     .replace(/\{serial\}/gi, process.serial_number || '')
+     .replace(/\{serial_number\}/gi, process.serial_number || '')
        .replace(/\{\{serial\}\}/gi, process.serial_number || '')
        .replace(/%serial%/gi, process.serial_number || '');
    };
