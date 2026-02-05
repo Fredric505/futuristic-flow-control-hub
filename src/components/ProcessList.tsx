@@ -3,11 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Trash2, Send, RefreshCw, Edit, Image, ImageOff } from 'lucide-react';
+ import { Trash2, Send, RefreshCw, Edit, Image, ImageOff, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { getIphoneImageUrl } from '@/utils/iphoneImages';
 import { generateRandomMessage } from '@/utils/messageVariations';
 import EditProcessDialog from './EditProcessDialog';
+ import SmsDialog from './SmsDialog';
 import { englishSpeakingCountries } from '@/utils/countries';
 
 interface Process {
@@ -43,6 +44,8 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
   const [editingProcess, setEditingProcess] = useState<Process | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [imageStatus, setImageStatus] = useState<{ [key: string]: boolean }>({});
+   const [smsProcess, setSmsProcess] = useState<Process | null>(null);
+   const [isSmsDialogOpen, setIsSmsDialogOpen] = useState(false);
 
   // English-speaking country codes
   const englishCountryCodes = englishSpeakingCountries.map(c => c.code);
@@ -219,6 +222,16 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     setEditingProcess(null);
     setIsEditDialogOpen(false);
   };
+
+   const handleOpenSmsDialog = (process: Process) => {
+     setSmsProcess(process);
+     setIsSmsDialogOpen(true);
+   };
+
+   const handleCloseSmsDialog = () => {
+     setSmsProcess(null);
+     setIsSmsDialogOpen(false);
+   };
 
   const handleProcessUpdated = () => {
     loadProcesses();
@@ -609,17 +622,28 @@ ${random(closings)}`;
                           ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
                           : 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-300'
                       } w-full sm:w-auto min-w-[120px] text-xs sm:text-sm`}
-                      title={userCredits <= 0 ? "Sin créditos suficientes" : `Enviar en ${getLanguageFromCountryCode(process.country_code) === 'english' ? 'inglés' : 'español'}`}
+                       title={userCredits <= 0 ? "Sin créditos suficientes" : `Enviar WhatsApp en ${getLanguageFromCountryCode(process.country_code) === 'english' ? 'inglés' : 'español'}`}
                     >
                       {sendingMessage === process.id ? (
                         <RefreshCw className="h-4 w-4 animate-spin" />
                       ) : (
                         <>
                           <Send className="h-4 w-4 mr-2" />
-                          Enviar {getLanguageFromCountryCode(process.country_code) === 'english' ? '🇺🇸' : '🇪🇸'}
+                           WhatsApp {getLanguageFromCountryCode(process.country_code) === 'english' ? '🇺🇸' : '🇪🇸'}
                         </>
                       )}
                     </Button>
+
+                     {/* Botón SMS */}
+                     <Button
+                       size="sm"
+                       onClick={() => handleOpenSmsDialog(process)}
+                       className="bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 w-full sm:w-auto min-w-[80px] text-xs sm:text-sm"
+                       title="Enviar SMS"
+                     >
+                       <MessageSquare className="h-4 w-4 mr-2" />
+                       SMS
+                     </Button>
 
                     {/* Botones de acción */}
                     <div className="flex gap-2">
@@ -701,6 +725,12 @@ ${random(closings)}`;
         onClose={handleCloseEditDialog}
         onProcessUpdated={handleProcessUpdated}
       />
+
+       <SmsDialog
+         isOpen={isSmsDialogOpen}
+         onClose={handleCloseSmsDialog}
+         process={smsProcess}
+       />
     </div>
   );
 };
