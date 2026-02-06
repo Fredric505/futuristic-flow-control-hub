@@ -331,13 +331,12 @@
                  {charCount}/{MAX_SMS_LENGTH}
                </span>
              </div>
-             <Textarea
-               value={previewMessage}
-               onChange={(e) => setMessage(e.target.value)}
-               placeholder="El mensaje se generará automáticamente al seleccionar una plantilla"
-               className={`bg-white/5 border-cyan-500/30 text-white min-h-[100px] ${isOverLimit ? 'border-red-500' : ''}`}
-               readOnly={!!selectedTemplateId}
-             />
+              <Textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="El mensaje se generará automáticamente al seleccionar una plantilla o escríbelo manualmente"
+                className={`bg-white/5 border-cyan-500/30 text-white min-h-[100px] ${isOverLimit ? 'border-red-500' : ''}`}
+              />
              {isOverLimit && (
                <p className="text-red-400 text-xs">
                  El mensaje excede el límite de {MAX_SMS_LENGTH} caracteres

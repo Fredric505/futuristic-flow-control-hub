@@ -187,8 +187,6 @@ const AdminDashboard = () => {
       case 'message-queue':
         return <MessageQueue />;
       
-      case 'sms-sender':
-        return <SmsSender />;
       
       case 'history':
         return <MessageHistory />;
