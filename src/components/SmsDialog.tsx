@@ -238,9 +238,9 @@
  
    if (!process) return null;
  
-   const previewMessage = getPreviewMessage();
-   const charCount = previewMessage.length;
-   const isOverLimit = charCount > MAX_SMS_LENGTH;
+    const previewMessage = replaceVariables(message);
+    const charCount = previewMessage.length;
+    const isOverLimit = charCount > MAX_SMS_LENGTH;
  
    return (
      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
