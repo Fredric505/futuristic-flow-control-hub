@@ -323,26 +323,34 @@
              </Select>
            </div>
  
-           {/* Message Preview */}
-           <div className="space-y-2">
-             <div className="flex justify-between items-center">
-               <Label className="text-cyan-200">Vista Previa del Mensaje</Label>
-               <span className={`text-xs ${isOverLimit ? 'text-red-400' : 'text-cyan-200/60'}`}>
-                 {charCount}/{MAX_SMS_LENGTH}
-               </span>
-             </div>
+            {/* Message Editor */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <Label className="text-cyan-200">Mensaje</Label>
+                <span className={`text-xs ${isOverLimit ? 'text-red-400' : 'text-cyan-200/60'}`}>
+                  {charCount}/{MAX_SMS_LENGTH}
+                </span>
+              </div>
               <Textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="El mensaje se generará automáticamente al seleccionar una plantilla o escríbelo manualmente"
-                className={`bg-white/5 border-cyan-500/30 text-white min-h-[100px] ${isOverLimit ? 'border-red-500' : ''}`}
+                placeholder="Selecciona una plantilla o escribe el mensaje manualmente"
+                className={`bg-white/5 border-cyan-500/30 text-white min-h-[80px] ${isOverLimit ? 'border-red-500' : ''}`}
               />
-             {isOverLimit && (
-               <p className="text-red-400 text-xs">
-                 El mensaje excede el límite de {MAX_SMS_LENGTH} caracteres
-               </p>
-             )}
-           </div>
+            </div>
+
+            {/* Preview */}
+            <div className="space-y-2">
+              <Label className="text-cyan-200 text-sm">Vista Previa (así se enviará)</Label>
+              <div className={`bg-white/10 rounded-lg p-3 text-sm text-white/90 min-h-[60px] ${isOverLimit ? 'border border-red-500' : 'border border-cyan-500/20'}`}>
+                {previewMessage || <span className="text-white/40 italic">El mensaje aparecerá aquí...</span>}
+              </div>
+              {isOverLimit && (
+                <p className="text-red-400 text-xs">
+                  El mensaje excede el límite de {MAX_SMS_LENGTH} caracteres
+                </p>
+              )}
+            </div>
  
            {/* Process Info */}
            <div className="bg-white/5 rounded-lg p-3 text-xs text-cyan-200/60">
