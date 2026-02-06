@@ -90,7 +90,6 @@ const AdminDashboard = () => {
     { id: 'add-process', icon: Plus, label: 'Agregar Proceso', description: 'Agregar formulario para luego guardar' },
     { id: 'view-processes', icon: FileText, label: 'Ver Procesos', description: 'Mis procesos guardados y listos para enviar' },
     { id: 'message-queue', icon: Clock, label: 'Cola de Mensajes', description: 'Ver y gestionar mensajes pendientes' },
-    { id: 'sms-sender', icon: Send, label: 'SMS Sender', description: 'Enviar SMS via Senders Global' },
     { id: 'history', icon: History, label: 'Historial', description: 'Mi historial de mensajes enviados' },
     { id: 'admin-messages', icon: History, label: 'Historial de Usuarios', description: 'Ver mensajes enviados por todos los usuarios' },
     { id: 'templates', icon: FileEdit, label: 'Plantillas', description: 'Gestionar plantillas de mensajes' },
