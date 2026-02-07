@@ -244,7 +244,12 @@
  
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto bg-slate-900 border-cyan-500/30 text-white">
+      <DialogContent 
+        className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto bg-slate-900 border-cyan-500/30 text-white"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-cyan-300">
             <MessageSquare className="h-5 w-5" />
