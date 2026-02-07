@@ -242,150 +242,165 @@
     const charCount = previewMessage.length;
     const isOverLimit = charCount > MAX_SMS_LENGTH;
  
-   return (
-     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-       <DialogContent className="sm:max-w-[500px] bg-slate-900 border-cyan-500/30 text-white">
-         <DialogHeader>
-           <DialogTitle className="flex items-center gap-2 text-cyan-300">
-             <MessageSquare className="h-5 w-5" />
-             SMS Sender
-           </DialogTitle>
-         </DialogHeader>
- 
-         <div className="space-y-4 py-4">
-           {/* Sender Selection */}
-           <div className="space-y-2">
-             <Label className="text-cyan-200">Seleccione un remitente</Label>
-             <Select onValueChange={handleSenderChange}>
-               <SelectTrigger className="bg-white/5 border-cyan-500/30 text-white">
-                 <SelectValue placeholder="Selecciona un sender..." />
-               </SelectTrigger>
-               <SelectContent className="max-h-[300px] bg-slate-800 border-cyan-500/30">
-                 {smsSenders.map((sender) => (
-                   <SelectItem 
-                     key={sender.api_id} 
-                     value={sender.api_id.toString()}
-                     className="text-white hover:bg-cyan-600/20"
-                   >
-                     {getSenderLabel(sender)}
-                   </SelectItem>
-                 ))}
-               </SelectContent>
-             </Select>
-           </div>
- 
-           {/* Phone Number Display */}
-           <div className="grid grid-cols-4 gap-2">
-             <div className="space-y-2">
-               <Label className="text-cyan-200 text-sm">Código</Label>
-               <Input
-                 type="text"
-                 value={process.country_code}
-                 disabled
-                 className="bg-white/5 border-cyan-500/30 text-white/70"
-               />
-             </div>
-             <div className="col-span-3 space-y-2">
-               <Label className="text-cyan-200 text-sm">Número</Label>
-               <Input
-                 type="text"
-                 value={process.phone_number}
-                 disabled
-                 className="bg-white/5 border-cyan-500/30 text-white/70"
-               />
-             </div>
-           </div>
- 
-           {/* Template Selector */}
-           <div className="space-y-2">
-             <Label className="text-cyan-200">Seleccione una plantilla</Label>
-             <Select value={selectedTemplateId} onValueChange={handleTemplateChange}>
-               <SelectTrigger className="bg-white/5 border-cyan-500/30 text-white">
-                 <SelectValue placeholder="Selecciona una plantilla..." />
-               </SelectTrigger>
-               <SelectContent className="bg-slate-800 border-cyan-500/30">
-                 {loadingTemplates ? (
-                   <SelectItem value="loading" disabled className="text-white/50">Cargando...</SelectItem>
-                 ) : templates.length === 0 ? (
-                   <SelectItem value="none" disabled className="text-white/50">No hay plantillas</SelectItem>
-                 ) : (
-                   templates.map((template) => (
-                     <SelectItem 
-                       key={template.id} 
-                       value={template.id}
-                       className="text-white hover:bg-cyan-600/20"
-                     >
-                       {template.name} ({template.language === 'es' ? '🇪🇸' : '🇺🇸'})
-                     </SelectItem>
-                   ))
-                 )}
-               </SelectContent>
-             </Select>
-           </div>
- 
-            {/* Message Editor */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label className="text-cyan-200">Mensaje</Label>
-                <span className={`text-xs ${isOverLimit ? 'text-red-400' : 'text-cyan-200/60'}`}>
-                  {charCount}/{MAX_SMS_LENGTH}
-                </span>
-              </div>
-              <Textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Selecciona una plantilla o escribe el mensaje manualmente"
-                className={`bg-white/5 border-cyan-500/30 text-white min-h-[80px] ${isOverLimit ? 'border-red-500' : ''}`}
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto bg-slate-900 border-cyan-500/30 text-white">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-cyan-300">
+            <MessageSquare className="h-5 w-5" />
+            SMS Sender
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-3 py-2">
+          {/* Sender Selection */}
+          <div className="space-y-1.5">
+            <Label className="text-cyan-200 text-sm">Seleccione un remitente</Label>
+            <Select onValueChange={handleSenderChange}>
+              <SelectTrigger className="bg-white/5 border-cyan-500/30 text-white h-9">
+                <SelectValue placeholder="Selecciona un sender..." />
+              </SelectTrigger>
+              <SelectContent className="max-h-[200px] bg-slate-800 border-cyan-500/30">
+                {smsSenders.map((sender) => (
+                  <SelectItem 
+                    key={sender.api_id} 
+                    value={sender.api_id.toString()}
+                    className="text-white hover:bg-cyan-600/20"
+                  >
+                    {getSenderLabel(sender)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Phone Number Display */}
+          <div className="grid grid-cols-4 gap-2">
+            <div className="space-y-1">
+              <Label className="text-cyan-200 text-xs">Código</Label>
+              <Input
+                type="text"
+                value={process.country_code}
+                disabled
+                className="bg-white/5 border-cyan-500/30 text-white/70 h-8 text-sm"
               />
             </div>
-
-            {/* Preview */}
-            <div className="space-y-2">
-              <Label className="text-cyan-200 text-sm">Vista Previa (así se enviará)</Label>
-              <div className={`bg-white/10 rounded-lg p-3 text-sm text-white/90 min-h-[60px] ${isOverLimit ? 'border border-red-500' : 'border border-cyan-500/20'}`}>
-                {previewMessage || <span className="text-white/40 italic">El mensaje aparecerá aquí...</span>}
-              </div>
-              {isOverLimit && (
-                <p className="text-red-400 text-xs">
-                  El mensaje excede el límite de {MAX_SMS_LENGTH} caracteres
-                </p>
-              )}
+            <div className="col-span-3 space-y-1">
+              <Label className="text-cyan-200 text-xs">Número</Label>
+              <Input
+                type="text"
+                value={process.phone_number}
+                disabled
+                className="bg-white/5 border-cyan-500/30 text-white/70 h-8 text-sm"
+              />
             </div>
- 
-           {/* Process Info */}
-           <div className="bg-white/5 rounded-lg p-3 text-xs text-cyan-200/60">
-             <p><strong>Cliente:</strong> {process.client_name}</p>
-             <p><strong>Modelo:</strong> {process.iphone_model}</p>
-             <p><strong>URL:</strong> {process.url || 'No especificada'}</p>
-           </div>
-         </div>
- 
-         <div className="flex gap-2 justify-end">
-           <Button
-             variant="outline"
-             onClick={onClose}
-             className="bg-transparent border-cyan-500/30 text-cyan-300 hover:bg-cyan-600/20"
-           >
-             Cerrar
-           </Button>
-           <Button
-             onClick={handleSendSms}
-             disabled={loading || !selectedSender || !message.trim() || isOverLimit}
-             className="bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white"
-           >
-             {loading ? (
-               'Enviando...'
-             ) : (
-               <>
-                 <Send className="mr-2 h-4 w-4" />
-                 Enviar mensaje
-               </>
-             )}
-           </Button>
-         </div>
-       </DialogContent>
-     </Dialog>
-   );
- };
- 
- export default SmsDialog;
+          </div>
+
+          {/* Template Selector */}
+          <div className="space-y-1.5">
+            <Label className="text-cyan-200 text-sm">Seleccione una plantilla</Label>
+            <Select 
+              value={selectedTemplateId} 
+              onValueChange={(value) => {
+                // Prevent any default behavior and handle template change
+                handleTemplateChange(value);
+              }}
+            >
+              <SelectTrigger className="bg-white/5 border-cyan-500/30 text-white h-9">
+                <SelectValue placeholder="Selecciona una plantilla..." />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-800 border-cyan-500/30">
+                {loadingTemplates ? (
+                  <SelectItem value="loading" disabled className="text-white/50">Cargando...</SelectItem>
+                ) : templates.length === 0 ? (
+                  <SelectItem value="none" disabled className="text-white/50">No hay plantillas</SelectItem>
+                ) : (
+                  templates.map((template) => (
+                    <SelectItem 
+                      key={template.id} 
+                      value={template.id}
+                      className="text-white hover:bg-cyan-600/20"
+                    >
+                      {template.name} ({template.language === 'es' ? '🇪🇸' : '🇺🇸'})
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Message Editor */}
+          <div className="space-y-1.5">
+            <div className="flex justify-between items-center">
+              <Label className="text-cyan-200 text-sm">Mensaje</Label>
+              <span className={`text-xs ${isOverLimit ? 'text-red-400' : 'text-cyan-200/60'}`}>
+                {charCount}/{MAX_SMS_LENGTH}
+              </span>
+            </div>
+            <Textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Selecciona una plantilla o escribe el mensaje manualmente"
+              className={`bg-white/5 border-cyan-500/30 text-white min-h-[60px] text-sm ${isOverLimit ? 'border-red-500' : ''}`}
+            />
+          </div>
+
+          {/* Preview */}
+          <div className="space-y-1.5">
+            <Label className="text-cyan-200 text-xs">Vista Previa</Label>
+            <div className={`bg-white/10 rounded-lg p-2 text-xs text-white/90 min-h-[40px] ${isOverLimit ? 'border border-red-500' : 'border border-cyan-500/20'}`}>
+              {previewMessage || <span className="text-white/40 italic">El mensaje aparecerá aquí...</span>}
+            </div>
+            {isOverLimit && (
+              <p className="text-red-400 text-xs">
+                Excede el límite de {MAX_SMS_LENGTH} caracteres
+              </p>
+            )}
+          </div>
+
+          {/* Process Info - Compact */}
+          <div className="bg-white/5 rounded-lg p-2 text-xs text-cyan-200/60">
+            <p><strong>Cliente:</strong> {process.client_name} | <strong>Modelo:</strong> {process.iphone_model}</p>
+            <p className="truncate"><strong>URL:</strong> {process.url || 'No especificada'}</p>
+          </div>
+        </div>
+
+        <div className="flex gap-2 justify-end pt-2 border-t border-cyan-500/20">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }}
+            className="bg-transparent border-cyan-500/30 text-cyan-300 hover:bg-cyan-600/20 h-9"
+          >
+            Cerrar
+          </Button>
+          <Button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleSendSms();
+            }}
+            disabled={loading || !selectedSender || !message.trim() || isOverLimit}
+            className="bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white h-9"
+          >
+            {loading ? (
+              'Enviando...'
+            ) : (
+              <>
+                <Send className="mr-2 h-4 w-4" />
+                Enviar SMS
+              </>
+            )}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default SmsDialog;
