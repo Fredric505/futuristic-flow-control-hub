@@ -595,11 +595,12 @@ serve(async (req) => {
         
         if (attempt === maxRetries) {
           console.error('❌ All network attempts failed');
+          const fErr = fetchError instanceof Error ? fetchError : new Error(String(fetchError));
           return new Response(
             JSON.stringify({ 
               success: false, 
               error: 'Network error sending to Telegram after all retries',
-              details: fetchError.message,
+              details: fErr.message,
               attempts: attempt,
               timestamp
             }), 
