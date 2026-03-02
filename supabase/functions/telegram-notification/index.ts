@@ -159,14 +159,15 @@ serve(async (req) => {
           }
         }
       }
-    } catch (parseError) {
+    } catch (parseError: unknown) {
       console.error('❌ Critical error parsing request body:', parseError);
+      const pErr = parseError instanceof Error ? parseError : new Error(String(parseError));
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: 'Invalid request format',
           message: 'Formato de solicitud inválido. Debe ser JSON o texto plano.',
-          details: parseError.message,
+          details: pErr.message,
           timestamp
         }), 
         { 
