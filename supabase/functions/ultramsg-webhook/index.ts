@@ -605,12 +605,13 @@ serve(async (req) => {
       }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Error processing webhook:', error);
+    const err = error instanceof Error ? error : new Error(String(error));
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message,
+        error: err.message,
         timestamp
       }), 
       { 

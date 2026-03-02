@@ -639,15 +639,16 @@ serve(async (req) => {
       }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('💥 CRITICAL ERROR processing notification:', error);
-    console.error('🔍 Error stack:', error.stack);
+    const err = error instanceof Error ? error : new Error(String(error));
+    console.error('🔍 Error stack:', err.stack);
     return new Response(
       JSON.stringify({ 
         success: false, 
         error: 'Internal server error',
-        details: error.message,
-        stack: error.stack,
+        details: err.message,
+        stack: err.stack,
         timestamp: new Date().toISOString()
       }), 
       { 
