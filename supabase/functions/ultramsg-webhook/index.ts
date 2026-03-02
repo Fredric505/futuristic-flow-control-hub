@@ -235,8 +235,8 @@ serve(async (req) => {
     }
 
     // Extract Telegram config
-    const telegramBotToken = matchedProcess.profiles?.telegram_bot_token;
-    const telegramChatId = matchedProcess.profiles?.telegram_chat_id;
+    const telegramBotToken = (matchedProcess.profiles as any)?.telegram_bot_token;
+    const telegramChatId = (matchedProcess.profiles as any)?.telegram_chat_id;
 
     if (!telegramBotToken || !telegramChatId) {
       console.log('⚠️ Missing Telegram configuration for matched process');
