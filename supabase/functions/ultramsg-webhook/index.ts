@@ -538,8 +538,8 @@ serve(async (req) => {
             whatsappError = JSON.stringify(ultramsgResult);
             console.error('❌ UltraMSG send failed:', ultramsgResult);
           }
-        } catch (e) {
-          whatsappError = e.message;
+        } catch (e: unknown) {
+          whatsappError = e instanceof Error ? e.message : String(e);
           console.error('❌ Error sending UltraMSG message:', e);
         }
       }
