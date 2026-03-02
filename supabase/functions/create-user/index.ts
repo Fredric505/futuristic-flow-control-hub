@@ -100,12 +100,13 @@ serve(async (req) => {
         status: 200,
       }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in create-user function:", error);
+    const err = error instanceof Error ? error : new Error(String(error));
     return new Response(
       JSON.stringify({ 
-        error: error.message || "Error creating user",
-        details: error.toString()
+        error: err.message || "Error creating user",
+        details: err.message
       }),
       {
         headers: { 

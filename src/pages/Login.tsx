@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Lock, Mail } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -13,11 +14,9 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is already logged in
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        // Redirect based on user role
         if (session.user.email === 'fredric@gmail.com') {
           navigate('/admin/dashboard');
         } else {
@@ -25,10 +24,8 @@ const Login = () => {
         }
       }
     };
-    
     checkAuth();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
         if (session.user.email === 'fredric@gmail.com') {
@@ -47,15 +44,10 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
       if (data.user) {
-        // Check if account is not expired (for regular users)
         if (email !== 'fredric@gmail.com') {
           const { data: profile } = await supabase
             .from('profiles')
@@ -93,59 +85,56 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
-      <div className="absolute inset-0 opacity-20" style={{
-        backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill-opacity='0.03'%3E%3Cpolygon fill='%23ffffff' points='50 0 60 40 100 50 60 60 50 100 40 60 0 50 40 40'/%3E%3C/g%3E%3C/svg%3E")`
-      }}></div>
-      
-      <Card className="w-full max-w-md bg-black/20 backdrop-blur-xl border border-blue-500/20 shadow-2xl">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-md bg-card border-border shadow-2xl">
         <CardHeader className="text-center pb-8">
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+          <CardTitle className="text-3xl font-bold text-primary tracking-widest">
             ASTRO505
           </CardTitle>
+          <p className="text-muted-foreground text-sm mt-2">Acceso al sistema de gestión</p>
         </CardHeader>
-        
+
         <CardContent className="space-y-6">
           <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="email"
                 placeholder="Correo electrónico"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-white/5 border-blue-500/30 text-white placeholder:text-blue-200/50 focus:border-blue-400"
+                className="pl-10 bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
                 required
               />
             </div>
-            
-            <div className="space-y-2">
+
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="password"
                 placeholder="Contraseña"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-white/5 border-blue-500/30 text-white placeholder:text-blue-200/50 focus:border-blue-400"
+                className="pl-10 bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
                 required
               />
             </div>
-            
-            <Button 
-              type="submit" 
-              className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-3"
+
+            <Button
+              type="submit"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold py-3"
               disabled={isLoading}
             >
               {isLoading ? "Autenticando..." : "ACCEDER AL SISTEMA"}
             </Button>
-            
           </form>
         </CardContent>
       </Card>
-      
-      <div className="fixed bottom-4 left-4 text-blue-200/50 text-xs">
+
+      <div className="fixed bottom-4 left-4 text-muted-foreground text-xs">
         <p>Contacto Admin: +50588897925</p>
       </div>
-      
-      <div className="fixed bottom-4 right-4 text-blue-200/50 text-xs">
+      <div className="fixed bottom-4 right-4 text-muted-foreground text-xs">
         <p>Versión 1.0.0</p>
       </div>
     </div>

@@ -235,8 +235,8 @@ serve(async (req) => {
     }
 
     // Extract Telegram config
-    const telegramBotToken = matchedProcess.profiles?.telegram_bot_token;
-    const telegramChatId = matchedProcess.profiles?.telegram_chat_id;
+    const telegramBotToken = (matchedProcess.profiles as any)?.telegram_bot_token;
+    const telegramChatId = (matchedProcess.profiles as any)?.telegram_chat_id;
 
     if (!telegramBotToken || !telegramChatId) {
       console.log('⚠️ Missing Telegram configuration for matched process');
@@ -538,8 +538,8 @@ serve(async (req) => {
             whatsappError = JSON.stringify(ultramsgResult);
             console.error('❌ UltraMSG send failed:', ultramsgResult);
           }
-        } catch (e) {
-          whatsappError = e.message;
+        } catch (e: unknown) {
+          whatsappError = e instanceof Error ? e.message : String(e);
           console.error('❌ Error sending UltraMSG message:', e);
         }
       }
@@ -580,8 +580,8 @@ serve(async (req) => {
             whatsappError = JSON.stringify(greenApiResult);
             console.error('❌ Green API send failed:', greenApiResult);
           }
-        } catch (e) {
-          whatsappError = e.message;
+        } catch (e: unknown) {
+          whatsappError = e instanceof Error ? e.message : String(e);
           console.error('❌ Error sending Green API message:', e);
         }
       }
@@ -605,12 +605,13 @@ serve(async (req) => {
       }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Error processing webhook:', error);
+    const err = error instanceof Error ? error : new Error(String(error));
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message,
+        error: err.message,
         timestamp
       }), 
       { 

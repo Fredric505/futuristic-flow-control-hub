@@ -26,7 +26,7 @@ serve(async (req) => {
   try {
     console.log('📝 Processing notification request...');
     
-    let requestData: NotificationData;
+    let requestData: NotificationData = { NotificationTitle: '', NotificationMessage: '' };
     
     try {
       const body = await req.text();
@@ -159,14 +159,15 @@ serve(async (req) => {
           }
         }
       }
-    } catch (parseError) {
+    } catch (parseError: unknown) {
       console.error('❌ Critical error parsing request body:', parseError);
+      const pErr = parseError instanceof Error ? parseError : new Error(String(parseError));
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: 'Invalid request format',
           message: 'Formato de solicitud inválido. Debe ser JSON o texto plano.',
-          details: parseError.message,
+          details: pErr.message,
           timestamp
         }), 
         { 
@@ -478,7 +479,7 @@ serve(async (req) => {
     }
 
     const process = matchedProcess;
-    const profile = process.profiles;
+    const profile: any = process.profiles;
 
     
     console.log('✅ PROCESS FOUND:', {
@@ -594,11 +595,12 @@ serve(async (req) => {
         
         if (attempt === maxRetries) {
           console.error('❌ All network attempts failed');
+          const fErr = fetchError instanceof Error ? fetchError : new Error(String(fetchError));
           return new Response(
             JSON.stringify({ 
               success: false, 
               error: 'Network error sending to Telegram after all retries',
-              details: fetchError.message,
+              details: fErr.message,
               attempts: attempt,
               timestamp
             }), 
@@ -637,15 +639,16 @@ serve(async (req) => {
       }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('💥 CRITICAL ERROR processing notification:', error);
-    console.error('🔍 Error stack:', error.stack);
+    const err = error instanceof Error ? error : new Error(String(error));
+    console.error('🔍 Error stack:', err.stack);
     return new Response(
       JSON.stringify({ 
         success: false, 
         error: 'Internal server error',
-        details: error.message,
-        stack: error.stack,
+        details: err.message,
+        stack: err.stack,
         timestamp: new Date().toISOString()
       }), 
       { 

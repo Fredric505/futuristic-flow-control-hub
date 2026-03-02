@@ -51,10 +51,11 @@ serve(async (req) => {
         status: 200,
       }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error:", error);
+    const err = error instanceof Error ? error : new Error(String(error));
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: err.message }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 400,

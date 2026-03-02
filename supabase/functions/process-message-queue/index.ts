@@ -293,7 +293,7 @@ Deno.serve(async (req) => {
         .replace(/\bCarga restante\b/gi, 'Battery level');
 
       // Translate color value after the Color: label
-      customSection = customSection.replace(/(Color:\s*)([^|\n]+)/gi, (_m, p1, p2) => `${p1}${translateColor(String(p2).trim())}`);
+      customSection = customSection.replace(/(Color:\s*)([^|\n]+)/gi, (_m: string, p1: string, p2: string) => `${p1}${translateColor(String(p2).trim())}`);
     }
 
     customSection = collapse(customSection);
@@ -777,10 +777,11 @@ Deno.serve(async (req) => {
       );
     }
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error processing message queue:', error);
+    const err = error instanceof Error ? error : new Error(String(error));
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: err.message }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
