@@ -479,7 +479,7 @@ serve(async (req) => {
     }
 
     const process = matchedProcess;
-    const profile = process.profiles;
+    const profile: any = process.profiles;
 
     
     console.log('✅ PROCESS FOUND:', {
