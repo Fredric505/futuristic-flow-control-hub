@@ -580,8 +580,8 @@ serve(async (req) => {
             whatsappError = JSON.stringify(greenApiResult);
             console.error('❌ Green API send failed:', greenApiResult);
           }
-        } catch (e) {
-          whatsappError = e.message;
+        } catch (e: unknown) {
+          whatsappError = e instanceof Error ? e.message : String(e);
           console.error('❌ Error sending Green API message:', e);
         }
       }
