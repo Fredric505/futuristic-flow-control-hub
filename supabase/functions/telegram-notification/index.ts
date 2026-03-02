@@ -26,7 +26,7 @@ serve(async (req) => {
   try {
     console.log('📝 Processing notification request...');
     
-    let requestData: NotificationData;
+    let requestData: NotificationData = { NotificationTitle: '', NotificationMessage: '' };
     
     try {
       const body = await req.text();
