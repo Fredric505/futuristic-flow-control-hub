@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, MessageSquare, Link } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, MessageSquare, Link, Sparkles, Send, Zap, Activity } from 'lucide-react';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
 import MessageHistory from '@/components/MessageHistory';
@@ -82,6 +82,15 @@ const UserDashboard = () => {
   const allItems = menuGroups.flatMap(g => g.items);
   const activeItem = allItems.find(i => i.id === activeSection);
 
+  const shortcuts = [
+    { id: 'add-process', icon: Plus, label: 'Nuevo Proceso', color: 'text-success', bg: 'bg-success/10' },
+    { id: 'view-processes', icon: FileText, label: 'Mis Procesos', color: 'text-info', bg: 'bg-info/10' },
+    { id: 'templates', icon: FileText, label: 'Plantillas', color: 'text-warning', bg: 'bg-warning/10' },
+    { id: 'history', icon: History, label: 'Historial', color: 'text-primary', bg: 'bg-primary/10' },
+    { id: 'telegram-config', icon: MessageSquare, label: 'Telegram', color: 'text-info', bg: 'bg-info/10' },
+    { id: 'chatbot-urls', icon: Link, label: 'URLs', color: 'text-success', bg: 'bg-success/10' },
+  ];
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/login');
@@ -91,61 +100,70 @@ const UserDashboard = () => {
     switch (activeSection) {
       case 'dashboard':
         return (
-          <div className="space-y-6">
+          <div className="space-y-8 animate-fade-in">
+            {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Card className="bg-card border-border">
-                <CardContent className="p-4 lg:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-muted-foreground text-xs uppercase tracking-wider">Procesos</p>
-                      <p className="text-2xl lg:text-3xl font-bold text-foreground mt-1">{stats.activeProcesses}</p>
-                    </div>
-                    <div className="h-10 w-10 rounded-lg bg-info/15 flex items-center justify-center">
-                      <FileText className="h-5 w-5 text-info" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card border-border">
-                <CardContent className="p-4 lg:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-muted-foreground text-xs uppercase tracking-wider">Mensajes</p>
-                      <p className="text-2xl lg:text-3xl font-bold text-foreground mt-1">{stats.messagesSent}</p>
-                    </div>
-                    <div className="h-10 w-10 rounded-lg bg-success/15 flex items-center justify-center">
-                      <History className="h-5 w-5 text-success" />
+              {[
+                { label: 'Procesos', value: stats.activeProcesses, icon: Activity, color: 'text-info', bg: 'bg-info/10' },
+                { label: 'Mensajes', value: stats.messagesSent, icon: Send, color: 'text-success', bg: 'bg-success/10' },
+                { label: 'Créditos', value: stats.creditsRemaining, icon: Zap, color: 'text-primary', bg: 'bg-primary/10' },
+              ].map((stat, i) => {
+                const Icon = stat.icon;
+                return (
+                  <div key={i} className="stat-card p-4 lg:p-5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-muted-foreground text-[10px] uppercase tracking-[0.15em] font-semibold">{stat.label}</p>
+                        <p className="text-2xl lg:text-3xl font-bold text-foreground mt-1 font-['Space_Grotesk']">{stat.value}</p>
+                      </div>
+                      <div className={`h-11 w-11 rounded-xl ${stat.bg} flex items-center justify-center`}>
+                        <Icon className={`h-5 w-5 ${stat.color}`} />
+                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card border-border">
-                <CardContent className="p-4 lg:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-muted-foreground text-xs uppercase tracking-wider">Créditos</p>
-                      <p className="text-2xl lg:text-3xl font-bold text-foreground mt-1">{stats.creditsRemaining}</p>
-                    </div>
-                    <div className="h-10 w-10 rounded-lg bg-warning/15 flex items-center justify-center">
-                      <Settings className="h-5 w-5 text-warning" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                );
+              })}
             </div>
 
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <CardTitle className="text-foreground">Panel de Usuario — ASTRO505</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Bienvenido a tu panel. Desde aquí puedes gestionar tus procesos y configurar las notificaciones.
-                </p>
-              </CardContent>
-            </Card>
+            {/* Shortcuts */}
+            <div>
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-[0.15em] mb-3 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Accesos Directos
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {shortcuts.map((sc) => {
+                  const Icon = sc.icon;
+                  return (
+                    <button
+                      key={sc.id}
+                      onClick={() => setActiveSection(sc.id)}
+                      className="shortcut-card group flex flex-col items-center gap-2 text-center"
+                    >
+                      <div className={`h-12 w-12 rounded-xl ${sc.bg} flex items-center justify-center transition-transform duration-300 group-hover:scale-110`}>
+                        <Icon className={`h-5 w-5 ${sc.color}`} />
+                      </div>
+                      <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">{sc.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Welcome */}
+            <div className="glass-card glow-card rounded-xl p-6">
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-xl gold-gradient flex items-center justify-center shrink-0 glow-gold">
+                  <Sparkles className="h-6 w-6 text-primary-foreground" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-foreground font-['Space_Grotesk']">Tu Panel</h3>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    Gestiona tus procesos y configura las notificaciones desde aquí.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         );
 
@@ -157,14 +175,17 @@ const UserDashboard = () => {
         return (
           <div className="space-y-6">
             <TelegramBotConfig />
-            <Card className="bg-card border-border">
+            <Card className="glass-card glow-card">
               <CardHeader>
-                <CardTitle className="text-foreground">ℹ️ Información Importante</CardTitle>
+                <CardTitle className="text-foreground flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-primary" />
+                  Información Importante
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4 text-muted-foreground">
                   <p className="text-primary font-semibold">
-                    🤖 Configura tu bot personal de Telegram para recibir notificaciones automáticas
+                    Configura tu bot personal de Telegram para recibir notificaciones automáticas
                   </p>
                   <p>
                     Una vez configurado tu bot, recibirás notificaciones automáticas cuando lleguen
@@ -182,7 +203,7 @@ const UserDashboard = () => {
       case 'chatbot-urls': return <UserChatbotUrls />;
       case 'settings':
         return (
-          <Card className="bg-card border-border">
+          <Card className="glass-card glow-card">
             <CardHeader>
               <CardTitle className="text-foreground">Configuración de Cuenta</CardTitle>
             </CardHeader>
@@ -196,7 +217,7 @@ const UserDashboard = () => {
         );
       default:
         return (
-          <Card className="bg-card border-border">
+          <Card className="glass-card glow-card">
             <CardHeader>
               <CardTitle className="text-foreground">Sección en Desarrollo</CardTitle>
             </CardHeader>
@@ -220,10 +241,19 @@ const UserDashboard = () => {
 
       <main className="flex-1 overflow-auto">
         <div className="max-w-7xl mx-auto px-4 lg:px-8 py-6 lg:py-8">
-          <div className="mb-6">
-            <h2 className="text-2xl lg:text-3xl font-bold text-foreground">{activeItem?.label}</h2>
-            <p className="text-muted-foreground text-sm mt-1">{activeItem?.description}</p>
-          </div>
+          {activeSection !== 'dashboard' && (
+            <div className="mb-6 flex items-center gap-3">
+              {activeItem && (
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  {React.createElement(activeItem.icon, { className: "h-5 w-5 text-primary" })}
+                </div>
+              )}
+              <div>
+                <h2 className="text-xl lg:text-2xl font-bold text-foreground font-['Space_Grotesk']">{activeItem?.label}</h2>
+                <p className="text-muted-foreground text-xs mt-0.5">{activeItem?.description}</p>
+              </div>
+            </div>
+          )}
           {renderContent()}
         </div>
       </main>
