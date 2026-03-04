@@ -236,6 +236,16 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
      setIsSmsDialogOpen(false);
    };
 
+   const handleOpenWhatsappDialog = (process: Process) => {
+     setWhatsappProcess(process);
+     setIsWhatsappDialogOpen(true);
+   };
+
+   const handleCloseWhatsappDialog = () => {
+     setWhatsappProcess(null);
+     setIsWhatsappDialogOpen(false);
+   };
+
   const handleProcessUpdated = () => {
     loadProcesses();
   };
