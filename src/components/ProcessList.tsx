@@ -658,6 +658,17 @@ ${random(closings)}`;
                        SMS
                      </Button>
 
+                     {/* Botón WhatsApp Whapi */}
+                     <Button
+                       size="sm"
+                       onClick={() => handleOpenWhatsappDialog(process)}
+                       className="bg-green-600/20 hover:bg-green-600/30 text-green-300 w-full sm:w-auto min-w-[80px] text-xs sm:text-sm"
+                       title="Enviar WhatsApp con botón interactivo"
+                     >
+                       <MessageSquare className="h-4 w-4 mr-2" />
+                       WA
+                     </Button>
+
                     {/* Botones de acción */}
                     <div className="flex gap-2">
                       <Button
