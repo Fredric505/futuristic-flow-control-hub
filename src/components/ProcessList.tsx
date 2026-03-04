@@ -9,6 +9,7 @@ import { getIphoneImageUrl } from '@/utils/iphoneImages';
 import { generateRandomMessage } from '@/utils/messageVariations';
 import EditProcessDialog from './EditProcessDialog';
  import SmsDialog from './SmsDialog';
+ import WhatsAppDialog from './WhatsAppDialog';
 import { englishSpeakingCountries } from '@/utils/countries';
 
 interface Process {
