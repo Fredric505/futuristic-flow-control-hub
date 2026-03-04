@@ -450,8 +450,7 @@ serve(async (req) => {
       .in('setting_key', [
         'whatsapp_instance', 'whatsapp_token',
         'whatsapp_instance_en', 'whatsapp_token_en',
-        'greenapi_instance', 'greenapi_token',
-        'greenapi_instance_en', 'greenapi_token_en',
+        'whapi_token', 'whapi_token_en',
         'api_provider'
       ]);
 

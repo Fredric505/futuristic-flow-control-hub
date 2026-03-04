@@ -724,7 +724,7 @@ Deno.serve(async (req) => {
 
     console.log('Full message WhatsApp API response:', result);
 
-    if (result.sent === true || result.sent === "true" || result.idMessage) {
+    if (result.sent === true || result.sent === "true" || result.idMessage || result.message_id) {
       // Deduct credit
       await supabase
         .from('profiles')
