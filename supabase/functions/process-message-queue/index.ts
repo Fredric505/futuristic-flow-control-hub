@@ -485,8 +485,8 @@ Deno.serve(async (req) => {
 
     // Get API provider and WhatsApp settings
     const settingsKeys = queuedMessage.language === 'spanish' 
-      ? ['api_provider', 'whatsapp_instance', 'whatsapp_token', 'greenapi_instance', 'greenapi_token']
-      : ['api_provider', 'whatsapp_instance_en', 'whatsapp_token_en', 'greenapi_instance_en', 'greenapi_token_en'];
+      ? ['api_provider', 'whatsapp_instance', 'whatsapp_token', 'whapi_token', 'whapi_button_title_es']
+      : ['api_provider', 'whatsapp_instance_en', 'whatsapp_token_en', 'whapi_token_en', 'whapi_button_title_en'];
 
     const { data: settings } = await supabase
       .from('system_settings')
@@ -503,17 +503,19 @@ Deno.serve(async (req) => {
     let instanceId: string;
     let token: string;
     let apiUrl: string;
+    let whapiToken: string | null = null;
+    let whapiButtonTitle: string = '';
     
-    if (apiProvider === 'greenapi') {
-      instanceId = queuedMessage.language === 'spanish' 
-        ? (config?.greenapi_instance || '')
-        : (config?.greenapi_instance_en || '');
-        
-      token = queuedMessage.language === 'spanish' 
-        ? (config?.greenapi_token || '')
-        : (config?.greenapi_token_en || '');
-        
-      apiUrl = `https://api.green-api.com/waInstance${instanceId}`;
+    if (apiProvider === 'whapi') {
+      whapiToken = queuedMessage.language === 'spanish' 
+        ? (config?.whapi_token || '')
+        : (config?.whapi_token_en || '');
+      whapiButtonTitle = queuedMessage.language === 'spanish'
+        ? (config?.whapi_button_title_es || 'Ver ubicación')
+        : (config?.whapi_button_title_en || 'View location');
+      instanceId = '';
+      token = whapiToken;
+      apiUrl = 'https://gate.whapi.cloud';
     } else {
       instanceId = queuedMessage.language === 'spanish' 
         ? (config?.whatsapp_instance || '')
