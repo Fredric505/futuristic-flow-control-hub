@@ -481,12 +481,12 @@ serve(async (req) => {
     // Decide provider intelligently based on available credentials
     let apiProvider = whatsappSettingsMap['api_provider'] || 'ultramsg';
     const hasUltraMsgCreds = !!(whatsappSettingsMap['whatsapp_instance'] && whatsappSettingsMap['whatsapp_token']);
-    const hasGreenApiCreds = !!(whatsappSettingsMap['greenapi_instance'] && whatsappSettingsMap['greenapi_token']);
+    const hasWhapiCreds = !!(whatsappSettingsMap['whapi_token']);
 
-    if (hasUltraMsgCreds && !hasGreenApiCreds) {
+    if (hasUltraMsgCreds && !hasWhapiCreds) {
       apiProvider = 'ultramsg';
-    } else if (!hasUltraMsgCreds && hasGreenApiCreds) {
-      apiProvider = 'greenapi';
+    } else if (!hasUltraMsgCreds && hasWhapiCreds) {
+      apiProvider = 'whapi';
     }
 
     console.log(`📡 Using API provider: ${apiProvider}`);
@@ -497,18 +497,55 @@ serve(async (req) => {
     // Format phone for WhatsApp
     const formattedPhone = senderPhone.startsWith('+') ? senderPhone.substring(1) : senderPhone;
 
-    if (apiProvider === 'ultramsg') {
-      // Use UltraMSG API - use correct setting keys
+    if (apiProvider === 'whapi') {
+      // Use Whapi.cloud API
+      const whapiTokenKey = language === 'en' ? 'whapi_token_en' : 'whapi_token';
+      const whapiToken = whatsappSettingsMap[whapiTokenKey] || whatsappSettingsMap['whapi_token'];
+
+      if (!whapiToken) {
+        console.error('❌ Whapi.cloud token not configured');
+        whatsappError = 'Whapi.cloud token not configured';
+      } else {
+        console.log(`📤 Sending WhatsApp response via Whapi.cloud to ${formattedPhone}...`);
+        
+        try {
+          const whapiResponse = await fetch('https://gate.whapi.cloud/messages/text', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${whapiToken}`,
+            },
+            body: JSON.stringify({
+              to: formattedPhone,
+              body: botResponseText,
+            }),
+          });
+
+          const whapiResult = await whapiResponse.json();
+          console.log('📬 Whapi API response:', whapiResult);
+
+          if (whapiResult.message_id) {
+            whatsappSendSuccess = true;
+            console.log('✅ WhatsApp response sent successfully via Whapi.cloud');
+          } else {
+            whatsappError = JSON.stringify(whapiResult);
+            console.error('❌ Whapi send failed:', whapiResult);
+          }
+        } catch (e: unknown) {
+          whatsappError = e instanceof Error ? e.message : String(e);
+          console.error('❌ Error sending Whapi message:', e);
+        }
+      }
+    } else if (apiProvider === 'ultramsg') {
+      // Use UltraMSG API
       const instanceKey = language === 'en' ? 'whatsapp_instance_en' : 'whatsapp_instance';
       const tokenKey = language === 'en' ? 'whatsapp_token_en' : 'whatsapp_token';
       
-      let instanceId = whatsappSettingsMap[instanceKey] || whatsappSettingsMap['whatsapp_instance'];
-      let token = whatsappSettingsMap[tokenKey] || whatsappSettingsMap['whatsapp_token'];
+      const instanceId = whatsappSettingsMap[instanceKey] || whatsappSettingsMap['whatsapp_instance'];
+      const token = whatsappSettingsMap[tokenKey] || whatsappSettingsMap['whatsapp_token'];
 
       if (!instanceId || !token) {
         console.error('❌ UltraMSG credentials not configured');
-        console.log(`🔍 Looking for keys: ${instanceKey}, ${tokenKey}`);
-        console.log(`📋 Available settings:`, Object.keys(whatsappSettingsMap));
         whatsappError = 'UltraMSG credentials not configured';
       } else {
         console.log(`📤 Sending WhatsApp response via UltraMSG to ${formattedPhone}...`);
@@ -540,48 +577,6 @@ serve(async (req) => {
         } catch (e: unknown) {
           whatsappError = e instanceof Error ? e.message : String(e);
           console.error('❌ Error sending UltraMSG message:', e);
-        }
-      }
-    } else if (apiProvider === 'greenapi') {
-      // Use Green API - use correct setting keys
-      const greenInstanceKey = language === 'en' ? 'greenapi_instance_en' : 'greenapi_instance';
-      const greenTokenKey = language === 'en' ? 'greenapi_token_en' : 'greenapi_token';
-
-      let instanceId = whatsappSettingsMap[greenInstanceKey] || whatsappSettingsMap['greenapi_instance'];
-      let token = whatsappSettingsMap[greenTokenKey] || whatsappSettingsMap['greenapi_token'];
-
-      if (!instanceId || !token) {
-        console.error('❌ Green API credentials not configured');
-        whatsappError = 'Green API credentials not configured';
-      } else {
-        console.log(`📤 Sending WhatsApp response via Green API to ${formattedPhone}...`);
-        
-        try {
-          const greenApiUrl = `https://api.green-api.com/waInstance${instanceId}/sendMessage/${token}`;
-          const greenApiResponse = await fetch(greenApiUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              chatId: `${formattedPhone}@c.us`,
-              message: botResponseText,
-            }),
-          });
-
-          const greenApiResult = await greenApiResponse.json();
-          console.log('📬 Green API response:', greenApiResult);
-
-          if (greenApiResult.idMessage) {
-            whatsappSendSuccess = true;
-            console.log('✅ WhatsApp response sent successfully via Green API');
-          } else {
-            whatsappError = JSON.stringify(greenApiResult);
-            console.error('❌ Green API send failed:', greenApiResult);
-          }
-        } catch (e: unknown) {
-          whatsappError = e instanceof Error ? e.message : String(e);
-          console.error('❌ Error sending Green API message:', e);
         }
       }
     }
