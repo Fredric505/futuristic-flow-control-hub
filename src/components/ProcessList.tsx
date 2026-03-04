@@ -755,6 +755,12 @@ ${random(closings)}`;
          onClose={handleCloseSmsDialog}
          process={smsProcess}
        />
+
+       <WhatsAppDialog
+         isOpen={isWhatsappDialogOpen}
+         onClose={handleCloseWhatsappDialog}
+         process={whatsappProcess}
+       />
     </div>
   );
 };
