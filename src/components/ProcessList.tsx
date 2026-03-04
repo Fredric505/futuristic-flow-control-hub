@@ -9,6 +9,7 @@ import { getIphoneImageUrl } from '@/utils/iphoneImages';
 import { generateRandomMessage } from '@/utils/messageVariations';
 import EditProcessDialog from './EditProcessDialog';
  import SmsDialog from './SmsDialog';
+ import WhatsAppDialog from './WhatsAppDialog';
 import { englishSpeakingCountries } from '@/utils/countries';
 
 interface Process {
@@ -46,6 +47,8 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
   const [imageStatus, setImageStatus] = useState<{ [key: string]: boolean }>({});
    const [smsProcess, setSmsProcess] = useState<Process | null>(null);
    const [isSmsDialogOpen, setIsSmsDialogOpen] = useState(false);
+   const [whatsappProcess, setWhatsappProcess] = useState<Process | null>(null);
+   const [isWhatsappDialogOpen, setIsWhatsappDialogOpen] = useState(false);
 
   // English-speaking country codes
   const englishCountryCodes = englishSpeakingCountries.map(c => c.code);
@@ -231,6 +234,16 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
    const handleCloseSmsDialog = () => {
      setSmsProcess(null);
      setIsSmsDialogOpen(false);
+   };
+
+   const handleOpenWhatsappDialog = (process: Process) => {
+     setWhatsappProcess(process);
+     setIsWhatsappDialogOpen(true);
+   };
+
+   const handleCloseWhatsappDialog = () => {
+     setWhatsappProcess(null);
+     setIsWhatsappDialogOpen(false);
    };
 
   const handleProcessUpdated = () => {
@@ -645,6 +658,17 @@ ${random(closings)}`;
                        SMS
                      </Button>
 
+                     {/* Botón WhatsApp Whapi */}
+                     <Button
+                       size="sm"
+                       onClick={() => handleOpenWhatsappDialog(process)}
+                       className="bg-green-600/20 hover:bg-green-600/30 text-green-300 w-full sm:w-auto min-w-[80px] text-xs sm:text-sm"
+                       title="Enviar WhatsApp con botón interactivo"
+                     >
+                       <MessageSquare className="h-4 w-4 mr-2" />
+                       WA
+                     </Button>
+
                     {/* Botones de acción */}
                     <div className="flex gap-2">
                       <Button
@@ -730,6 +754,12 @@ ${random(closings)}`;
          isOpen={isSmsDialogOpen}
          onClose={handleCloseSmsDialog}
          process={smsProcess}
+       />
+
+       <WhatsAppDialog
+         isOpen={isWhatsappDialogOpen}
+         onClose={handleCloseWhatsappDialog}
+         process={whatsappProcess}
        />
     </div>
   );

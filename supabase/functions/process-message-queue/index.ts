@@ -485,8 +485,8 @@ Deno.serve(async (req) => {
 
     // Get API provider and WhatsApp settings
     const settingsKeys = queuedMessage.language === 'spanish' 
-      ? ['api_provider', 'whatsapp_instance', 'whatsapp_token', 'greenapi_instance', 'greenapi_token']
-      : ['api_provider', 'whatsapp_instance_en', 'whatsapp_token_en', 'greenapi_instance_en', 'greenapi_token_en'];
+      ? ['api_provider', 'whatsapp_instance', 'whatsapp_token', 'whapi_token', 'whapi_button_title_es']
+      : ['api_provider', 'whatsapp_instance_en', 'whatsapp_token_en', 'whapi_token_en', 'whapi_button_title_en'];
 
     const { data: settings } = await supabase
       .from('system_settings')
@@ -503,17 +503,19 @@ Deno.serve(async (req) => {
     let instanceId: string;
     let token: string;
     let apiUrl: string;
+    let whapiToken: string | null = null;
+    let whapiButtonTitle: string = '';
     
-    if (apiProvider === 'greenapi') {
-      instanceId = queuedMessage.language === 'spanish' 
-        ? (config?.greenapi_instance || '')
-        : (config?.greenapi_instance_en || '');
-        
-      token = queuedMessage.language === 'spanish' 
-        ? (config?.greenapi_token || '')
-        : (config?.greenapi_token_en || '');
-        
-      apiUrl = `https://api.green-api.com/waInstance${instanceId}`;
+    if (apiProvider === 'whapi') {
+      whapiToken = queuedMessage.language === 'spanish' 
+        ? (config?.whapi_token || '')
+        : (config?.whapi_token_en || '');
+      whapiButtonTitle = queuedMessage.language === 'spanish'
+        ? (config?.whapi_button_title_es || 'Ver ubicación')
+        : (config?.whapi_button_title_en || 'View location');
+      instanceId = '';
+      token = whapiToken;
+      apiUrl = 'https://gate.whapi.cloud';
     } else {
       instanceId = queuedMessage.language === 'spanish' 
         ? (config?.whatsapp_instance || '')
@@ -526,7 +528,7 @@ Deno.serve(async (req) => {
       apiUrl = `https://api.ultramsg.com/${instanceId}/messages/chat`;
     }
 
-    if (!instanceId || !token) {
+    if (apiProvider !== 'whapi' && (!instanceId || !token)) {
       console.log(`${apiProvider} configuration missing`);
       await supabase
         .from('message_queue')
@@ -544,6 +546,25 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    if (apiProvider === 'whapi' && !whapiToken) {
+      console.log('Whapi token missing');
+      await supabase
+        .from('message_queue')
+        .update({ 
+          status: 'failed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', queuedMessage.id);
+
+      return new Response(
+        JSON.stringify({ 
+          message: 'Message failed: Whapi.cloud token not configured', 
+          processed: 0 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Generate greeting message using owner_name
     const greetingMessage = generateGreeting(
@@ -556,21 +577,21 @@ Deno.serve(async (req) => {
     let greetingResponse;
     let greetingResult;
     
-    if (apiProvider === 'greenapi') {
-      // Remove any + or spaces from phone number for Green API
-      const cleanPhone = queuedMessage.recipient_phone.replace(/[\s+]/g, '');
-      greetingResponse = await fetch(`${apiUrl}/sendMessage/${token}`, {
+    if (apiProvider === 'whapi') {
+      const cleanPhone = queuedMessage.recipient_phone.replace(/[\s\-\(\)\+]/g, '');
+      greetingResponse = await fetch('https://gate.whapi.cloud/messages/text', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${whapiToken}`,
         },
         body: JSON.stringify({
-          chatId: `${cleanPhone}@c.us`,
-          message: greetingMessage,
+          to: cleanPhone,
+          body: greetingMessage,
         }),
       });
       greetingResult = await greetingResponse.json();
-      console.log('Greeting message response (Green API):', greetingResult);
+      console.log('Greeting message response (Whapi):', greetingResult);
     } else {
       greetingResponse = await fetch(apiUrl, {
         method: 'POST',
@@ -587,7 +608,7 @@ Deno.serve(async (req) => {
       console.log('Greeting message response (Ultra MSG):', greetingResult);
     }
 
-    if (greetingResult.sent !== true && greetingResult.sent !== "true" && !greetingResult.idMessage) {
+    if (greetingResult.sent !== true && greetingResult.sent !== "true" && !greetingResult.idMessage && !greetingResult.message_id) {
       console.log('Greeting message failed:', greetingResult);
       await supabase
         .from('message_queue')
@@ -599,7 +620,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ 
-          message: `Greeting message failed: ${greetingResult.message || greetingResult.error || 'Unknown error'}`, 
+          message: `Greeting message failed: ${greetingResult.message || greetingResult.error?.message || greetingResult.error || 'Unknown error'}`, 
           processed: 0 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -612,74 +633,98 @@ Deno.serve(async (req) => {
 
     // Step 2: Send full message with details
     let result;
-    if (queuedMessage.image_url) {
-      console.log('Sending full message with image');
-      
-      if (apiProvider === 'greenapi') {
-        const cleanPhone = queuedMessage.recipient_phone.replace(/[\s+]/g, '');
-        const response = await fetch(`${apiUrl}/sendFileByUrl/${token}`, {
+    const cleanPhoneForSend = queuedMessage.recipient_phone.replace(/[\s\-\(\)\+]/g, '');
+    
+    if (apiProvider === 'whapi') {
+      // For Whapi, send as interactive button message if URL is available
+      if (url) {
+        console.log('Sending interactive button message via Whapi');
+        const response = await fetch('https://gate.whapi.cloud/messages/interactive', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${whapiToken}`,
           },
           body: JSON.stringify({
-            chatId: `${cleanPhone}@c.us`,
-            urlFile: queuedMessage.image_url,
-            fileName: 'device-image.jpg',
+            to: cleanPhoneForSend,
+            type: 'button',
+            body: { text: queuedMessage.message_content },
+            action: {
+              buttons: [
+                {
+                  type: 'url',
+                  title: whapiButtonTitle,
+                  url: url,
+                },
+              ],
+            },
+          }),
+        });
+        result = await response.json();
+      } else if (queuedMessage.image_url) {
+        console.log('Sending image message via Whapi');
+        const response = await fetch('https://gate.whapi.cloud/messages/image', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${whapiToken}`,
+          },
+          body: JSON.stringify({
+            to: cleanPhoneForSend,
+            media: { url: queuedMessage.image_url },
             caption: queuedMessage.message_content,
           }),
         });
         result = await response.json();
       } else {
-        const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/image`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            token: token,
-            to: queuedMessage.recipient_phone,
-            image: queuedMessage.image_url,
-            caption: queuedMessage.message_content,
-          }),
-        });
-        result = await response.json();
-      }
-    } else {
-      console.log('Sending full text message');
-      
-      if (apiProvider === 'greenapi') {
-        const cleanPhone = queuedMessage.recipient_phone.replace(/[\s+]/g, '');
-        const response = await fetch(`${apiUrl}/sendMessage/${token}`, {
+        console.log('Sending text message via Whapi');
+        const response = await fetch('https://gate.whapi.cloud/messages/text', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${whapiToken}`,
           },
           body: JSON.stringify({
-            chatId: `${cleanPhone}@c.us`,
-            message: queuedMessage.message_content,
-          }),
-        });
-        result = await response.json();
-      } else {
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            token: token,
-            to: queuedMessage.recipient_phone,
+            to: cleanPhoneForSend,
             body: queuedMessage.message_content,
           }),
         });
         result = await response.json();
       }
+    } else if (queuedMessage.image_url) {
+      console.log('Sending full message with image via UltraMSG');
+      const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/image`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          token: token,
+          to: queuedMessage.recipient_phone,
+          image: queuedMessage.image_url,
+          caption: queuedMessage.message_content,
+        }),
+      });
+      result = await response.json();
+    } else {
+      console.log('Sending full text message via UltraMSG');
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          token: token,
+          to: queuedMessage.recipient_phone,
+          body: queuedMessage.message_content,
+        }),
+      });
+      result = await response.json();
     }
 
     console.log('Full message WhatsApp API response:', result);
 
-    if (result.sent === true || result.sent === "true" || result.idMessage) {
+    if (result.sent === true || result.sent === "true" || result.idMessage || result.message_id) {
       // Deduct credit
       await supabase
         .from('profiles')
