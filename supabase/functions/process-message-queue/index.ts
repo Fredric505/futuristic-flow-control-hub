@@ -528,7 +528,7 @@ Deno.serve(async (req) => {
       apiUrl = `https://api.ultramsg.com/${instanceId}/messages/chat`;
     }
 
-    if (!instanceId || !token) {
+    if (apiProvider !== 'whapi' && (!instanceId || !token)) {
       console.log(`${apiProvider} configuration missing`);
       await supabase
         .from('message_queue')
@@ -541,6 +541,25 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           message: `Message failed: ${apiProvider} configuration missing`, 
+          processed: 0 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    if (apiProvider === 'whapi' && !whapiToken) {
+      console.log('Whapi token missing');
+      await supabase
+        .from('message_queue')
+        .update({ 
+          status: 'failed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', queuedMessage.id);
+
+      return new Response(
+        JSON.stringify({ 
+          message: 'Message failed: Whapi.cloud token not configured', 
           processed: 0 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
