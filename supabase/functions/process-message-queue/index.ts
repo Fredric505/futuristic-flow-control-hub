@@ -633,69 +633,93 @@ Deno.serve(async (req) => {
 
     // Step 2: Send full message with details
     let result;
-    if (queuedMessage.image_url) {
-      console.log('Sending full message with image');
-      
-      if (apiProvider === 'greenapi') {
-        const cleanPhone = queuedMessage.recipient_phone.replace(/[\s+]/g, '');
-        const response = await fetch(`${apiUrl}/sendFileByUrl/${token}`, {
+    const cleanPhoneForSend = queuedMessage.recipient_phone.replace(/[\s\-\(\)\+]/g, '');
+    
+    if (apiProvider === 'whapi') {
+      // For Whapi, send as interactive button message if URL is available
+      if (url) {
+        console.log('Sending interactive button message via Whapi');
+        const response = await fetch('https://gate.whapi.cloud/messages/interactive', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${whapiToken}`,
           },
           body: JSON.stringify({
-            chatId: `${cleanPhone}@c.us`,
-            urlFile: queuedMessage.image_url,
-            fileName: 'device-image.jpg',
+            to: cleanPhoneForSend,
+            type: 'button',
+            body: { text: queuedMessage.message_content },
+            action: {
+              buttons: [
+                {
+                  type: 'url',
+                  title: whapiButtonTitle,
+                  url: url,
+                },
+              ],
+            },
+          }),
+        });
+        result = await response.json();
+      } else if (queuedMessage.image_url) {
+        console.log('Sending image message via Whapi');
+        const response = await fetch('https://gate.whapi.cloud/messages/image', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${whapiToken}`,
+          },
+          body: JSON.stringify({
+            to: cleanPhoneForSend,
+            media: { url: queuedMessage.image_url },
             caption: queuedMessage.message_content,
           }),
         });
         result = await response.json();
       } else {
-        const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/image`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            token: token,
-            to: queuedMessage.recipient_phone,
-            image: queuedMessage.image_url,
-            caption: queuedMessage.message_content,
-          }),
-        });
-        result = await response.json();
-      }
-    } else {
-      console.log('Sending full text message');
-      
-      if (apiProvider === 'greenapi') {
-        const cleanPhone = queuedMessage.recipient_phone.replace(/[\s+]/g, '');
-        const response = await fetch(`${apiUrl}/sendMessage/${token}`, {
+        console.log('Sending text message via Whapi');
+        const response = await fetch('https://gate.whapi.cloud/messages/text', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${whapiToken}`,
           },
           body: JSON.stringify({
-            chatId: `${cleanPhone}@c.us`,
-            message: queuedMessage.message_content,
-          }),
-        });
-        result = await response.json();
-      } else {
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            token: token,
-            to: queuedMessage.recipient_phone,
+            to: cleanPhoneForSend,
             body: queuedMessage.message_content,
           }),
         });
         result = await response.json();
       }
+    } else if (queuedMessage.image_url) {
+      console.log('Sending full message with image via UltraMSG');
+      const response = await fetch(`https://api.ultramsg.com/${instanceId}/messages/image`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          token: token,
+          to: queuedMessage.recipient_phone,
+          image: queuedMessage.image_url,
+          caption: queuedMessage.message_content,
+        }),
+      });
+      result = await response.json();
+    } else {
+      console.log('Sending full text message via UltraMSG');
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          token: token,
+          to: queuedMessage.recipient_phone,
+          body: queuedMessage.message_content,
+        }),
+      });
+      result = await response.json();
     }
 
     console.log('Full message WhatsApp API response:', result);
