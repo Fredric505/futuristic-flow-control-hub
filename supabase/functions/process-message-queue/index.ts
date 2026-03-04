@@ -577,21 +577,21 @@ Deno.serve(async (req) => {
     let greetingResponse;
     let greetingResult;
     
-    if (apiProvider === 'greenapi') {
-      // Remove any + or spaces from phone number for Green API
-      const cleanPhone = queuedMessage.recipient_phone.replace(/[\s+]/g, '');
-      greetingResponse = await fetch(`${apiUrl}/sendMessage/${token}`, {
+    if (apiProvider === 'whapi') {
+      const cleanPhone = queuedMessage.recipient_phone.replace(/[\s\-\(\)\+]/g, '');
+      greetingResponse = await fetch('https://gate.whapi.cloud/messages/text', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${whapiToken}`,
         },
         body: JSON.stringify({
-          chatId: `${cleanPhone}@c.us`,
-          message: greetingMessage,
+          to: cleanPhone,
+          body: greetingMessage,
         }),
       });
       greetingResult = await greetingResponse.json();
-      console.log('Greeting message response (Green API):', greetingResult);
+      console.log('Greeting message response (Whapi):', greetingResult);
     } else {
       greetingResponse = await fetch(apiUrl, {
         method: 'POST',
@@ -608,7 +608,7 @@ Deno.serve(async (req) => {
       console.log('Greeting message response (Ultra MSG):', greetingResult);
     }
 
-    if (greetingResult.sent !== true && greetingResult.sent !== "true" && !greetingResult.idMessage) {
+    if (greetingResult.sent !== true && greetingResult.sent !== "true" && !greetingResult.idMessage && !greetingResult.message_id) {
       console.log('Greeting message failed:', greetingResult);
       await supabase
         .from('message_queue')
@@ -620,7 +620,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ 
-          message: `Greeting message failed: ${greetingResult.message || greetingResult.error || 'Unknown error'}`, 
+          message: `Greeting message failed: ${greetingResult.message || greetingResult.error?.message || greetingResult.error || 'Unknown error'}`, 
           processed: 0 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
