@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
     let result;
 
     if (button_text && button_url) {
-      // Send interactive button message with cta_url
+      // Send interactive button message
       console.log(`Sending interactive button message to ${cleanNumber}`);
       const response = await fetch('https://gate.whapi.cloud/messages/interactive', {
         method: 'POST',
@@ -80,14 +80,17 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           to: cleanNumber,
-          type: 'cta_url',
+          type: 'button',
           body: { text: message },
           action: {
-            name: 'cta_url',
-            parameters: {
-              display_text: button_text,
-              url: button_url,
-            },
+            buttons: [
+              {
+                id: 'btn_1',
+                type: 'url',
+                title: button_text,
+                url: button_url,
+              },
+            ],
           },
         }),
       });
