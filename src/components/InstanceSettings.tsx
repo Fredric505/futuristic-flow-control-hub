@@ -82,14 +82,25 @@ const InstanceSettings = () => {
   };
 
   const upsertSetting = async (key: string, value: string) => {
-    const { error } = await supabase
+    // First try to update existing
+    const { data: existing } = await supabase
       .from('system_settings')
-      .upsert({
-        setting_key: key,
-        setting_value: value,
-        updated_at: new Date().toISOString()
-      });
-    if (error) throw error;
+      .select('id')
+      .eq('setting_key', key)
+      .maybeSingle();
+
+    if (existing) {
+      const { error } = await supabase
+        .from('system_settings')
+        .update({ setting_value: value, updated_at: new Date().toISOString() })
+        .eq('setting_key', key);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from('system_settings')
+        .insert({ setting_key: key, setting_value: value });
+      if (error) throw error;
+    }
   };
 
   const handleSave = async () => {
