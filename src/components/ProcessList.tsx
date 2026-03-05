@@ -548,11 +548,26 @@ ${random(closings)}`;
     );
   }
 
+  const filteredProcesses = processes.filter(p => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (p.client_name || '').toLowerCase().includes(q) ||
+      (p.phone_number || '').toLowerCase().includes(q) ||
+      (p.iphone_model || '').toLowerCase().includes(q) ||
+      (p.imei || '').toLowerCase().includes(q) ||
+      (p.serial_number || '').toLowerCase().includes(q) ||
+      (p.owner_name || '').toLowerCase().includes(q) ||
+      (p.status || '').toLowerCase().includes(q) ||
+      (p.color || '').toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h2 className="text-2xl font-bold text-blue-300">
-          Mis Procesos ({processes.length})
+          Mis Procesos ({filteredProcesses.length}{searchQuery ? ` / ${processes.length}` : ''})
         </h2>
         <div className="flex items-center space-x-4">
           <div className="bg-gradient-to-r from-purple-600 to-purple-800 text-white px-4 py-2 rounded-lg">
@@ -569,20 +584,31 @@ ${random(closings)}`;
         </div>
       </div>
 
-      {processes.length === 0 ? (
+      {/* Search bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por nombre, teléfono, modelo, IMEI, serie, estado..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10 bg-accent/50 border-border/50"
+        />
+      </div>
+
+      {filteredProcesses.length === 0 ? (
         <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
           <CardContent className="p-8">
             <div className="text-center">
-              <p className="text-blue-200/70 mb-4">No hay procesos guardados</p>
+              <p className="text-blue-200/70 mb-4">{searchQuery ? 'No se encontraron resultados' : 'No hay procesos guardados'}</p>
               <p className="text-blue-200/50 text-sm">
-                Los procesos que agregues aparecerán aquí listos para enviar.
+                {searchQuery ? 'Intenta con otro término de búsqueda.' : 'Los procesos que agregues aparecerán aquí listos para enviar.'}
               </p>
             </div>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-4">
-          {processes.map((process) => (
+          {filteredProcesses.map((process) => (
             <Card key={process.id} className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
               <CardHeader>
                 <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">

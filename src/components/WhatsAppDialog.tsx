@@ -178,6 +178,20 @@ const WhatsAppDialog: React.FC<WhatsAppDialogProps> = ({ isOpen, onClose, proces
         return;
       }
 
+      // Strip URL from message text when sending with button (URL is in the button)
+      let finalMessageClean = finalMessage;
+      if (buttonText && buttonUrl) {
+        // Remove URL patterns from the message body since the URL is in the interactive button
+        finalMessageClean = finalMessage
+          .replace(/https?:\/\/[^\s]+/gi, '')
+          .replace(/Consulta aqui:\s*/gi, '')
+          .replace(/Ver estado del dispositivo:\s*/gi, '')
+          .replace(/View device status:\s*/gi, '')
+          .replace(/🌍\s*/g, '')
+          .replace(/\n\n\n+/g, '\n\n')
+          .trim();
+      }
+
       const response = await fetch(
         `https://bifqtxaigahdhejurzyb.supabase.co/functions/v1/send-whapi`,
         {
@@ -188,7 +202,7 @@ const WhatsAppDialog: React.FC<WhatsAppDialogProps> = ({ isOpen, onClose, proces
           },
           body: JSON.stringify({
             number: fullNumber,
-            message: finalMessage,
+            message: finalMessageClean,
             button_text: buttonText && buttonUrl ? buttonText : undefined,
             button_url: buttonText && buttonUrl ? buttonUrl : undefined,
             language: 'spanish',
