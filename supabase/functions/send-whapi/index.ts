@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     }
 
     // Clean phone number - Whapi expects number without + prefix
-    const cleanNumber = number.replace(/[\s\-\(\)\+]/g, '');
+    const cleanNumber = String(number).replace(/\D/g, '');
 
     let result;
 
