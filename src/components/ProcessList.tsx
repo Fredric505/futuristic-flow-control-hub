@@ -50,6 +50,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
    const [isSmsDialogOpen, setIsSmsDialogOpen] = useState(false);
    const [whatsappProcess, setWhatsappProcess] = useState<Process | null>(null);
    const [isWhatsappDialogOpen, setIsWhatsappDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // English-speaking country codes
   const englishCountryCodes = englishSpeakingCountries.map(c => c.code);
