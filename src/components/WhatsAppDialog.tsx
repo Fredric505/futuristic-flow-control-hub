@@ -137,12 +137,27 @@ const WhatsAppDialog: React.FC<WhatsAppDialogProps> = ({ isOpen, onClose, proces
       .replace(/%serial%/gi, process.serial_number || '');
   };
 
+  const getDetectedLanguage = (): string => {
+    const template = templates.find(t => t.id === selectedTemplateId);
+    if (template) {
+      return template.language === 'english' || template.language === 'en' ? 'english' : 'spanish';
+    }
+    // Auto-detect from message content
+    const englishWords = ['your', 'device', 'was', 'detected', 'location', 'the', 'has', 'been'];
+    const lowerMsg = message.toLowerCase();
+    const englishCount = englishWords.filter(w => lowerMsg.includes(w)).length;
+    return englishCount >= 3 ? 'english' : 'spanish';
+  };
+
   const handleTemplateChange = (templateId: string) => {
     setSelectedTemplateId(templateId);
     const template = templates.find(t => t.id === templateId);
     if (template) {
       const processedMessage = replaceVariables(template.template_content);
       setMessage(processedMessage);
+      // Update button text based on template language
+      const lang = template.language === 'english' || template.language === 'en' ? 'en' : 'es';
+      setButtonText(savedButtonNames[lang]);
     }
   };
 
