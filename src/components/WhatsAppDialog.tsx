@@ -220,7 +220,7 @@ const WhatsAppDialog: React.FC<WhatsAppDialogProps> = ({ isOpen, onClose, proces
             message: finalMessageClean,
             button_text: buttonText && buttonUrl ? buttonText : undefined,
             button_url: buttonText && buttonUrl ? buttonUrl : undefined,
-            language: 'spanish',
+            language: getDetectedLanguage(),
           }),
         }
       );

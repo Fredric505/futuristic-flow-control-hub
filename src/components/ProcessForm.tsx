@@ -114,10 +114,13 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
   const colorOptions = [
     // Colores básicos
     'Negro', 'Blanco', 'Azul', 'Verde', 'Rosa', 'Amarillo', 'Púrpura', 'Rojo',
+    // Colores específicos iPhone 17
+    'Verde Oscuro', 'Aerogel',
     // Colores específicos iPhone 16
     'Ultramarino', 'Verde azulado',
-    // Colores Titanio
+    // Colores Titanio (iPhone 17 Pro / 16 Pro)
     'Titanio Natural', 'Titanio Azul', 'Titanio Blanco', 'Titanio Negro',
+    'Titanio Desierto', 'Titanio Oscuro', 'Titanio Verde',
     // Colores especiales
     'Medianoche', 'Luz de estrella', 'Oro', 'Plata', 'Grafito',
     'Púrpura Intenso', 'Sierra Blue', 'Azul Pacífico', 'Verde Noche',
