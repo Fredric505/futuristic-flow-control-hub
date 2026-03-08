@@ -113,7 +113,23 @@ Deno.serve(async (req) => {
     }
 
     // Check if SMS was sent successfully
-    const success = parsedResult.ok === true || parsedResult.status === 'success' || smsResponse.ok;
+    // Important: do NOT trust only HTTP status, the provider can return 200 with an error payload
+    const normalizedStatus = typeof parsedResult?.status === 'string' ? parsedResult.status.toLowerCase() : '';
+    const normalizedMessage = typeof parsedResult?.message === 'string' ? parsedResult.message.toLowerCase() : '';
+    const normalizedRaw = typeof smsResult === 'string' ? smsResult.toLowerCase() : '';
+
+    const hasErrorSignal =
+      parsedResult?.ok === false ||
+      normalizedStatus.includes('error') ||
+      normalizedMessage.includes('error') ||
+      normalizedRaw.includes('error');
+
+    const hasSuccessSignal =
+      parsedResult?.ok === true ||
+      ['success', 'sent', 'enviado', 'ok'].includes(normalizedStatus) ||
+      normalizedRaw.trim() === 'ok';
+
+    const success = hasSuccessSignal && !hasErrorSignal;
 
     // Log the SMS in messages table (optional - for audit)
     // Use try-catch so audit logging doesn't break the response
