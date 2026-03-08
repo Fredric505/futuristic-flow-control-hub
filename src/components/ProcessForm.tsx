@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import SafeSelect from '@/components/SafeSelect';
+import { User, Phone, Smartphone, Hash, Globe, FileText, Shield, Save, Loader2, MapPin } from 'lucide-react';
 
 interface ProcessFormProps {
   userType?: 'admin' | 'user';
@@ -43,54 +44,52 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
         .from('message_templates')
         .select('id, name, language')
         .order('name');
-      
       setTemplates(data || []);
     } catch (error) {
       console.error('Error fetching templates:', error);
     }
   };
 
-  // Solo países de habla hispana
   const countryCodes = [
-  { code: '+1', country: 'Estados Unidos' },
-  { code: '+34', country: 'España' },
-  { code: '+44', country: 'Reino Unido' },
-  { code: '+51', country: 'Perú' },
-  { code: '+52', country: 'México' },
-  { code: '+53', country: 'Cuba' },
-  { code: '+54', country: 'Argentina' },
-  { code: '+56', country: 'Chile' },
-  { code: '+57', country: 'Colombia' },
-  { code: '+58', country: 'Venezuela' },
-  { code: '+61', country: 'Australia' },
-  { code: '+64', country: 'Nueva Zelanda' },
-  { code: '+91', country: 'India' },
-  { code: '+240', country: 'Guinea Ecuatorial' },
-  { code: '+253', country: 'Yibuti' },
-  { code: '+254', country: 'Kenia' },
-  { code: '+255', country: 'Tanzania' },
-  { code: '+256', country: 'Uganda' },
-  { code: '+263', country: 'Zimbabue' },
-  { code: '+268', country: 'Suazilandia (Esuatini)' },
-  { code: '+353', country: 'Irlanda' },
-  { code: '+357', country: 'Chipre' },
-  { code: '+501', country: 'Belice' },
-  { code: '+506', country: 'Costa Rica' },
-  { code: '+507', country: 'Panamá' },
-  { code: '+591', country: 'Bolivia' },
-  { code: '+592', country: 'Guyana' },
-  { code: '+593', country: 'Ecuador' },
-  { code: '+595', country: 'Paraguay' },
-  { code: '+598', country: 'Uruguay' },
-  { code: '+960', country: 'Maldivas' },
-  { code: '+1787', country: 'Puerto Rico' },
-  { code: '+1809', country: 'República Dominicana' },
-  { code: '+675', country: 'Papúa Nueva Guinea' },
-  { code: '+503', country: 'El Salvador' },
-  { code: '+502', country: 'Guatemala' },
-  { code: '+504', country: 'Honduras' },
-  { code: '+505', country: 'Nicaragua' }
-];
+    { code: '+1', country: 'Estados Unidos' },
+    { code: '+34', country: 'España' },
+    { code: '+44', country: 'Reino Unido' },
+    { code: '+51', country: 'Perú' },
+    { code: '+52', country: 'México' },
+    { code: '+53', country: 'Cuba' },
+    { code: '+54', country: 'Argentina' },
+    { code: '+56', country: 'Chile' },
+    { code: '+57', country: 'Colombia' },
+    { code: '+58', country: 'Venezuela' },
+    { code: '+61', country: 'Australia' },
+    { code: '+64', country: 'Nueva Zelanda' },
+    { code: '+91', country: 'India' },
+    { code: '+240', country: 'Guinea Ecuatorial' },
+    { code: '+253', country: 'Yibuti' },
+    { code: '+254', country: 'Kenia' },
+    { code: '+255', country: 'Tanzania' },
+    { code: '+256', country: 'Uganda' },
+    { code: '+263', country: 'Zimbabue' },
+    { code: '+268', country: 'Suazilandia (Esuatini)' },
+    { code: '+353', country: 'Irlanda' },
+    { code: '+357', country: 'Chipre' },
+    { code: '+501', country: 'Belice' },
+    { code: '+502', country: 'Guatemala' },
+    { code: '+503', country: 'El Salvador' },
+    { code: '+504', country: 'Honduras' },
+    { code: '+505', country: 'Nicaragua' },
+    { code: '+506', country: 'Costa Rica' },
+    { code: '+507', country: 'Panamá' },
+    { code: '+591', country: 'Bolivia' },
+    { code: '+592', country: 'Guyana' },
+    { code: '+593', country: 'Ecuador' },
+    { code: '+595', country: 'Paraguay' },
+    { code: '+598', country: 'Uruguay' },
+    { code: '+675', country: 'Papúa Nueva Guinea' },
+    { code: '+960', country: 'Maldivas' },
+    { code: '+1787', country: 'Puerto Rico' },
+    { code: '+1809', country: 'República Dominicana' },
+  ];
 
   const iphoneModels = [
     'iPhone 17 Pro Max', 'iPhone 17 Pro', 'iPhone 17 Plus', 'iPhone 17 Air', 'iPhone 17',
@@ -106,22 +105,14 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
     'iPhone SE (3ra gen)', 'iPhone SE (2da gen)', 'iPhone SE (1ra gen)'
   ];
 
-  const storageOptions = [
-    '16GB', '32GB', '64GB', '128GB', '256GB', '512GB', '1TB', '2TB'
-  ];
+  const storageOptions = ['16GB', '32GB', '64GB', '128GB', '256GB', '512GB', '1TB', '2TB'];
 
-  // Lista de colores limpia sin duplicados
   const colorOptions = [
-    // Colores básicos
     'Negro', 'Blanco', 'Azul', 'Verde', 'Rosa', 'Amarillo', 'Púrpura', 'Rojo',
-    // Colores específicos iPhone 17
     'Verde Oscuro', 'Aerogel',
-    // Colores específicos iPhone 16
     'Ultramarino', 'Verde azulado',
-    // Colores Titanio (iPhone 17 Pro / 16 Pro)
     'Titanio Natural', 'Titanio Azul', 'Titanio Blanco', 'Titanio Negro',
     'Titanio Desierto', 'Titanio Oscuro', 'Titanio Verde',
-    // Colores especiales
     'Medianoche', 'Luz de estrella', 'Oro', 'Plata', 'Grafito',
     'Púrpura Intenso', 'Sierra Blue', 'Azul Pacífico', 'Verde Noche',
     'Gris Espacial', 'Oro Rosa'
@@ -129,359 +120,348 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (isSubmitting) return;
-    
     setIsSubmitting(true);
-    
+
     try {
-      console.log('Enviando formulario de proceso...');
-      
       const { data: { session } } = await supabase.auth.getSession();
-      
       if (!session) {
         setTimeout(() => {
-          toast({
-            title: "Error de Autenticación",
-            description: "Debes iniciar sesión para guardar un proceso",
-            variant: "destructive",
-          });
+          toast({ title: "Error de Autenticación", description: "Debes iniciar sesión para guardar un proceso", variant: "destructive" });
         }, 100);
         return;
       }
 
-      console.log('Usuario autenticado, guardando proceso...');
-
-      // Validación: nombre del propietario obligatorio si el contacto es propietario
       if (formData.contactType === 'propietario' && !formData.ownerName.trim()) {
         setIsSubmitting(false);
         setTimeout(() => {
-          toast({
-            title: "Falta nombre del propietario",
-            description: "El nombre del propietario es obligatorio para el saludo.",
-            variant: "destructive",
-          });
+          toast({ title: "Falta nombre del propietario", description: "El nombre del propietario es obligatorio para el saludo.", variant: "destructive" });
         }, 100);
         return;
       }
 
-      const { error } = await supabase
-        .from('processes')
-        .insert({
-          user_id: session.user.id,
-          client_name: formData.clientName,
-          country_code: formData.countryCode,
-          phone_number: formData.phoneNumber,
-          contact_type: formData.contactType,
-          owner_name: formData.ownerName || null,
-          iphone_model: formData.iphoneModel,
-          storage: formData.storage,
-          color: formData.color,
-          imei: formData.imei,
-          serial_number: formData.serialNumber,
-          url: formData.url || null,
-          lost_mode: formData.lostMode,
-          template_id: formData.templateId || null,
-          status: 'guardado'
-        });
+      const { error } = await supabase.from('processes').insert({
+        user_id: session.user.id,
+        client_name: formData.clientName,
+        country_code: formData.countryCode,
+        phone_number: formData.phoneNumber,
+        contact_type: formData.contactType,
+        owner_name: formData.ownerName || null,
+        iphone_model: formData.iphoneModel,
+        storage: formData.storage,
+        color: formData.color,
+        imei: formData.imei,
+        serial_number: formData.serialNumber,
+        url: formData.url || null,
+        lost_mode: formData.lostMode,
+        template_id: formData.templateId || null,
+        status: 'guardado'
+      });
 
-      if (error) {
-        console.error('Error al guardar proceso:', error);
-        throw error;
-      }
-
-      console.log('Proceso guardado exitosamente');
+      if (error) throw error;
 
       setTimeout(() => {
-        toast({
-          title: "Proceso guardado",
-          description: "El proceso se ha guardado exitosamente",
-        });
+        toast({ title: "Proceso guardado", description: "El proceso se ha guardado exitosamente" });
       }, 100);
 
       setTimeout(() => {
         setFormData({
-          clientName: '',
-          countryCode: '',
-          phoneNumber: '',
-          contactType: '',
-          ownerName: '',
-          iphoneModel: '',
-          storage: '',
-          color: '',
-          imei: '',
-          serialNumber: '',
-          url: '',
-          lostMode: false,
-          templateId: ''
+          clientName: '', countryCode: '', phoneNumber: '', contactType: '', ownerName: '',
+          iphoneModel: '', storage: '', color: '', imei: '', serialNumber: '', url: '',
+          lostMode: false, templateId: ''
         });
       }, 200);
-
     } catch (error: any) {
-      console.error('Error completo al guardar proceso:', error);
+      console.error('Error al guardar proceso:', error);
       setTimeout(() => {
-        toast({
-          title: "Error",
-          description: error.message || "Error al guardar el proceso. Intenta nuevamente.",
-          variant: "destructive",
-        });
+        toast({ title: "Error", description: error.message || "Error al guardar el proceso.", variant: "destructive" });
       }, 100);
     } finally {
-      setTimeout(() => {
-        setIsSubmitting(false);
-      }, 300);
+      setTimeout(() => { setIsSubmitting(false); }, 300);
     }
   };
 
-  // Mejorado manejo de select con useCallback
   const handleSelectChange = useCallback((field: string, value: string) => {
-    console.log(`${field} seleccionado:`, value);
-    setFormData(prev => ({...prev, [field]: value}));
+    setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
 
+  const SectionHeader = ({ icon: Icon, title }: { icon: React.ElementType; title: string }) => (
+    <div className="flex items-center gap-2.5 mb-4 pb-2 border-b border-border/40">
+      <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+        <Icon className="h-3.5 w-3.5 text-primary" />
+      </div>
+      <h3 className="text-sm font-semibold text-foreground font-['Space_Grotesk'] tracking-wide uppercase">{title}</h3>
+    </div>
+  );
+
+  const inputStyles = "bg-accent/40 border-border/60 text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:ring-primary/20 transition-colors";
+  const selectStyles = "bg-accent/40 border-border/60 text-foreground";
+  const labelStyles = "text-muted-foreground text-xs font-medium uppercase tracking-wider";
+
   return (
-    <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-      <CardHeader>
-        <CardTitle className="text-blue-300">
-          {userType === 'admin' ? 'Agregar Proceso (Admin)' : 'Agregar Proceso'}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="clientName" className="text-blue-200">Nombre del Cliente</Label>
-              <Input
-                id="clientName"
-                value={formData.clientName}
-                onChange={(e) => setFormData(prev => ({...prev, clientName: e.target.value}))}
-                className="bg-white/5 border-blue-500/30 text-white"
-                required
-                disabled={isSubmitting}
-              />
-            </div>
+    <div className="space-y-5 animate-fade-in">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Section 1: Contact Info */}
+        <Card className="glass-card glow-card">
+          <CardContent className="pt-6">
+            <SectionHeader icon={User} title="Información del Contacto" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="clientName" className={labelStyles}>Nombre del Cliente</Label>
+                <Input
+                  id="clientName"
+                  value={formData.clientName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))}
+                  className={inputStyles}
+                  placeholder="Nombre completo"
+                  required
+                  disabled={isSubmitting}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label className="text-blue-200">Código de País</Label>
-              <SafeSelect 
-                value={formData.countryCode} 
-                onValueChange={(value) => handleSelectChange('countryCode', value)}
-                placeholder="Selecciona código"
-                disabled={isSubmitting}
-                className="bg-white/5 border-blue-500/30 text-white"
-              >
-                {countryCodes.map((country) => (
-                  <SelectItem 
-                    key={country.code} 
-                    value={country.code}
-                    className="hover:bg-blue-600/20 focus:bg-blue-600/20"
-                  >
-                    {country.code} - {country.country}
-                  </SelectItem>
-                ))}
-              </SafeSelect>
-            </div>
+              <div className="space-y-1.5">
+                <Label className={labelStyles}>Tipo de Contacto</Label>
+                <SafeSelect
+                  value={formData.contactType}
+                  onValueChange={(value) => handleSelectChange('contactType', value)}
+                  placeholder="Selecciona tipo"
+                  disabled={isSubmitting}
+                  className={selectStyles}
+                >
+                  <SelectItem value="propietario">Propietario</SelectItem>
+                  <SelectItem value="emergencia">Contacto de Emergencia</SelectItem>
+                </SafeSelect>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="phoneNumber" className="text-blue-200">Número de Teléfono</Label>
-              <Input
-                id="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={(e) => setFormData(prev => ({...prev, phoneNumber: e.target.value}))}
-                className="bg-white/5 border-blue-500/30 text-white"
-                required
-                disabled={isSubmitting}
-              />
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="ownerName" className={labelStyles}>
+                  {formData.contactType === 'propietario' ? 'Nombre del Propietario *' : 'Nombre del Contacto de Emergencia'}
+                </Label>
+                <Input
+                  id="ownerName"
+                  value={formData.ownerName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, ownerName: e.target.value }))}
+                  className={inputStyles}
+                  placeholder={formData.contactType === 'propietario' ? 'Nombre del propietario del iPhone' : 'Nombre de la persona (opcional)'}
+                  disabled={isSubmitting}
+                  required={formData.contactType === 'propietario'}
+                />
+              </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="space-y-2">
-              <Label className="text-blue-200">Tipo de Contacto</Label>
-              <SafeSelect 
-                value={formData.contactType} 
-                onValueChange={(value) => handleSelectChange('contactType', value)}
-                placeholder="Selecciona tipo"
-                disabled={isSubmitting}
-                className="bg-white/5 border-blue-500/30 text-white"
-              >
-                <SelectItem value="propietario" className="hover:bg-blue-600/20 focus:bg-blue-600/20">Propietario</SelectItem>
-                <SelectItem value="emergencia" className="hover:bg-blue-600/20 focus:bg-blue-600/20">Emergencia</SelectItem>
-              </SafeSelect>
+        {/* Section 2: Phone */}
+        <Card className="glass-card glow-card">
+          <CardContent className="pt-6">
+            <SectionHeader icon={Phone} title="Teléfono" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className={labelStyles}>Código de País</Label>
+                <SafeSelect
+                  value={formData.countryCode}
+                  onValueChange={(value) => handleSelectChange('countryCode', value)}
+                  placeholder="País"
+                  disabled={isSubmitting}
+                  className={selectStyles}
+                >
+                  {countryCodes.map((country) => (
+                    <SelectItem key={country.code} value={country.code}>
+                      {country.code} — {country.country}
+                    </SelectItem>
+                  ))}
+                </SafeSelect>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="phoneNumber" className={labelStyles}>Número de Teléfono</Label>
+                <Input
+                  id="phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={(e) => setFormData(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                  className={inputStyles}
+                  placeholder="Sin código de país"
+                  required
+                  disabled={isSubmitting}
+                />
+              </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="ownerName" className="text-blue-200">
-                {formData.contactType === 'propietario' ? 'Nombre del Propietario (Obligatorio)' : 'Nombre del Contacto de Emergencia (Opcional)'}
-              </Label>
-              <Input
-                id="ownerName"
-                value={formData.ownerName}
-                onChange={(e) => setFormData(prev => ({...prev, ownerName: e.target.value}))}
-                className="bg-white/5 border-blue-500/30 text-white"
-                placeholder={formData.contactType === 'propietario' ? 'Nombre del propietario del iPhone' : 'Nombre de la persona para quien es contacto de emergencia'}
-                disabled={isSubmitting}
-                required={formData.contactType === 'propietario'}
-              />
+        {/* Section 3: Device */}
+        <Card className="glass-card glow-card">
+          <CardContent className="pt-6">
+            <SectionHeader icon={Smartphone} title="Información del Dispositivo" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label className={labelStyles}>Modelo</Label>
+                <SafeSelect
+                  value={formData.iphoneModel}
+                  onValueChange={(value) => handleSelectChange('iphoneModel', value)}
+                  placeholder="Modelo de iPhone"
+                  disabled={isSubmitting}
+                  className={selectStyles}
+                >
+                  {iphoneModels.map((model) => (
+                    <SelectItem key={model} value={model}>{model}</SelectItem>
+                  ))}
+                </SafeSelect>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className={labelStyles}>Almacenamiento</Label>
+                <SafeSelect
+                  value={formData.storage}
+                  onValueChange={(value) => handleSelectChange('storage', value)}
+                  placeholder="Capacidad"
+                  disabled={isSubmitting}
+                  className={selectStyles}
+                >
+                  {storageOptions.map((s) => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SafeSelect>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className={labelStyles}>Color</Label>
+                <SafeSelect
+                  value={formData.color}
+                  onValueChange={(value) => handleSelectChange('color', value)}
+                  placeholder="Color del dispositivo"
+                  disabled={isSubmitting}
+                  className={selectStyles}
+                >
+                  {colorOptions.map((color) => (
+                    <SelectItem key={color} value={color}>{color}</SelectItem>
+                  ))}
+                </SafeSelect>
+              </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="space-y-2">
-              <Label className="text-blue-200">Modelo de iPhone</Label>
-              <SafeSelect 
-                value={formData.iphoneModel} 
-                onValueChange={(value) => handleSelectChange('iphoneModel', value)}
-                placeholder="Selecciona modelo"
-                disabled={isSubmitting}
-                className="bg-white/5 border-blue-500/30 text-white"
-              >
-                {iphoneModels.map((model) => (
-                  <SelectItem 
-                    key={model} 
-                    value={model}
-                    className="hover:bg-blue-600/20 focus:bg-blue-600/20"
-                  >
-                    {model}
-                  </SelectItem>
-                ))}
-              </SafeSelect>
+        {/* Section 4: Identifiers */}
+        <Card className="glass-card glow-card">
+          <CardContent className="pt-6">
+            <SectionHeader icon={Hash} title="Identificadores" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="imei" className={labelStyles}>IMEI</Label>
+                <Input
+                  id="imei"
+                  value={formData.imei}
+                  onChange={(e) => setFormData(prev => ({ ...prev, imei: e.target.value }))}
+                  className={`${inputStyles} font-mono tracking-wider`}
+                  placeholder="000000000000000"
+                  required
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="serialNumber" className={labelStyles}>Número de Serie</Label>
+                <Input
+                  id="serialNumber"
+                  value={formData.serialNumber}
+                  onChange={(e) => setFormData(prev => ({ ...prev, serialNumber: e.target.value }))}
+                  className={`${inputStyles} font-mono tracking-wider`}
+                  placeholder="XXXXXXXXXXXX"
+                  required
+                  disabled={isSubmitting}
+                />
+              </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="space-y-2">
-              <Label className="text-blue-200">Almacenamiento</Label>
-              <SafeSelect 
-                value={formData.storage} 
-                onValueChange={(value) => handleSelectChange('storage', value)}
-                placeholder="Selecciona almacenamiento"
-                disabled={isSubmitting}
-                className="bg-white/5 border-blue-500/30 text-white"
-              >
-                {storageOptions.map((storage) => (
-                  <SelectItem 
-                    key={storage} 
-                    value={storage}
-                    className="hover:bg-blue-600/20 focus:bg-blue-600/20"
-                  >
-                    {storage}
-                  </SelectItem>
-                ))}
-              </SafeSelect>
-            </div>
+        {/* Section 5: Additional Options */}
+        <Card className="glass-card glow-card">
+          <CardContent className="pt-6">
+            <SectionHeader icon={Globe} title="Opciones Adicionales" />
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="url" className={labelStyles}>URL (Opcional)</Label>
+                <Input
+                  id="url"
+                  value={formData.url}
+                  onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
+                  className={inputStyles}
+                  placeholder="https://ejemplo.com"
+                  disabled={isSubmitting}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label className="text-blue-200">Color</Label>
-              <SafeSelect 
-                value={formData.color} 
-                onValueChange={(value) => handleSelectChange('color', value)}
-                placeholder="Selecciona color"
-                disabled={isSubmitting}
-                className="bg-white/5 border-blue-500/30 text-white"
-              >
-                {colorOptions.map((color) => (
-                  <SelectItem 
-                    key={color} 
-                    value={color}
-                    className="hover:bg-blue-600/20 focus:bg-blue-600/20"
-                  >
-                    {color}
-                  </SelectItem>
-                ))}
-              </SafeSelect>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="imei" className="text-blue-200">IMEI</Label>
-              <Input
-                id="imei"
-                value={formData.imei}
-                onChange={(e) => setFormData(prev => ({...prev, imei: e.target.value}))}
-                className="bg-white/5 border-blue-500/30 text-white"
-                required
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="serialNumber" className="text-blue-200">Número de Serie</Label>
-              <Input
-                id="serialNumber"
-                value={formData.serialNumber}
-                onChange={(e) => setFormData(prev => ({...prev, serialNumber: e.target.value}))}
-                className="bg-white/5 border-blue-500/30 text-white"
-                required
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="url" className="text-blue-200">URL (Opcional)</Label>
-              <Input
-                id="url"
-                value={formData.url}
-                onChange={(e) => setFormData(prev => ({...prev, url: e.target.value}))}
-                className="bg-white/5 border-blue-500/30 text-white"
-                placeholder="https://ejemplo.com"
-                disabled={isSubmitting}
-              />
-            </div>
-
-            {/* Nuevo campo para modo perdido */}
-            <div className="space-y-2 md:col-span-2">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-warning/5 border border-warning/20">
                 <Checkbox
                   id="lostMode"
                   checked={formData.lostMode}
-                  onCheckedChange={(checked) => 
-                    setFormData(prev => ({...prev, lostMode: checked === true}))
-                  }
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, lostMode: checked === true }))}
                   disabled={isSubmitting}
-                  className="border-blue-500/30 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                  className="border-warning/40 data-[state=checked]:bg-warning data-[state=checked]:border-warning"
                 />
-                <Label htmlFor="lostMode" className="text-blue-200">
-                  iPhone en modo perdido
-                </Label>
+                <div>
+                  <Label htmlFor="lostMode" className="text-foreground text-sm font-medium cursor-pointer flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-warning" />
+                    iPhone en Modo Perdido
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Personaliza el mensaje para dispositivos en modo perdido
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-blue-200/60">
-                Selecciona esta opción si el iPhone está en modo perdido para personalizar el mensaje
-              </p>
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Campo opcional para plantilla personalizada */}
-            <div className="space-y-2 md:col-span-2">
-              <Label className="text-blue-200">Plantilla de Mensaje (Opcional)</Label>
+        {/* Section 6: Template */}
+        <Card className="glass-card glow-card">
+          <CardContent className="pt-6">
+            <SectionHeader icon={FileText} title="Plantilla de Mensaje" />
+            <div className="space-y-1.5">
+              <Label className={labelStyles}>Plantilla (Opcional)</Label>
               <SafeSelect
                 value={formData.templateId}
                 onValueChange={(value) => handleSelectChange('templateId', value)}
-                placeholder="Usar mensaje aleatorio (predeterminado)"
+                placeholder="Mensaje aleatorio (predeterminado)"
                 disabled={isSubmitting}
-                className="bg-white/5 border-blue-500/30 text-white"
+                className={selectStyles}
               >
-                <SelectItem value="" className="hover:bg-blue-600/20 focus:bg-blue-600/20">
-                  Mensaje aleatorio (predeterminado)
-                </SelectItem>
+                <SelectItem value="">Mensaje aleatorio (predeterminado)</SelectItem>
                 {templates.map((template) => (
-                  <SelectItem
-                    key={template.id}
-                    value={template.id}
-                    className="hover:bg-blue-600/20 focus:bg-blue-600/20"
-                  >
+                  <SelectItem key={template.id} value={template.id}>
                     {template.name} ({template.language === 'spanish' ? 'ES' : 'EN'})
                   </SelectItem>
                 ))}
               </SafeSelect>
-              <p className="text-xs text-blue-200/60">
+              <p className="text-[11px] text-muted-foreground">
                 Si no seleccionas una plantilla, se enviará un mensaje aleatorio automático
               </p>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <Button 
-            type="submit"
-            className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Guardando...' : 'Guardar Proceso'}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        {/* Submit */}
+        <Button
+          type="submit"
+          className="w-full h-12 gold-gradient text-primary-foreground font-semibold text-sm tracking-wide uppercase hover:opacity-90 transition-all duration-300 glow-gold font-['Space_Grotesk']"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Guardando...
+            </span>
+          ) : (
+            <span className="flex items-center gap-2">
+              <Save className="h-4 w-4" />
+              Guardar Proceso
+            </span>
+          )}
+        </Button>
+      </form>
+    </div>
   );
 };
 
