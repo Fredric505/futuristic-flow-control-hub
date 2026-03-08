@@ -191,9 +191,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
   };
 
   const deleteProcess = async (processId: string) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este proceso?')) {
-      return;
-    }
+    setDeleteConfirmId(null);
 
     try {
       console.log('Deleting process:', processId);
