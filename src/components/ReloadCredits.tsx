@@ -1,16 +1,51 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { ChevronDown, User, Search } from 'lucide-react';
+
+interface UserProfile {
+  id: string;
+  email: string;
+  credits: number;
+}
 
 const ReloadCredits = () => {
   const [userEmail, setUserEmail] = useState('');
   const [creditsAmount, setCreditsAmount] = useState('');
   const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [searchFilter, setSearchFilter] = useState('');
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, email, credits')
+      .order('email', { ascending: true });
+    
+    if (!error && data) {
+      setUsers(data);
+    }
+  };
+
+  const filteredUsers = users.filter(u => 
+    u.email.toLowerCase().includes(searchFilter.toLowerCase())
+  );
+
+  const selectUser = (email: string) => {
+    setUserEmail(email);
+    setShowDropdown(false);
+    setSearchFilter('');
+  };
 
   const handleReloadCredits = async (e: React.FormEvent) => {
     e.preventDefault();
