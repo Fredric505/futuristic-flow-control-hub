@@ -12,7 +12,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Send, MessageCircle } from 'lucide-react';
+import { Send, MessageCircle, ArrowLeft, Eye, Pencil } from 'lucide-react';
+import WhatsAppPreview from '@/components/WhatsAppPreview';
 
 interface MessageTemplate {
   id: string;
@@ -50,11 +51,13 @@ const WhatsAppDialog: React.FC<WhatsAppDialogProps> = ({ isOpen, onClose, proces
   const [loading, setLoading] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [savedButtonNames, setSavedButtonNames] = useState({ es: 'Ver ubicación', en: 'View location' });
+  const [step, setStep] = useState<'edit' | 'preview'>('edit');
 
   useEffect(() => {
     if (isOpen) {
       loadTemplates();
       loadButtonNames();
+      setStep('edit');
     }
   }, [isOpen]);
 
@@ -63,7 +66,6 @@ const WhatsAppDialog: React.FC<WhatsAppDialogProps> = ({ isOpen, onClose, proces
       setSelectedTemplateId('');
       setMessage('');
       setButtonUrl(process.url || '');
-      // Set button text based on saved names
       setButtonText(savedButtonNames.es);
     }
   }, [process?.id]);
@@ -74,7 +76,6 @@ const WhatsAppDialog: React.FC<WhatsAppDialogProps> = ({ isOpen, onClose, proces
         .from('system_settings')
         .select('setting_key, setting_value')
         .in('setting_key', ['whapi_button_title_es', 'whapi_button_title_en']);
-
       if (data) {
         const map: Record<string, string> = {};
         data.forEach(s => { map[s.setting_key] = s.setting_value || ''; });
@@ -82,13 +83,9 @@ const WhatsAppDialog: React.FC<WhatsAppDialogProps> = ({ isOpen, onClose, proces
           es: map['whapi_button_title_es'] || 'Ver ubicación',
           en: map['whapi_button_title_en'] || 'View location',
         });
-        if (!buttonText) {
-          setButtonText(map['whapi_button_title_es'] || 'Ver ubicación');
-        }
+        if (!buttonText) setButtonText(map['whapi_button_title_es'] || 'Ver ubicación');
       }
-    } catch (error) {
-      console.error('Error loading button names:', error);
-    }
+    } catch (error) { console.error('Error loading button names:', error); }
   };
 
   const loadTemplates = async () => {
@@ -96,18 +93,11 @@ const WhatsAppDialog: React.FC<WhatsAppDialogProps> = ({ isOpen, onClose, proces
       setLoadingTemplates(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data, error } = await supabase
-        .from('message_templates')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('name');
+      const { data, error } = await supabase.from('message_templates').select('*').eq('user_id', user.id).order('name');
       if (error) throw error;
       setTemplates(data || []);
-    } catch (error) {
-      console.error('Error loading templates:', error);
-    } finally {
-      setLoadingTemplates(false);
-    }
+    } catch (error) { console.error('Error loading templates:', error); }
+    finally { setLoadingTemplates(false); }
   };
 
   const replaceVariables = (text: string): string => {
@@ -139,122 +129,81 @@ const WhatsAppDialog: React.FC<WhatsAppDialogProps> = ({ isOpen, onClose, proces
 
   const getDetectedLanguage = (): string => {
     const template = templates.find(t => t.id === selectedTemplateId);
-    if (template) {
-      return template.language === 'english' || template.language === 'en' ? 'english' : 'spanish';
-    }
-    // Auto-detect from message content
+    if (template) return template.language === 'english' || template.language === 'en' ? 'english' : 'spanish';
     const englishWords = ['your', 'device', 'was', 'detected', 'location', 'the', 'has', 'been'];
     const lowerMsg = message.toLowerCase();
-    const englishCount = englishWords.filter(w => lowerMsg.includes(w)).length;
-    return englishCount >= 3 ? 'english' : 'spanish';
+    return englishWords.filter(w => lowerMsg.includes(w)).length >= 3 ? 'english' : 'spanish';
   };
 
   const handleTemplateChange = (templateId: string) => {
     setSelectedTemplateId(templateId);
     const template = templates.find(t => t.id === templateId);
     if (template) {
-      const processedMessage = replaceVariables(template.template_content);
-      setMessage(processedMessage);
-      // Update button text based on template language
+      setMessage(replaceVariables(template.template_content));
       const lang = template.language === 'english' || template.language === 'en' ? 'en' : 'es';
       setButtonText(savedButtonNames[lang]);
     }
   };
 
-  const handleSendWhatsApp = async () => {
-    if (!process) return;
-    if (!message.trim()) {
-      toast({ title: "Error", description: "Por favor ingresa un mensaje", variant: "destructive" });
-      return;
+  const getCleanMessage = () => {
+    const finalMessage = replaceVariables(message);
+    if (buttonText && buttonUrl) {
+      return finalMessage
+        .replace(/https?:\/\/[^\s]+/gi, '')
+        .replace(/Consulta aqui:\s*/gi, '')
+        .replace(/Ver estado del dispositivo:\s*/gi, '')
+        .replace(/View device status:\s*/gi, '')
+        .replace(/🌍\s*/g, '')
+        .replace(/\n\n\n+/g, '\n\n')
+        .trim();
     }
+    return finalMessage;
+  };
 
+  const handleSendWhatsApp = async () => {
+    if (!process || !message.trim()) return;
     setLoading(true);
-
     try {
       const fullNumber = `${process.country_code}${process.phone_number}`;
-      const finalMessage = replaceVariables(message);
+      const finalMessageClean = getCleanMessage();
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({ title: "Error", description: "No hay sesión activa", variant: "destructive" });
-        setLoading(false);
-        return;
-      }
+      if (!session) { toast({ title: "Error", description: "No hay sesión activa", variant: "destructive" }); return; }
 
-      // Check credits
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('credits')
-        .eq('id', session.user.id)
-        .single();
+      const { data: profile } = await supabase.from('profiles').select('credits').eq('id', session.user.id).single();
+      if (!profile || profile.credits < 1) { toast({ title: "Sin créditos", description: "No tienes créditos suficientes", variant: "destructive" }); return; }
 
-      if (!profile || profile.credits < 1) {
-        toast({ title: "Sin créditos", description: "No tienes créditos suficientes", variant: "destructive" });
-        setLoading(false);
-        return;
-      }
-
-      // Strip URL from message text when sending with button (URL is in the button)
-      let finalMessageClean = finalMessage;
-      if (buttonText && buttonUrl) {
-        // Remove URL patterns from the message body since the URL is in the interactive button
-        finalMessageClean = finalMessage
-          .replace(/https?:\/\/[^\s]+/gi, '')
-          .replace(/Consulta aqui:\s*/gi, '')
-          .replace(/Ver estado del dispositivo:\s*/gi, '')
-          .replace(/View device status:\s*/gi, '')
-          .replace(/🌍\s*/g, '')
-          .replace(/\n\n\n+/g, '\n\n')
-          .trim();
-      }
-
-      const response = await fetch(
-        `https://bifqtxaigahdhejurzyb.supabase.co/functions/v1/send-whapi`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            number: fullNumber,
-            message: finalMessageClean,
-            button_text: buttonText && buttonUrl ? buttonText : undefined,
-            button_url: buttonText && buttonUrl ? buttonUrl : undefined,
-            language: getDetectedLanguage(),
-          }),
-        }
-      );
+      const response = await fetch('https://bifqtxaigahdhejurzyb.supabase.co/functions/v1/send-whapi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          number: fullNumber, message: finalMessageClean,
+          button_text: buttonText && buttonUrl ? buttonText : undefined,
+          button_url: buttonText && buttonUrl ? buttonUrl : undefined,
+          language: getDetectedLanguage(),
+        }),
+      });
 
       const result = await response.json();
-
       if (result.success) {
-        // Deduct 1 credit
-        await supabase
-          .from('profiles')
-          .update({ credits: profile.credits - 1 })
-          .eq('id', session.user.id);
-
+        await supabase.from('profiles').update({ credits: profile.credits - 1 }).eq('id', session.user.id);
         toast({ title: "✅ WhatsApp Enviado", description: `Mensaje enviado a +${fullNumber}. Se descontó 1 crédito.` });
         onClose();
       } else {
-        toast({ title: "Error", description: result.error || "Error al enviar WhatsApp", variant: "destructive" });
+        toast({ title: "Error", description: result.error || "Error al enviar", variant: "destructive" });
       }
     } catch (error: any) {
-      console.error('Error sending WhatsApp:', error);
-      toast({ title: "Error", description: error.message || "Error al enviar WhatsApp", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+      toast({ title: "Error", description: error.message || "Error al enviar", variant: "destructive" });
+    } finally { setLoading(false); }
   };
 
   if (!process) return null;
 
-  const previewMessage = replaceVariables(message);
+  const previewMessage = getCleanMessage();
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto glass-card border-border/50"
+        className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto glass-card border-border/50"
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
@@ -262,128 +211,105 @@ const WhatsAppDialog: React.FC<WhatsAppDialogProps> = ({ isOpen, onClose, proces
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-foreground">
             <MessageCircle className="h-5 w-5 text-success" />
-            WhatsApp Sender (Whapi)
+            WhatsApp Sender
+            <span className="ml-auto text-xs font-normal text-muted-foreground">
+              {step === 'edit' ? '1/2 Editar' : '2/2 Vista Previa'}
+            </span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3 py-2">
-          <div className="grid grid-cols-4 gap-2">
-            <div className="space-y-1">
-              <Label className="text-muted-foreground text-xs">Código</Label>
-              <Input type="text" value={process.country_code} disabled className="bg-accent/50 border-border/50 h-8 text-sm" />
-            </div>
-            <div className="col-span-3 space-y-1">
-              <Label className="text-muted-foreground text-xs">Número</Label>
-              <Input type="text" value={process.phone_number} disabled className="bg-accent/50 border-border/50 h-8 text-sm" />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-muted-foreground text-sm">Seleccione una plantilla</Label>
-            <Select value={selectedTemplateId} onValueChange={handleTemplateChange}>
-              <SelectTrigger className="bg-accent/50 border-border/50 h-9">
-                <SelectValue placeholder="Selecciona una plantilla..." />
-              </SelectTrigger>
-              <SelectContent>
-                {loadingTemplates ? (
-                  <SelectItem value="loading" disabled>Cargando...</SelectItem>
-                ) : templates.length === 0 ? (
-                  <SelectItem value="none" disabled>No hay plantillas</SelectItem>
-                ) : (
-                  templates.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.name} ({template.language === 'es' ? '🇪🇸' : '🇺🇸'})
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-muted-foreground text-sm">Mensaje</Label>
-            <Textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Selecciona una plantilla o escribe el mensaje manualmente"
-              className="bg-accent/50 border-border/50 min-h-[60px] text-sm"
-            />
-          </div>
-
-          {/* Button configuration */}
-          <div className="space-y-2 p-3 rounded-lg bg-success/5 border border-success/20">
-            <Label className="text-success text-sm font-semibold">🔘 Botón Interactivo</Label>
-            <div className="grid grid-cols-2 gap-2">
+        {step === 'edit' ? (
+          /* ── STEP 1: EDIT ── */
+          <div className="space-y-3 py-2">
+            <div className="grid grid-cols-4 gap-2">
               <div className="space-y-1">
-                <Label className="text-muted-foreground text-xs">Texto del botón</Label>
-                <Input
-                  type="text"
-                  value={buttonText}
-                  onChange={(e) => setButtonText(e.target.value)}
-                  placeholder="Ver ubicación"
-                  className="bg-accent/50 border-border/50 h-8 text-sm"
-                  maxLength={20}
-                />
+                <Label className="text-muted-foreground text-xs">Código</Label>
+                <Input type="text" value={process.country_code} disabled className="bg-accent/50 border-border/50 h-8 text-sm" />
               </div>
-              <div className="space-y-1">
-                <Label className="text-muted-foreground text-xs">URL del botón</Label>
-                <Input
-                  type="text"
-                  value={buttonUrl}
-                  onChange={(e) => setButtonUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="bg-accent/50 border-border/50 h-8 text-sm"
-                />
+              <div className="col-span-3 space-y-1">
+                <Label className="text-muted-foreground text-xs">Número</Label>
+                <Input type="text" value={process.phone_number} disabled className="bg-accent/50 border-border/50 h-8 text-sm" />
               </div>
             </div>
-            <p className="text-muted-foreground text-[10px]">El botón aparecerá debajo del mensaje como en la imagen de referencia. Máx 20 caracteres.</p>
-          </div>
 
-          {/* Preview */}
-          <div className="space-y-1.5">
-            <Label className="text-muted-foreground text-xs">Vista Previa</Label>
-            <div className="bg-[#1a2e1a] rounded-lg overflow-hidden border border-success/20">
-              <div className="p-3 text-sm text-foreground/90 min-h-[40px]">
-                {previewMessage || <span className="text-muted-foreground italic">El mensaje aparecerá aquí...</span>}
-              </div>
-              {buttonText && buttonUrl && (
-                <div className="border-t border-success/20 p-2 flex items-center justify-center gap-2 text-success text-sm">
-                  <span>↗</span>
-                  <span>{buttonText}</span>
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground text-sm">Plantilla</Label>
+              <Select value={selectedTemplateId} onValueChange={handleTemplateChange}>
+                <SelectTrigger className="bg-accent/50 border-border/50 h-9">
+                  <SelectValue placeholder="Selecciona una plantilla..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {loadingTemplates ? (
+                    <SelectItem value="loading" disabled>Cargando...</SelectItem>
+                  ) : templates.length === 0 ? (
+                    <SelectItem value="none" disabled>No hay plantillas</SelectItem>
+                  ) : templates.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name} ({t.language === 'es' ? '🇪🇸' : '🇺🇸'})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground text-sm">Mensaje</Label>
+              <Textarea value={message} onChange={(e) => setMessage(e.target.value)}
+                placeholder="Selecciona una plantilla o escribe manualmente"
+                className="bg-accent/50 border-border/50 min-h-[80px] text-sm" />
+            </div>
+
+            <div className="space-y-2 p-3 rounded-lg bg-success/5 border border-success/20">
+              <Label className="text-success text-sm font-semibold">🔘 Botón Interactivo</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground text-xs">Texto</Label>
+                  <Input type="text" value={buttonText} onChange={(e) => setButtonText(e.target.value)}
+                    placeholder="Ver ubicación" className="bg-accent/50 border-border/50 h-8 text-sm" maxLength={20} />
                 </div>
-              )}
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground text-xs">URL</Label>
+                  <Input type="text" value={buttonUrl} onChange={(e) => setButtonUrl(e.target.value)}
+                    placeholder="https://..." className="bg-accent/50 border-border/50 h-8 text-sm" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-accent/30 rounded-lg p-2 text-xs text-muted-foreground">
+              <p><strong>Cliente:</strong> {process.client_name} | <strong>Modelo:</strong> {process.iphone_model}</p>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-2 border-t border-border/50">
+              <Button type="button" variant="outline" onClick={onClose} className="h-9">Cancelar</Button>
+              <Button type="button" onClick={() => setStep('preview')} disabled={!message.trim()}
+                className="bg-success hover:bg-success/90 text-primary-foreground h-9">
+                <Eye className="mr-2 h-4 w-4" /> Vista Previa
+              </Button>
             </div>
           </div>
+        ) : (
+          /* ── STEP 2: PREVIEW ── */
+          <div className="space-y-4 py-2">
+            <p className="text-xs text-muted-foreground text-center">
+              Así se verá el mensaje que recibirá <strong className="text-foreground">+{process.country_code}{process.phone_number}</strong>
+            </p>
 
-          <div className="bg-accent/30 rounded-lg p-2 text-xs text-muted-foreground">
-            <p><strong>Cliente:</strong> {process.client_name} | <strong>Modelo:</strong> {process.iphone_model}</p>
-            <p className="truncate"><strong>URL:</strong> {process.url || 'No especificada'}</p>
+            <WhatsAppPreview
+              message={previewMessage}
+              buttonText={buttonText && buttonUrl ? buttonText : undefined}
+              buttonUrl={buttonText && buttonUrl ? buttonUrl : undefined}
+              contactName={process.owner_name || process.client_name || 'iPhone Support'}
+            />
+
+            <div className="flex gap-2 justify-between pt-2 border-t border-border/50">
+              <Button type="button" variant="outline" onClick={() => setStep('edit')} className="h-9">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Editar
+              </Button>
+              <Button type="button" onClick={handleSendWhatsApp} disabled={loading}
+                className="bg-success hover:bg-success/90 text-primary-foreground h-9">
+                {loading ? 'Enviando...' : <><Send className="mr-2 h-4 w-4" /> Enviar (1 crédito)</>}
+              </Button>
+            </div>
           </div>
-        </div>
-
-        <div className="flex gap-2 justify-end pt-2 border-t border-border/50">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); }}
-            className="h-9"
-          >
-            Cerrar
-          </Button>
-          <Button
-            type="button"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSendWhatsApp(); }}
-            disabled={loading || !message.trim()}
-            className="bg-success hover:bg-success/90 text-primary-foreground h-9"
-          >
-            {loading ? 'Enviando...' : (
-              <>
-                <Send className="mr-2 h-4 w-4" />
-                Enviar (1 crédito)
-              </>
-            )}
-          </Button>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   );
