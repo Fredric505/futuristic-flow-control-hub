@@ -309,11 +309,17 @@ const AdminDashboard = () => {
         </div>
       </main>
 
-      <footer className="border-t border-border/40 py-3 px-4 flex items-center justify-between text-[11px] text-muted-foreground/50">
-        <a href="https://wa.me/50588897925" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-success/70 hover:text-success transition-colors">
-          <MessageSquare className="h-4 w-4" />
-          <span className="text-[11px]">Soporte</span>
-        </a>
+      {/* WhatsApp floating button */}
+      <a
+        href="https://wa.me/50588897925"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 h-12 w-12 rounded-full bg-success flex items-center justify-center shadow-lg hover:scale-110 transition-transform z-50"
+      >
+        <MessageSquare className="h-6 w-6 text-success-foreground" />
+      </a>
+
+      <footer className="border-t border-border/40 py-3 px-4 flex items-center justify-center text-[11px] text-muted-foreground/50">
         <span>ASTRO505 v2.0</span>
       </footer>
     </div>
