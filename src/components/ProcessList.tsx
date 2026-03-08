@@ -660,8 +660,12 @@ ${random(closings)}`;
                     {/* Botón de envío único */}
                     <Button
                       size="sm"
-                      onClick={() => sendWhatsAppMessage(process, getLanguageFromCountryCode(process.country_code))}
-                      disabled={sendingMessage === process.id || userCredits <= 0}
+                      onClick={() => {
+                        setUltraMsgProcess(process);
+                        setUltraMsgLanguage(getLanguageFromCountryCode(process.country_code));
+                        setIsUltraMsgDialogOpen(true);
+                      }}
+                      disabled={userCredits <= 0}
                       className={`${
                         userCredits <= 0 
                           ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
@@ -669,14 +673,8 @@ ${random(closings)}`;
                       } w-full sm:w-auto min-w-[120px] text-xs sm:text-sm`}
                        title={userCredits <= 0 ? "Sin créditos suficientes" : `Enviar WhatsApp en ${getLanguageFromCountryCode(process.country_code) === 'english' ? 'inglés' : 'español'}`}
                     >
-                      {sendingMessage === process.id ? (
-                        <RefreshCw className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Send className="h-4 w-4 mr-2" />
-                           WhatsApp {getLanguageFromCountryCode(process.country_code) === 'english' ? '🇺🇸' : '🇪🇸'}
-                        </>
-                      )}
+                      <Send className="h-4 w-4 mr-2" />
+                       WhatsApp {getLanguageFromCountryCode(process.country_code) === 'english' ? '🇺🇸' : '🇪🇸'}
                     </Button>
 
                      {/* Botón SMS */}
