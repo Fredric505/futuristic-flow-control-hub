@@ -310,14 +310,24 @@ const AdminDashboard = () => {
       </main>
 
       {/* WhatsApp floating button */}
-      <a
-        href="https://wa.me/50588897925"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 h-12 w-12 rounded-full bg-success flex items-center justify-center shadow-lg hover:scale-110 transition-transform z-50"
-      >
-        <MessageSquare className="h-6 w-6 text-success-foreground" />
-      </a>
+      {activeSection === 'dashboard' && (
+        <button
+          type="button"
+          onClick={() => {
+            const url = 'https://wa.me/50588897925';
+            const popup = window.open(url, '_blank', 'noopener,noreferrer');
+
+            if (!popup && window.top && window.top !== window) {
+              window.top.location.href = url;
+            }
+          }}
+          className="fixed bottom-6 right-6 h-12 w-12 rounded-full bg-success flex items-center justify-center shadow-lg hover:scale-110 transition-transform z-50"
+          aria-label="Abrir soporte por WhatsApp"
+          title="Soporte por WhatsApp"
+        >
+          <MessageSquare className="h-6 w-6 text-success-foreground" />
+        </button>
+      )}
 
       <footer className="border-t border-border/40 py-3 px-4 flex items-center justify-center text-[11px] text-muted-foreground/50">
         <span>ASTRO505 v2.0</span>
