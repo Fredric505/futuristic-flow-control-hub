@@ -727,7 +727,7 @@ ${random(closings)}`;
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => deleteProcess(process.id)}
+                          onClick={() => setDeleteConfirmId(process.id)}
                           className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
