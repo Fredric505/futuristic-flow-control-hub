@@ -56,6 +56,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
   const [ultraMsgProcess, setUltraMsgProcess] = useState<Process | null>(null);
   const [ultraMsgLanguage, setUltraMsgLanguage] = useState<'spanish' | 'english'>('spanish');
   const [isUltraMsgDialogOpen, setIsUltraMsgDialogOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // English-speaking country codes
   const englishCountryCodes = englishSpeakingCountries.map(c => c.code);
