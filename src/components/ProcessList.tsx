@@ -791,6 +791,14 @@ ${random(closings)}`;
          onClose={handleCloseWhatsappDialog}
          process={whatsappProcess}
        />
+
+       <UltraMsgPreviewDialog
+         isOpen={isUltraMsgDialogOpen}
+         onClose={() => { setIsUltraMsgDialogOpen(false); setUltraMsgProcess(null); }}
+         process={ultraMsgProcess}
+         language={ultraMsgLanguage}
+         onSent={loadProcesses}
+       />
     </div>
   );
 };
