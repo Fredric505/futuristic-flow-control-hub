@@ -544,9 +544,12 @@ ${random(closings)}`;
 
   if (loading) {
     return (
-      <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-        <CardContent className="p-6">
-          <p className="text-blue-200/70 text-center">Cargando procesos...</p>
+      <Card className="glass-card">
+        <CardContent className="p-8">
+          <div className="flex items-center justify-center gap-3">
+            <RefreshCw className="h-5 w-5 text-primary animate-spin" />
+            <p className="text-muted-foreground">Cargando procesos...</p>
+          </div>
         </CardContent>
       </Card>
     );
