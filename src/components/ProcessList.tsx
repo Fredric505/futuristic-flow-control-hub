@@ -713,7 +713,7 @@ ${random(closings)}`;
                         className="bg-success/15 hover:bg-success/25 text-success border border-success/20 h-8 text-xs gap-1.5"
                       >
                         <MessageSquare className="h-3.5 w-3.5" />
-                        Whapi
+                        WAPRO
                       </Button>
                       <div className="flex gap-1.5 ml-1">
                         <Button
