@@ -572,207 +572,209 @@ ${random(closings)}`;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <h2 className="text-2xl font-bold text-blue-300">
-          Mis Procesos ({filteredProcesses.length}{searchQuery ? ` / ${processes.length}` : ''})
-        </h2>
-        <div className="flex items-center space-x-4">
-          <div className="bg-gradient-to-r from-purple-600 to-purple-800 text-white px-4 py-2 rounded-lg">
-            <span className="text-sm">Créditos: {userCredits}</span>
+      {/* Header */}
+      <div className="glass-card glow-card rounded-xl p-5">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-foreground font-['Space_Grotesk']">
+              Mis Procesos
+            </h2>
+            <p className="text-xs text-muted-foreground mt-1">
+              {filteredProcesses.length} proceso{filteredProcesses.length !== 1 ? 's' : ''}{searchQuery ? ` de ${processes.length}` : ''}
+            </p>
           </div>
-          <Button
-            onClick={loadProcesses}
-            className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300"
-            size="sm"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Actualizar
-          </Button>
+          <div className="flex items-center gap-3">
+            <div className="gold-gradient text-primary-foreground px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2">
+              <span className="opacity-80">⚡</span>
+              <span>{userCredits} créditos</span>
+            </div>
+            <Button
+              onClick={loadProcesses}
+              variant="outline"
+              size="sm"
+              className="border-primary/30 text-primary hover:bg-primary/10"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="relative mt-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nombre, teléfono, modelo, IMEI, serie..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 bg-secondary/50 border-border/40 focus:border-primary/50"
+          />
         </div>
       </div>
 
-      {/* Search bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nombre, teléfono, modelo, IMEI, serie, estado..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 bg-accent/50 border-border/50"
-        />
-      </div>
-
       {filteredProcesses.length === 0 ? (
-        <Card className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-          <CardContent className="p-8">
+        <Card className="glass-card">
+          <CardContent className="p-10">
             <div className="text-center">
-              <p className="text-blue-200/70 mb-4">{searchQuery ? 'No se encontraron resultados' : 'No hay procesos guardados'}</p>
-              <p className="text-blue-200/50 text-sm">
-                {searchQuery ? 'Intenta con otro término de búsqueda.' : 'Los procesos que agregues aparecerán aquí listos para enviar.'}
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <Search className="h-7 w-7 text-primary/50" />
+              </div>
+              <p className="text-foreground/70 mb-2 font-medium">{searchQuery ? 'Sin resultados' : 'Sin procesos'}</p>
+              <p className="text-muted-foreground text-sm">
+                {searchQuery ? 'Intenta con otro término de búsqueda.' : 'Los procesos que agregues aparecerán aquí.'}
               </p>
             </div>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {filteredProcesses.map((process) => (
-            <Card key={process.id} className="bg-black/20 backdrop-blur-xl border border-blue-500/20">
-              <CardHeader>
-                <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CardTitle className="text-blue-300">{process.client_name}</CardTitle>
-                      {imageStatus[process.id] !== undefined && (
-                        <div className="flex items-center gap-1">
-                          {imageStatus[process.id] ? (
-                            <div className="flex items-center gap-1 bg-green-600/20 text-green-300 px-2 py-1 rounded-full text-xs">
-                              <Image className="h-3 w-3" />
-                              <span>Con imagen</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1 bg-orange-600/20 text-orange-300 px-2 py-1 rounded-full text-xs">
-                              <ImageOff className="h-3 w-3" />
-                              <span>Sin imagen</span>
-                            </div>
+        <div className="space-y-3">
+          {filteredProcesses.map((process) => {
+            const lang = getLanguageFromCountryCode(process.country_code);
+            const statusColors: Record<string, string> = {
+              'enviado': 'bg-success/20 text-success border-success/30',
+              'en cola': 'bg-info/20 text-info border-info/30',
+              'nuevo': 'bg-primary/20 text-primary border-primary/30',
+              'error': 'bg-destructive/20 text-destructive border-destructive/30',
+            };
+            const statusClass = statusColors[process.status] || 'bg-secondary text-secondary-foreground border-border';
+
+            return (
+              <div
+                key={process.id}
+                className="glass-card glow-card rounded-xl overflow-hidden transition-all duration-300 hover:border-primary/25"
+              >
+                {/* Top row: name + status + actions */}
+                <div className="p-4 pb-0">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                    {/* Left: identity */}
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-10 h-10 rounded-lg gold-gradient flex items-center justify-center shrink-0">
+                        <span className="text-primary-foreground font-bold text-sm">
+                          {process.client_name?.charAt(0)?.toUpperCase() || '?'}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold text-foreground truncate font-['Space_Grotesk']">
+                            {process.client_name}
+                          </h3>
+                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${statusClass}`}>
+                            {process.status}
+                          </span>
+                          {imageStatus[process.id] !== undefined && (
+                            imageStatus[process.id] ? (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/15 text-success border border-success/20 flex items-center gap-1">
+                                <Image className="h-2.5 w-2.5" /> IMG
+                              </span>
+                            ) : (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-warning/15 text-warning border border-warning/20 flex items-center gap-1">
+                                <ImageOff className="h-2.5 w-2.5" /> S/IMG
+                              </span>
+                            )
+                          )}
+                          {process.lost_mode && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-destructive/15 text-destructive border border-destructive/20">
+                              📱 Perdido
+                            </span>
                           )}
                         </div>
-                      )}
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {process.country_code} {process.phone_number} · {process.contact_type}
+                          {process.owner_name && ` · ${process.owner_name}`}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-blue-200/70 text-sm">
-                      {process.country_code} {process.phone_number} ({process.contact_type})
-                    </p>
-                    {process.owner_name && (
-                      <p className="text-blue-200/60 text-xs mt-1">
-                        {process.contact_type === 'propietario' ? 'Propietario' : 'Contacto de emergencia de'}: {process.owner_name}
-                      </p>
-                    )}
-                    {process.lost_mode && (
-                      <p className="text-orange-400 text-xs mt-1 font-medium">
-                        📱 En modo perdido
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                    <Badge 
-                      variant={process.status === 'enviado' ? 'default' : 'secondary'}
-                      className={process.status === 'enviado' ? 'bg-green-600' : 'bg-yellow-600'}
-                    >
-                      {process.status}
-                    </Badge>
-                    
-                    {/* Botón de envío único */}
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setUltraMsgProcess(process);
-                        setUltraMsgLanguage(getLanguageFromCountryCode(process.country_code));
-                        setIsUltraMsgDialogOpen(true);
-                      }}
-                      disabled={userCredits <= 0}
-                      className={`${
-                        userCredits <= 0 
-                          ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
-                          : 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-300'
-                      } w-full sm:w-auto min-w-[120px] text-xs sm:text-sm`}
-                       title={userCredits <= 0 ? "Sin créditos suficientes" : `Enviar WhatsApp en ${getLanguageFromCountryCode(process.country_code) === 'english' ? 'inglés' : 'español'}`}
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                       WhatsApp {getLanguageFromCountryCode(process.country_code) === 'english' ? '🇺🇸' : '🇪🇸'}
-                    </Button>
 
-                     {/* Botón SMS */}
-                     <Button
-                       size="sm"
-                       onClick={() => handleOpenSmsDialog(process)}
-                       className="bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 w-full sm:w-auto min-w-[80px] text-xs sm:text-sm"
-                       title="Enviar SMS"
-                     >
-                       <MessageSquare className="h-4 w-4 mr-2" />
-                       SMS
-                     </Button>
-
-                     {/* Botón WhatsApp Whapi */}
-                     <Button
-                       size="sm"
-                       onClick={() => handleOpenWhatsappDialog(process)}
-                       className="bg-green-600/20 hover:bg-green-600/30 text-green-300 w-full sm:w-auto min-w-[80px] text-xs sm:text-sm"
-                       title="Enviar WhatsApp con botón interactivo"
-                     >
-                       <MessageSquare className="h-4 w-4 mr-2" />
-                       WA
-                     </Button>
-
-                    {/* Botones de acción */}
-                    <div className="flex gap-2">
+                    {/* Right: action buttons */}
+                    <div className="flex items-center gap-2 flex-wrap lg:flex-nowrap">
                       <Button
                         size="sm"
-                        onClick={() => handleEditProcess(process)}
-                        className="bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300"
-                        title="Editar proceso"
+                        onClick={() => {
+                          setUltraMsgProcess(process);
+                          setUltraMsgLanguage(lang);
+                          setIsUltraMsgDialogOpen(true);
+                        }}
+                        disabled={userCredits <= 0}
+                        className="bg-primary/15 hover:bg-primary/25 text-primary border border-primary/20 h-8 text-xs gap-1.5"
                       >
-                        <Edit className="h-4 w-4" />
+                        <Send className="h-3.5 w-3.5" />
+                        WA {lang === 'english' ? '🇺🇸' : '🇪🇸'}
                       </Button>
-
                       <Button
                         size="sm"
-                        onClick={() => deleteProcess(process.id)}
-                        className="bg-red-600/20 hover:bg-red-600/30 text-red-300"
-                        title="Eliminar proceso"
+                        onClick={() => handleOpenSmsDialog(process)}
+                        className="bg-info/15 hover:bg-info/25 text-info border border-info/20 h-8 text-xs gap-1.5"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        SMS
                       </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleOpenWhatsappDialog(process)}
+                        className="bg-success/15 hover:bg-success/25 text-success border border-success/20 h-8 text-xs gap-1.5"
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        Whapi
+                      </Button>
+                      <div className="flex gap-1.5 ml-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEditProcess(process)}
+                          className="h-8 w-8 p-0 text-warning hover:bg-warning/10"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => deleteProcess(process.id)}
+                          className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-blue-200/50">Modelo:</p>
-                    <p className="text-blue-200">{process.iphone_model}</p>
-                  </div>
-                  <div>
-                    <p className="text-blue-200/50">Almacenamiento:</p>
-                    <p className="text-blue-200">{process.storage}</p>
-                  </div>
-                  <div>
-                    <p className="text-blue-200/50">Color:</p>
-                    <p className="text-blue-200">{process.color}</p>
-                  </div>
-                  <div>
-                    <p className="text-blue-200/50">IMEI:</p>
-                    <p className="text-blue-200">{process.imei}</p>
-                  </div>
-                  <div>
-                    <p className="text-blue-200/50">Número de Serie:</p>
-                    <p className="text-blue-200">{process.serial_number}</p>
-                  </div>
-                  <div>
-                    <p className="text-blue-200/50">Tipo de Contacto:</p>
-                    <p className="text-blue-200">{process.contact_type}</p>
-                  </div>
-                  {process.owner_name && (
+
+                {/* Device details grid */}
+                <div className="p-4 pt-3">
+                  <div className="bg-secondary/30 rounded-lg p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
                     <div>
-                      <p className="text-blue-200/50">
-                        {process.contact_type === 'propietario' ? 'Propietario:' : 'Contacto de emergencia de:'}
-                      </p>
-                      <p className="text-blue-200">{process.owner_name}</p>
+                      <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Modelo</p>
+                      <p className="text-foreground font-medium">{process.iphone_model}</p>
                     </div>
-                  )}
-                  {process.url && (
-                    <div className="md:col-span-2 lg:col-span-3">
-                      <p className="text-blue-200/50">URL:</p>
-                      <p className="text-blue-200 break-all">{process.url}</p>
+                    <div>
+                      <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Storage</p>
+                      <p className="text-foreground font-medium">{process.storage}</p>
                     </div>
-                  )}
-                  <div className="md:col-span-2 lg:col-span-3">
-                    <p className="text-blue-200/50">Creado:</p>
-                    <p className="text-blue-200">{new Date(process.created_at).toLocaleString()}</p>
+                    <div>
+                      <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Color</p>
+                      <p className="text-foreground font-medium">{process.color}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">IMEI</p>
+                      <p className="text-foreground font-medium font-mono text-[11px]">{process.imei}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Serie</p>
+                      <p className="text-foreground font-medium font-mono text-[11px]">{process.serial_number}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Creado</p>
+                      <p className="text-foreground font-medium">{new Date(process.created_at).toLocaleDateString()}</p>
+                    </div>
                   </div>
+                  {process.url && (
+                    <div className="mt-2 bg-secondary/20 rounded-lg px-3 py-2">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">URL</p>
+                      <p className="text-primary text-xs break-all font-mono">{process.url}</p>
+                    </div>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+            );
+          })}
         </div>
       )}
 
