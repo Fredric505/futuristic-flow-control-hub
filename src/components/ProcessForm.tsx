@@ -201,10 +201,10 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
   return (
     <div className="space-y-5 animate-fade-in">
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Section 1: Contact Info */}
+        {/* Section 1: Client Info */}
         <Card className="glass-card glow-card">
           <CardContent className="pt-6">
-            <SectionHeader icon={User} title="Información del Contacto" />
+            <SectionHeader icon={User} title="Datos del Cliente" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="clientName" className={labelStyles}>Nombre del Cliente</Label>
@@ -218,7 +218,15 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
                   disabled={isSubmitting}
                 />
               </div>
+            </div>
+          </CardContent>
+        </Card>
 
+        {/* Section 2: Owner / Emergency Contact */}
+        <Card className="glass-card glow-card">
+          <CardContent className="pt-6">
+            <SectionHeader icon={Shield} title="Propietario / Contacto de Emergencia" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className={labelStyles}>Tipo de Contacto</Label>
                 <SafeSelect
@@ -233,7 +241,7 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
                 </SafeSelect>
               </div>
 
-              <div className="space-y-1.5 md:col-span-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="ownerName" className={labelStyles}>
                   {formData.contactType === 'propietario' ? 'Nombre del Propietario *' : 'Nombre del Contacto de Emergencia'}
                 </Label>
