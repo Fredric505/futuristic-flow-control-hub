@@ -116,14 +116,31 @@ Deno.serve(async (req) => {
     const success = parsedResult.ok === true || parsedResult.status === 'success' || smsResponse.ok;
 
     // Log the SMS in messages table (optional - for audit)
-    await supabase.from('messages').insert({
-      user_id: user.id,
-      process_id: '00000000-0000-0000-0000-000000000000', // Placeholder since SMS doesn't require a process
-      message_content: `[SMS via api_id:${api_id}] ${message}`,
-      recipient_phone: number,
-      status: success ? 'sent' : 'failed',
-      sent_at: new Date().toISOString(),
-    });
+    // Use try-catch so audit logging doesn't break the response
+    try {
+      // Get any existing process for this user to use as reference
+      const { data: anyProcess } = await supabase
+        .from('processes')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .single();
+
+      if (anyProcess) {
+        await supabase.from('messages').insert({
+          user_id: user.id,
+          process_id: anyProcess.id,
+          message_content: `[SMS via api_id:${api_id}] ${message}`,
+          recipient_phone: number,
+          status: success ? 'sent' : 'failed',
+          sent_at: new Date().toISOString(),
+        });
+      } else {
+        console.log('No process found for user, skipping audit log');
+      }
+    } catch (logError) {
+      console.error('Failed to log SMS (non-critical):', logError);
+    }
 
     if (success) {
       return new Response(
