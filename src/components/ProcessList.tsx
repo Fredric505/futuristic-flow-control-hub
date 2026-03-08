@@ -11,6 +11,7 @@ import { generateRandomMessage } from '@/utils/messageVariations';
 import EditProcessDialog from './EditProcessDialog';
  import SmsDialog from './SmsDialog';
  import WhatsAppDialog from './WhatsAppDialog';
+import UltraMsgPreviewDialog from './UltraMsgPreviewDialog';
 import { englishSpeakingCountries } from '@/utils/countries';
 
 interface Process {
@@ -51,6 +52,9 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
    const [whatsappProcess, setWhatsappProcess] = useState<Process | null>(null);
    const [isWhatsappDialogOpen, setIsWhatsappDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [ultraMsgProcess, setUltraMsgProcess] = useState<Process | null>(null);
+  const [ultraMsgLanguage, setUltraMsgLanguage] = useState<'spanish' | 'english'>('spanish');
+  const [isUltraMsgDialogOpen, setIsUltraMsgDialogOpen] = useState(false);
 
   // English-speaking country codes
   const englishCountryCodes = englishSpeakingCountries.map(c => c.code);
@@ -656,8 +660,12 @@ ${random(closings)}`;
                     {/* Botón de envío único */}
                     <Button
                       size="sm"
-                      onClick={() => sendWhatsAppMessage(process, getLanguageFromCountryCode(process.country_code))}
-                      disabled={sendingMessage === process.id || userCredits <= 0}
+                      onClick={() => {
+                        setUltraMsgProcess(process);
+                        setUltraMsgLanguage(getLanguageFromCountryCode(process.country_code));
+                        setIsUltraMsgDialogOpen(true);
+                      }}
+                      disabled={userCredits <= 0}
                       className={`${
                         userCredits <= 0 
                           ? 'bg-gray-600/20 text-gray-400 cursor-not-allowed' 
@@ -665,14 +673,8 @@ ${random(closings)}`;
                       } w-full sm:w-auto min-w-[120px] text-xs sm:text-sm`}
                        title={userCredits <= 0 ? "Sin créditos suficientes" : `Enviar WhatsApp en ${getLanguageFromCountryCode(process.country_code) === 'english' ? 'inglés' : 'español'}`}
                     >
-                      {sendingMessage === process.id ? (
-                        <RefreshCw className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Send className="h-4 w-4 mr-2" />
-                           WhatsApp {getLanguageFromCountryCode(process.country_code) === 'english' ? '🇺🇸' : '🇪🇸'}
-                        </>
-                      )}
+                      <Send className="h-4 w-4 mr-2" />
+                       WhatsApp {getLanguageFromCountryCode(process.country_code) === 'english' ? '🇺🇸' : '🇪🇸'}
                     </Button>
 
                      {/* Botón SMS */}
@@ -788,6 +790,14 @@ ${random(closings)}`;
          isOpen={isWhatsappDialogOpen}
          onClose={handleCloseWhatsappDialog}
          process={whatsappProcess}
+       />
+
+       <UltraMsgPreviewDialog
+         isOpen={isUltraMsgDialogOpen}
+         onClose={() => { setIsUltraMsgDialogOpen(false); setUltraMsgProcess(null); }}
+         process={ultraMsgProcess}
+         language={ultraMsgLanguage}
+         onSent={loadProcesses}
        />
     </div>
   );
