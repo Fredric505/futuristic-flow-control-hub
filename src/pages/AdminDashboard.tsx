@@ -310,7 +310,10 @@ const AdminDashboard = () => {
       </main>
 
       <footer className="border-t border-border/40 py-3 px-4 flex items-center justify-between text-[11px] text-muted-foreground/50">
-        <span>Contacto Admin: +50588897925</span>
+        <a href="https://wa.me/50588897925" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-success/70 hover:text-success transition-colors">
+          <MessageSquare className="h-4 w-4" />
+          <span className="text-[11px]">Soporte</span>
+        </a>
         <span>ASTRO505 v2.0</span>
       </footer>
     </div>
