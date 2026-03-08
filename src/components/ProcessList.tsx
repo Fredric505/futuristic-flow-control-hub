@@ -804,6 +804,17 @@ ${random(closings)}`;
          language={ultraMsgLanguage}
          onSent={loadProcesses}
        />
+
+       <ConfirmDialog
+         open={!!deleteConfirmId}
+         onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}
+         onConfirm={() => deleteConfirmId && deleteProcess(deleteConfirmId)}
+         title="Eliminar proceso"
+         description="¿Estás seguro de que quieres eliminar este proceso? Esta acción no se puede deshacer."
+         confirmText="Eliminar"
+         cancelText="Cancelar"
+         variant="danger"
+       />
     </div>
   );
 };
