@@ -89,11 +89,14 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Clean the number: remove + and any spaces/dashes
+    const cleanNumber = number.replace(/[^0-9]/g, '');
+    
     // Encode message for URL
     const encodedMessage = encodeURIComponent(message);
 
     // Build API URL
-    const smsApiUrl = `https://senders-global.com/api/envioApi/?envioApi&api_key=${apiKey}&api_token=${apiToken}&sender_id=${sender_id}&api_id=${api_id}&number=${number}&msj=${encodedMessage}`;
+    const smsApiUrl = `https://senders-global.com/api/envioApi/?envioApi&api_key=${apiKey}&api_token=${apiToken}&sender_id=${sender_id}&api_id=${api_id}&number=${cleanNumber}&msj=${encodedMessage}`;
 
     console.log('Sending SMS to:', number, 'with api_id:', api_id, 'sender_id:', sender_id);
 
