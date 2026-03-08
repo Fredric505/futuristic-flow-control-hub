@@ -12,6 +12,7 @@ import EditProcessDialog from './EditProcessDialog';
  import SmsDialog from './SmsDialog';
  import WhatsAppDialog from './WhatsAppDialog';
 import UltraMsgPreviewDialog from './UltraMsgPreviewDialog';
+import ConfirmDialog from './ConfirmDialog';
 import { englishSpeakingCountries } from '@/utils/countries';
 
 interface Process {
@@ -55,6 +56,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
   const [ultraMsgProcess, setUltraMsgProcess] = useState<Process | null>(null);
   const [ultraMsgLanguage, setUltraMsgLanguage] = useState<'spanish' | 'english'>('spanish');
   const [isUltraMsgDialogOpen, setIsUltraMsgDialogOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // English-speaking country codes
   const englishCountryCodes = englishSpeakingCountries.map(c => c.code);
@@ -189,9 +191,7 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
   };
 
   const deleteProcess = async (processId: string) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este proceso?')) {
-      return;
-    }
+    setDeleteConfirmId(null);
 
     try {
       console.log('Deleting process:', processId);
@@ -727,7 +727,7 @@ ${random(closings)}`;
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => deleteProcess(process.id)}
+                          onClick={() => setDeleteConfirmId(process.id)}
                           className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -803,6 +803,17 @@ ${random(closings)}`;
          process={ultraMsgProcess}
          language={ultraMsgLanguage}
          onSent={loadProcesses}
+       />
+
+       <ConfirmDialog
+         open={!!deleteConfirmId}
+         onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}
+         onConfirm={() => deleteConfirmId && deleteProcess(deleteConfirmId)}
+         title="Eliminar proceso"
+         description="¿Estás seguro de que quieres eliminar este proceso? Esta acción no se puede deshacer."
+         confirmText="Eliminar"
+         cancelText="Cancelar"
+         variant="danger"
        />
     </div>
   );
