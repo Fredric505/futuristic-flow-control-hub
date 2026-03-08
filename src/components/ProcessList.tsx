@@ -12,6 +12,7 @@ import EditProcessDialog from './EditProcessDialog';
  import SmsDialog from './SmsDialog';
  import WhatsAppDialog from './WhatsAppDialog';
 import UltraMsgPreviewDialog from './UltraMsgPreviewDialog';
+import ConfirmDialog from './ConfirmDialog';
 import { englishSpeakingCountries } from '@/utils/countries';
 
 interface Process {
