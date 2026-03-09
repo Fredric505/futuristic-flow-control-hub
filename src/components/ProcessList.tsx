@@ -737,32 +737,56 @@ ${random(closings)}`;
                   </div>
                 </div>
 
-                {/* Device details grid */}
+                {/* Device details with image */}
                 <div className="p-4 pt-3">
-                  <div className="bg-secondary/30 rounded-lg p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
-                    <div>
-                      <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Modelo</p>
-                      <p className="text-foreground font-medium">{process.iphone_model}</p>
+                  <div className="bg-secondary/30 rounded-lg p-3 flex gap-4">
+                    {/* iPhone Image */}
+                    <div className="shrink-0 hidden sm:flex items-center justify-center">
+                      <div className="w-20 h-24 rounded-lg bg-secondary/50 border border-border/30 overflow-hidden flex items-center justify-center">
+                        {imageStatus[process.id] ? (
+                          <img
+                            src={getIphoneImageUrl(process.iphone_model, process.color)}
+                            alt={`${process.iphone_model} ${process.color}`}
+                            className="w-full h-full object-contain p-1"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                            <span className="text-2xl">📱</span>
+                            <span className="text-[8px] uppercase tracking-wider">No img</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Storage</p>
-                      <p className="text-foreground font-medium">{process.storage}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Color</p>
-                      <p className="text-foreground font-medium">{process.color}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">IMEI</p>
-                      <p className="text-foreground font-medium font-mono text-[11px]">{process.imei}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Serie</p>
-                      <p className="text-foreground font-medium font-mono text-[11px]">{process.serial_number}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Creado</p>
-                      <p className="text-foreground font-medium">{new Date(process.created_at).toLocaleDateString()}</p>
+                    {/* Details grid */}
+                    <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+                      <div>
+                        <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Modelo</p>
+                        <p className="text-foreground font-medium">{process.iphone_model}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Storage</p>
+                        <p className="text-foreground font-medium">{process.storage}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Color</p>
+                        <p className="text-foreground font-medium">{process.color}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">IMEI</p>
+                        <p className="text-foreground font-medium font-mono text-[11px]">{process.imei}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Serie</p>
+                        <p className="text-foreground font-medium font-mono text-[11px]">{process.serial_number}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Creado</p>
+                        <p className="text-foreground font-medium">{new Date(process.created_at).toLocaleDateString()}</p>
+                      </div>
                     </div>
                   </div>
                   {process.url && (
