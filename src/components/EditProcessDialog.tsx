@@ -273,7 +273,7 @@ const EditProcessDialog: React.FC<EditProcessDialogProps> = ({
 
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="ownerName" className="text-blue-200">
-                {formData.contactType === 'propietario' ? 'Nombre del Propietario (Opcional)' : 'Nombre del Contacto de Emergencia (Opcional)'}
+                {formData.contactType === 'propietario' ? 'Nombre del Propietario *' : 'Nombre del Propietario del dispositivo *'}
               </Label>
               <Input
                 id="ownerName"
