@@ -83,43 +83,59 @@ ${random(helpPhrases)}
 ${random(closings)}`;
       
     } else {
-      // Variaciones para contacto de emergencia en español - BREVE y profesional
-      const messages = [
-        `🔐 Notificación de seguridad
-Fecha: ${formatDate(delayedTime, 'spanish')} – ${formatTime(delayedTime)}
-
-El dispositivo de *${process.owner_name || 'usuario registrado'}* ha sido localizado.
-• ${process.iphone_model} – ${process.color}
-• IMEI: ${process.imei}
-• Batería: ${battery}%
-
-Caso: ${caseId}
-Por favor, notifica al propietario.`,
-
-        `🛡️ Alerta de seguridad
-${formatDate(delayedTime, 'spanish')} – ${formatTime(delayedTime)}
-
-Equipo de *${process.owner_name || 'usuario registrado'}* detectado en línea.
-• ${process.iphone_model} (${process.storage})
-• IMEI: ${process.imei}
-• Batería: ${battery}%
-
-Ref: ${caseId}
-Informa al propietario sobre esta detección.`,
-
-        `🔒 Aviso de seguridad
-${formatDate(delayedTime, 'spanish')} – ${formatTime(delayedTime)}
-
-Dispositivo de *${process.owner_name || 'usuario registrado'}* localizado.
-• ${process.iphone_model} – ${process.color}
-• Serie: ${process.serial_number}
-• Batería: ${battery}%
-
-ID: ${caseId}
-Comunica al propietario que su equipo fue encontrado.`
+      // Variaciones para contacto de emergencia en español - profesional y conciso
+      const openings = [
+        "🔐 Notificación de seguridad",
+        "🛡️ Alerta de seguridad",
+        "🔒 Sistema de protección"
       ];
       
-      return random(messages);
+      const detectionPhrases = [
+        `Fecha: ${formatDate(delayedTime, 'spanish')} – ${formatTime(delayedTime)}\nDispositivo de *${process.owner_name || 'usuario registrado'}* localizado.\nEstado: En línea ✅\n\nCaso: ${caseId}`,
+        `Registro: ${formatDate(delayedTime, 'spanish')} – ${formatTime(delayedTime)}\nEquipo de *${process.owner_name || 'usuario registrado'}* detectado.\nEstatus: Operativo ✅\n\nRef: ${caseId}`,
+        `Hora: ${formatDate(delayedTime, 'spanish')} – ${formatTime(delayedTime)}\nDispositivo de *${process.owner_name || 'usuario registrado'}* encontrado.\nEstado: Activo ✅\n\nID: ${caseId}`
+      ];
+      
+      const deviceSections = [
+        `• Modelo: ${process.iphone_model} – ${process.color}
+• IMEI: ${process.imei}
+• Batería: ${battery}%`,
+        `• Equipo: ${process.iphone_model} (${process.storage})
+• IMEI: ${process.imei}
+• Batería: ${battery}%`,
+        `• Dispositivo: ${process.iphone_model} – ${process.color}
+• Serie: ${process.serial_number}
+• Batería: ${battery}%`
+      ];
+      
+      const instructionPhrases = [
+        "Por favor, notifica al propietario.",
+        "Informa al propietario sobre esta detección.",
+        "Comunica al propietario que su equipo fue encontrado."
+      ];
+      
+      const helpPhrases = [
+        "¿Necesitás ayuda? Escribí *Menú* para asistencia técnica 👨‍💻",
+        "¿Requerís soporte? Respondé *Menú* para ayuda especializada 🔧",
+        "¿Buscás asistencia? Enviá *Menú* para contactar soporte 👩‍💻"
+      ];
+      
+      const closings = [
+        "Servicio automatizado – Atención disponible 24 h",
+        "Sistema automático – Soporte activo 24/7",
+        "Monitoreo continuo – Asistencia permanente"
+      ];
+      
+      return `${random(openings)}
+
+${random(detectionPhrases)}
+
+${random(deviceSections)}
+
+${random(instructionPhrases)}
+
+${random(helpPhrases)}
+${random(closings)}`;
     }
   } else {
     // Mensajes en inglés con variaciones similares
