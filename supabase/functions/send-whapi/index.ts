@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
       settingsMap[s.setting_key] = s.setting_value || '';
     });
 
-    const whapiToken = settingsMap[tokenKey] || settingsMap['whapi_token'];
+    const whapiToken = (settingsMap[tokenKey] || settingsMap['whapi_token'] || '').trim();
 
     if (!whapiToken) {
       return new Response(JSON.stringify({ success: false, error: 'Whapi.cloud token not configured' }), {
