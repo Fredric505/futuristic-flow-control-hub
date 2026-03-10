@@ -170,13 +170,13 @@ const ProcessForm = ({ userType = 'user' }: ProcessFormProps) => {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="ownerName" className={labelClass}>
-                    {formData.contactType === 'propietario' ? 'Nombre del Propietario *' : 'Nombre del Contacto'}
+                    {formData.contactType === 'propietario' ? 'Nombre del Propietario *' : 'Nombre del Propietario del dispositivo *'}
                   </Label>
                   <Input id="ownerName" value={formData.ownerName}
                     onChange={(e) => setFormData(prev => ({ ...prev, ownerName: e.target.value }))}
                     className={inputClass}
-                    placeholder={formData.contactType === 'propietario' ? 'Nombre del dueño del iPhone' : 'Nombre (opcional)'}
-                    disabled={isSubmitting} required={formData.contactType === 'propietario'} />
+                    placeholder={formData.contactType === 'propietario' ? 'Nombre del dueño del iPhone' : 'Nombre del dueño del iPhone (diferente al contacto)'}
+                    disabled={isSubmitting} required={formData.contactType === 'propietario' || formData.contactType === 'contacto_emergencia'} />
                 </div>
               </div>
             </div>
