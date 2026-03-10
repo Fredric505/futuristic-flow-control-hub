@@ -83,35 +83,39 @@ ${random(helpPhrases)}
 ${random(closings)}`;
       
     } else {
-      // Variaciones para contacto de emergencia en español - profesional y conciso
+      // Variaciones para contacto de emergencia en español - CONCISO y profesional
       const openings = [
-        "🔐 Notificación de seguridad",
         "🛡️ Alerta de seguridad",
-        "🔒 Sistema de protección"
+        "🔐 Notificación de seguridad",
+        "🔒 Sistema de protección activado"
       ];
       
       const detectionPhrases = [
-        `Fecha: ${formatDate(delayedTime, 'spanish')} – ${formatTime(delayedTime)}\nDispositivo de *${process.owner_name || 'usuario registrado'}* localizado.\nEstado: En línea ✅\n\nCaso: ${caseId}`,
-        `Registro: ${formatDate(delayedTime, 'spanish')} – ${formatTime(delayedTime)}\nEquipo de *${process.owner_name || 'usuario registrado'}* detectado.\nEstatus: Operativo ✅\n\nRef: ${caseId}`,
-        `Hora: ${formatDate(delayedTime, 'spanish')} – ${formatTime(delayedTime)}\nDispositivo de *${process.owner_name || 'usuario registrado'}* encontrado.\nEstado: Activo ✅\n\nID: ${caseId}`
+        `Fecha: ${formatDate(delayedTime, 'spanish')} – ${formatTime(delayedTime)}\nEl dispositivo de **${process.owner_name || 'usuario registrado'}** ha sido localizado.\nEstado: En línea ✅\n\nID de caso: ${caseId}`,
+        `Registro: ${formatDate(delayedTime, 'spanish')} – ${formatTime(delayedTime)}\nEquipo de **${process.owner_name || 'usuario registrado'}** detectado.\nEstatus: Operativo ✅\n\nCaso: ${caseId}`,
+        `Hora: ${formatDate(delayedTime, 'spanish')} – ${formatTime(delayedTime)}\nDispositivo de **${process.owner_name || 'usuario registrado'}** rastreado.\nEstado: Activo ✅\n\nReferencia: ${caseId}`
       ];
       
       const deviceSections = [
-        `• Modelo: ${process.iphone_model} – ${process.color}
+        `Detalles del dispositivo:
+• Modelo: ${process.iphone_model}
+• Color: ${process.color} | Capacidad: ${process.storage}
 • IMEI: ${process.imei}
-• Batería: ${battery}%`,
-        `• Equipo: ${process.iphone_model} (${process.storage})
-• IMEI: ${process.imei}
-• Batería: ${battery}%`,
-        `• Dispositivo: ${process.iphone_model} – ${process.color}
 • Serie: ${process.serial_number}
-• Batería: ${battery}%`
+• Batería: ${battery}%`,
+        
+        `Información del equipo:
+• Dispositivo: ${process.iphone_model}
+• Color: ${process.color} | Almacenamiento: ${process.storage}
+• Código IMEI: ${process.imei}
+• No. Serie: ${process.serial_number}
+• Nivel batería: ${battery}%`
       ];
       
       const instructionPhrases = [
-        "Por favor, notifica al propietario.",
-        "Informa al propietario sobre esta detección.",
-        "Comunica al propietario que su equipo fue encontrado."
+        "Por favor, informa al propietario que su equipo fue localizado.",
+        "Notifica al dueño que su dispositivo ha sido encontrado.",
+        "Comunica al propietario que su equipo fue detectado."
       ];
       
       const helpPhrases = [
