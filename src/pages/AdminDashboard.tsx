@@ -94,6 +94,7 @@ const AdminDashboard = () => {
         { id: 'global-urls', icon: Globe, label: 'URLs Globales', description: 'URLs del chatbot' },
         { id: 'webhook-config', icon: Smartphone, label: 'Webhook', description: 'Config UltraMSG' },
         { id: 'settings', icon: Settings, label: 'Instancia', description: 'Token y ajustes' },
+        { id: 'whatsapp-personal', icon: QrCode, label: 'WA Personal', description: 'Vincular WhatsApp propio' },
       ]
     },
     {
