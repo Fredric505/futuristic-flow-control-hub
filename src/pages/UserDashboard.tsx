@@ -75,6 +75,7 @@ const UserDashboard = () => {
       items: [
         { id: 'telegram-config', icon: MessageSquare, label: 'Bot Telegram', description: 'Configurar notificaciones' },
         { id: 'chatbot-urls', icon: Link, label: 'URLs Chatbot', description: 'Personalizar URLs' },
+        { id: 'whatsapp-personal', icon: QrCode, label: 'WA Personal', description: 'Vincular tu WhatsApp' },
         { id: 'settings', icon: Settings, label: 'Cuenta', description: 'Ajustes de cuenta' },
       ]
     },
