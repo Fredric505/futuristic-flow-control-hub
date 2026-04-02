@@ -25,6 +25,10 @@ const InstanceSettings = () => {
   // SMS API settings
   const [smsApiKey, setSmsApiKey] = useState('');
   const [smsApiToken, setSmsApiToken] = useState('');
+
+  // WhatsApp Web.js VPS settings
+  const [webJsApiUrl, setWebJsApiUrl] = useState('');
+  const [webJsApiKey, setWebJsApiKey] = useState('');
   
   const [loading, setLoading] = useState(true);
 
