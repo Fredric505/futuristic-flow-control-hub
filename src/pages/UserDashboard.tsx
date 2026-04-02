@@ -8,6 +8,7 @@ import MessageHistory from '@/components/MessageHistory';
 import TelegramBotConfig from '@/components/TelegramBotConfig';
 import MessageTemplates from '@/components/MessageTemplates';
 import UserChatbotUrls from '@/components/UserChatbotUrls';
+import WhatsAppQRScanner from '@/components/WhatsAppQRScanner';
 import TopNavbar from '@/components/TopNavbar';
 import { supabase } from '@/integrations/supabase/client';
 
