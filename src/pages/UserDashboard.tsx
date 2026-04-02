@@ -203,6 +203,7 @@ const UserDashboard = () => {
           </div>
         );
       case 'chatbot-urls': return <UserChatbotUrls />;
+      case 'whatsapp-personal': return <WhatsAppQRScanner />;
       case 'settings':
         return (
           <Card className="glass-card glow-card">
