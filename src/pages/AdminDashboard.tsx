@@ -267,6 +267,7 @@ const AdminDashboard = () => {
       case 'manage-users': return <ManageUsers />;
       case 'reload-credits': return <ReloadCredits />;
       case 'settings': return <InstanceSettings />;
+      case 'whatsapp-personal': return <WhatsAppQRScanner />;
 
       default:
         return (

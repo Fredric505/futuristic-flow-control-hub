@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.send-whapi]
 verify_jwt = false
+
+[functions.whatsapp-webjs-proxy]
+verify_jwt = false
+
+[functions.send-whatsapp-webjs]
+verify_jwt = false
