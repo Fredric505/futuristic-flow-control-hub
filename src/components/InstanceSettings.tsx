@@ -331,6 +331,37 @@ const InstanceSettings = () => {
         </CardContent>
       </Card>
 
+      {/* WhatsApp Web.js VPS Config */}
+      <Card className="glass-card glow-card">
+        <CardHeader>
+          <CardTitle className="text-foreground flex items-center gap-2">
+            🔗 WhatsApp Web.js (VPS)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label className="text-muted-foreground">URL del VPS</Label>
+            <Input
+              value={webJsApiUrl}
+              onChange={(e) => setWebJsApiUrl(e.target.value)}
+              placeholder="https://tu-vps.com:3001"
+              className="bg-secondary/50 border-border/40"
+            />
+            <p className="text-xs text-muted-foreground mt-1">URL base de tu API de whatsapp-web.js</p>
+          </div>
+          <div>
+            <Label className="text-muted-foreground">API Key del VPS</Label>
+            <Input
+              value={webJsApiKey}
+              onChange={(e) => setWebJsApiKey(e.target.value)}
+              placeholder="Tu API key de autenticación"
+              type="password"
+              className="bg-secondary/50 border-border/40"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Action Buttons */}
       <div className="flex space-x-4">
         <Button onClick={handleSave} className="flex-1 gold-gradient text-primary-foreground glow-gold hover:opacity-90">
