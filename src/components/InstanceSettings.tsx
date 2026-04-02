@@ -74,6 +74,10 @@ const InstanceSettings = () => {
       // SMS API settings
       setSmsApiKey(settings?.sms_api_key || '');
       setSmsApiToken(settings?.sms_api_token || '');
+
+      // WhatsApp Web.js VPS settings
+      setWebJsApiUrl(settings?.whatsapp_webjs_api_url || '');
+      setWebJsApiKey(settings?.whatsapp_webjs_api_key || '');
     } catch (error) {
       console.error('Error loading settings:', error);
       toast({
