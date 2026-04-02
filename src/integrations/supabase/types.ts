@@ -380,6 +380,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_whatsapp_sessions: {
+        Row: {
+          connected_phone: string | null
+          created_at: string
+          id: string
+          session_status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connected_phone?: string | null
+          created_at?: string
+          id?: string
+          session_status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connected_phone?: string | null
+          created_at?: string
+          id?: string
+          session_status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       whatsapp_telegram_log: {
         Row: {
           forwarded_at: string
