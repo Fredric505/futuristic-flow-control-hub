@@ -256,6 +256,49 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     loadProcesses();
   };
 
+  const handleSendViaWebJs = async (process: Process) => {
+    try {
+      setSendingMessage(process.id);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No autenticado');
+
+      const lang = getLanguageFromCountryCode(process.country_code);
+      const { battery, delayedTime, formatDate, formatTime } = generateDynamicValues();
+      const messageContent = generateRandomMessage(process, lang, battery, delayedTime, formatDate, formatTime);
+      const fullPhone = `${process.country_code}${process.phone_number}`;
+      const imageUrl = getIphoneImageUrl(process.iphone_model, process.color);
+      const hasImage = imageStatus[process.id];
+
+      const { data, error } = await supabase.functions.invoke('send-whatsapp-webjs', {
+        body: {
+          userId: user.id,
+          phone: fullPhone,
+          message: messageContent,
+          imageUrl: hasImage ? imageUrl : null,
+          language: lang,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: data?.sent_via === 'whatsapp-webjs' ? '✅ Enviado via WA Web' : '📱 Enviado via UltraMsg (fallback)',
+        description: `Mensaje enviado a ${process.client_name}`,
+      });
+
+      await loadProcesses();
+    } catch (error: any) {
+      console.error('WA Web send error:', error);
+      toast({
+        title: 'Error de envío',
+        description: error.message || 'No se pudo enviar el mensaje',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingMessage(null);
+    }
+  };
+
   const sendWhatsAppMessage = async (process: Process, language: 'spanish' | 'english') => {
     try {
       if (userCredits <= 0) {
