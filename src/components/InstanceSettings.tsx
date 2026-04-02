@@ -25,6 +25,10 @@ const InstanceSettings = () => {
   // SMS API settings
   const [smsApiKey, setSmsApiKey] = useState('');
   const [smsApiToken, setSmsApiToken] = useState('');
+
+  // WhatsApp Web.js VPS settings
+  const [webJsApiUrl, setWebJsApiUrl] = useState('');
+  const [webJsApiKey, setWebJsApiKey] = useState('');
   
   const [loading, setLoading] = useState(true);
 
@@ -41,7 +45,8 @@ const InstanceSettings = () => {
           'api_provider',
           'whatsapp_instance', 'whatsapp_token', 'whatsapp_instance_en', 'whatsapp_token_en',
           'whapi_token', 'whapi_token_en', 'whapi_button_title_es', 'whapi_button_title_en',
-          'sms_api_key', 'sms_api_token'
+          'sms_api_key', 'sms_api_token',
+          'whatsapp_webjs_api_url', 'whatsapp_webjs_api_key'
         ]);
 
       if (error) throw error;
@@ -69,6 +74,10 @@ const InstanceSettings = () => {
       // SMS API settings
       setSmsApiKey(settings?.sms_api_key || '');
       setSmsApiToken(settings?.sms_api_token || '');
+
+      // WhatsApp Web.js VPS settings
+      setWebJsApiUrl(settings?.whatsapp_webjs_api_url || '');
+      setWebJsApiKey(settings?.whatsapp_webjs_api_key || '');
     } catch (error) {
       console.error('Error loading settings:', error);
       toast({
@@ -116,6 +125,8 @@ const InstanceSettings = () => {
       await upsertSetting('whapi_button_title_en', whapiButtonTitleEn);
       await upsertSetting('sms_api_key', smsApiKey);
       await upsertSetting('sms_api_token', smsApiToken);
+      await upsertSetting('whatsapp_webjs_api_url', webJsApiUrl);
+      await upsertSetting('whatsapp_webjs_api_key', webJsApiKey);
 
       toast({
         title: "Configuración guardada",
@@ -316,6 +327,37 @@ const InstanceSettings = () => {
               <Label className="text-muted-foreground">API Token</Label>
               <Input type="text" value={smsApiToken} onChange={(e) => setSmsApiToken(e.target.value)} className="bg-accent/50 border-border/50" placeholder="Ingresa tu API Token de senders-global" />
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* WhatsApp Web.js VPS Config */}
+      <Card className="glass-card glow-card">
+        <CardHeader>
+          <CardTitle className="text-foreground flex items-center gap-2">
+            🔗 WhatsApp Web.js (VPS)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label className="text-muted-foreground">URL del VPS</Label>
+            <Input
+              value={webJsApiUrl}
+              onChange={(e) => setWebJsApiUrl(e.target.value)}
+              placeholder="https://tu-vps.com:3001"
+              className="bg-secondary/50 border-border/40"
+            />
+            <p className="text-xs text-muted-foreground mt-1">URL base de tu API de whatsapp-web.js</p>
+          </div>
+          <div>
+            <Label className="text-muted-foreground">API Key del VPS</Label>
+            <Input
+              value={webJsApiKey}
+              onChange={(e) => setWebJsApiKey(e.target.value)}
+              placeholder="Tu API key de autenticación"
+              type="password"
+              className="bg-secondary/50 border-border/40"
+            />
           </div>
         </CardContent>
       </Card>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageSquare, Smartphone, Bell, Clock, FileEdit, Bot, Globe, Send, ArrowRight, Sparkles, Zap, Activity } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, User, Users, CreditCard, Wrench, MessageSquare, Smartphone, Bell, Clock, FileEdit, Bot, Globe, Send, ArrowRight, Sparkles, Zap, Activity, QrCode } from 'lucide-react';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
 import AddUserForm from '@/components/AddUserForm';
@@ -18,6 +18,7 @@ import MessageTemplates from '@/components/MessageTemplates';
 import ChatbotConfig from '@/components/ChatbotConfig';
 import GlobalChatbotUrls from '@/components/GlobalChatbotUrls';
 import SmsSender from '@/components/SmsSender';
+import WhatsAppQRScanner from '@/components/WhatsAppQRScanner';
 import TopNavbar from '@/components/TopNavbar';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -93,6 +94,7 @@ const AdminDashboard = () => {
         { id: 'global-urls', icon: Globe, label: 'URLs Globales', description: 'URLs del chatbot' },
         { id: 'webhook-config', icon: Smartphone, label: 'Webhook', description: 'Config UltraMSG' },
         { id: 'settings', icon: Settings, label: 'Instancia', description: 'Token y ajustes' },
+        { id: 'whatsapp-personal', icon: QrCode, label: 'WA Personal', description: 'Vincular WhatsApp propio' },
       ]
     },
     {
@@ -265,6 +267,7 @@ const AdminDashboard = () => {
       case 'manage-users': return <ManageUsers />;
       case 'reload-credits': return <ReloadCredits />;
       case 'settings': return <InstanceSettings />;
+      case 'whatsapp-personal': return <WhatsAppQRScanner />;
 
       default:
         return (

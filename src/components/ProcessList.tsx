@@ -256,6 +256,49 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     loadProcesses();
   };
 
+  const handleSendViaWebJs = async (process: Process) => {
+    try {
+      setSendingMessage(process.id);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No autenticado');
+
+      const lang = getLanguageFromCountryCode(process.country_code);
+      const { battery, delayedTime, formatDate, formatTime } = generateDynamicValues();
+      const messageContent = generateRandomMessage(process, lang, battery, delayedTime, formatDate, formatTime);
+      const fullPhone = `${process.country_code}${process.phone_number}`;
+      const imageUrl = getIphoneImageUrl(process.iphone_model, process.color);
+      const hasImage = imageStatus[process.id];
+
+      const { data, error } = await supabase.functions.invoke('send-whatsapp-webjs', {
+        body: {
+          userId: user.id,
+          phone: fullPhone,
+          message: messageContent,
+          imageUrl: hasImage ? imageUrl : null,
+          language: lang,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: data?.sent_via === 'whatsapp-webjs' ? '✅ Enviado via WA Web' : '📱 Enviado via UltraMsg (fallback)',
+        description: `Mensaje enviado a ${process.client_name}`,
+      });
+
+      await loadProcesses();
+    } catch (error: any) {
+      console.error('WA Web send error:', error);
+      toast({
+        title: 'Error de envío',
+        description: error.message || 'No se pudo enviar el mensaje',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingMessage(null);
+    }
+  };
+
   const sendWhatsAppMessage = async (process: Process, language: 'spanish' | 'english') => {
     try {
       if (userCredits <= 0) {
@@ -268,6 +311,47 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       }
 
       setSendingMessage(process.id);
+
+      // Check if user has active WA Web session — if so, send directly via VPS
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser) {
+        const { data: waSession } = await supabase
+          .from('user_whatsapp_sessions')
+          .select('session_status')
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
+
+        if (waSession?.session_status === 'connected') {
+          // Send via WA Web.js instead of UltraMsg queue
+          const { battery, delayedTime, formatDate, formatTime } = generateDynamicValues();
+          const messageContent = generateRandomMessage(process, language, battery, delayedTime, formatDate, formatTime);
+          const fullPhone = `${process.country_code}${process.phone_number}`;
+          const imageUrl = getIphoneImageUrl(process.iphone_model, process.color);
+          const hasImage = imageStatus[process.id];
+
+          const { data: sendData, error: sendError } = await supabase.functions.invoke('send-whatsapp-webjs', {
+            body: {
+              userId: currentUser.id,
+              phone: fullPhone,
+              message: messageContent,
+              imageUrl: hasImage ? imageUrl : null,
+              language,
+            },
+          });
+
+          if (!sendError && sendData?.sent_via === 'whatsapp-webjs') {
+            toast({
+              title: '✅ Enviado via tu WhatsApp',
+              description: `Mensaje enviado a ${process.client_name} desde tu sesión personal`,
+            });
+            await loadProcesses();
+            return;
+          }
+          // If WA Web failed, fall through to UltraMsg queue
+          console.log('WA Web send failed, falling back to queue');
+        }
+      }
+
       console.log(`Adding message to queue for process: ${process.id} in ${language}`);
 
       const settingsKeys = language === 'spanish' 
@@ -715,6 +799,17 @@ ${random(closings)}`;
                         <MessageSquare className="h-3.5 w-3.5" />
                         WAPRO
                       </Button>
+                      {userType === 'admin' && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleSendViaWebJs(process)}
+                          disabled={sendingMessage === process.id}
+                          className="bg-violet-500/15 hover:bg-violet-500/25 text-violet-400 border border-violet-500/20 h-8 text-xs gap-1.5"
+                        >
+                          <Send className="h-3.5 w-3.5" />
+                          WA Web
+                        </Button>
+                      )}
                       <div className="flex gap-1.5 ml-1">
                         <Button
                           size="sm"

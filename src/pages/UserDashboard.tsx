@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, FileText, History, Settings, MessageSquare, Link, Sparkles, Send, Zap, Activity } from 'lucide-react';
+import { Home, Plus, FileText, History, Settings, MessageSquare, Link, Sparkles, Send, Zap, Activity, QrCode } from 'lucide-react';
 import ProcessForm from '@/components/ProcessForm';
 import ProcessList from '@/components/ProcessList';
 import MessageHistory from '@/components/MessageHistory';
 import TelegramBotConfig from '@/components/TelegramBotConfig';
 import MessageTemplates from '@/components/MessageTemplates';
 import UserChatbotUrls from '@/components/UserChatbotUrls';
+import WhatsAppQRScanner from '@/components/WhatsAppQRScanner';
 import TopNavbar from '@/components/TopNavbar';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -74,6 +75,7 @@ const UserDashboard = () => {
       items: [
         { id: 'telegram-config', icon: MessageSquare, label: 'Bot Telegram', description: 'Configurar notificaciones' },
         { id: 'chatbot-urls', icon: Link, label: 'URLs Chatbot', description: 'Personalizar URLs' },
+        { id: 'whatsapp-personal', icon: QrCode, label: 'WA Personal', description: 'Vincular tu WhatsApp' },
         { id: 'settings', icon: Settings, label: 'Cuenta', description: 'Ajustes de cuenta' },
       ]
     },
@@ -201,6 +203,7 @@ const UserDashboard = () => {
           </div>
         );
       case 'chatbot-urls': return <UserChatbotUrls />;
+      case 'whatsapp-personal': return <WhatsAppQRScanner />;
       case 'settings':
         return (
           <Card className="glass-card glow-card">
