@@ -1,154 +1,114 @@
 
-# Plan: Implementar Sistema de SMS con Senders-Global API
+
+# Plan: Integración WhatsApp Web.js (Sesión QR por Usuario)
 
 ## Resumen
 
-Implementar una nueva funcionalidad de envío de SMS usando la API de senders-global.com, que funcionará en paralelo con el sistema de WhatsApp existente. El admin podrá elegir entre enviar por WhatsApp o SMS, y cuando seleccione SMS, podrá elegir entre diferentes "senders" (remitentes) según el país del destinatario.
+Permitir que cada usuario escanee un código QR para vincular su propio WhatsApp. Los mensajes se envían desde su sesión personal. Si la sesión se desconecta, el sistema vuelve automáticamente a UltraMsg. El botón WAPRO sigue siendo exclusivo del admin.
 
-## Arquitectura de la Solución
-
-```text
-+------------------+     +------------------+     +------------------+
-|   Admin Panel    |     |   Edge Function  |     | Senders-Global   |
-|   (SMS Sender)   | --> | send-sms         | --> | API              |
-+------------------+     +------------------+     +------------------+
-        |                        |
-        v                        v
-+------------------+     +------------------+
-| Plantillas SMS   |     |  Mensajes Table  |
-| (message_templates)    | (registro SMS)   |
-+------------------+     +------------------+
-```
-
-## Cambios a Implementar
-
-### 1. Nueva Edge Function: `send-sms`
-
-Crear una nueva edge function para enviar SMS mediante la API de senders-global.com:
-
-- Recibir parametros: `number`, `message`, `api_id`, `sender_id`
-- Hacer llamada a la API con los credenciales guardados
-- Registrar el mensaje enviado en la base de datos
-
-### 2. Nuevo Componente: `SmsSender.tsx`
-
-Crear un componente modal/dialog para enviar SMS:
-
-- Selector de Sender (lista de 27 opciones con pais/operadora)
-- Campos de codigo de pais + numero de telefono
-- Selector de plantilla existente (de `message_templates`)
-- Textarea para previsualizar/editar el mensaje
-- Variables disponibles: `{{model}}`, `{{url}}`, `{{time}}`, `{{date}}`
-- Boton "Enviar mensaje"
-
-### 3. Actualizar Panel Admin
-
-Agregar nueva seccion "SMS Sender" en el menu del AdminDashboard:
-
-- Icono: MessageSquare o similar
-- Acceso directo al componente SmsSender
-
-### 4. Configuracion de API SMS
-
-Agregar en `InstanceSettings.tsx`:
-
-- Campo para API Key de senders-global
-- Campo para API Token de senders-global
-
-### 5. Guardar Credenciales en Base de Datos
-
-Agregar nuevas claves en `system_settings`:
-
-- `sms_api_key`: La API key
-- `sms_api_token`: El API token
-
----
-
-## Detalles Tecnicos
-
-### Lista de Senders Disponibles
+## Arquitectura
 
 ```text
-api_id | sender_id | Descripcion
--------|-----------|------------------------------------------
-1      | Apple     | Claro Peru PE (Semi Mundial)
-2      | short8    | Claro AR
-3      | short2    | Argentina AR Movistar
-4      | short6    | Argentina AR Personal
-5      | Apple     | Espana ES
-6      | info      | Costa Rica CR (All Companies)
-7      | short1    | Bitel/Movistar Peru
-8      | short1    | Argentina AR Premium (Todas)
-10     | short     | El Salvador SV / Nicaragua NI
-11     | usa2      | USA Long/Code
-12     | short9    | Ecuador EC / Entel Peru
-13     | short0    | Bolivia BO Entel
-14     | Apple     | Bolivia BO Nuevatel
-15     | Apple     | Bolivia BO Tigo
-16     | Apple     | Italia IT
-17     | short5    | Colombia CO (Tigo/Claro/Wom)
-18     | usa       | Premium Worldwide Long/Code
-19     | short     | Honduras HN / Guatemala (Claro Only)
-21     | short     | Brazil BR
-22     | short     | Dominican Republic DO (Claro Only)
-23     | short     | Mexico MX Premium
-24     | short     | Chile CL (All Company)
-25     | Apple     | Paraguay PY
-26     | usa       | Dominican Republic DO (All Companies)
-28     | Apple     | Mexico MX Premium
-29     | Apple     | Iran IR Premium
-30     | Apple     | Francia FR
-31     | short     | Panama PA
+┌──────────────┐     ┌──────────────────┐     ┌──────────────┐
+│  Frontend    │────▶│  Edge Function    │────▶│  VPS         │
+│  (React)     │     │  (proxy/bridge)   │     │  whatsapp-   │
+│              │     │                   │     │  web.js      │
+│ - QR Scanner │     │ - /qr/:userId     │     │  sessions    │
+│ - Status     │     │ - /send/:userId   │     │              │
+│ - Fallback   │     │ - /status/:userId │     │              │
+└──────────────┘     └──────────────────┘     └──────────────┘
 ```
 
-### Formato de Plantilla SMS
+## Componentes del VPS (fuera de Lovable)
 
-Las plantillas existentes se pueden reutilizar con estas variables:
+El usuario montará en su VPS una API REST con whatsapp-web.js que exponga:
 
-- `{{model}}` - Modelo del dispositivo (ej: iPhone 15 Pro Max)
-- `{{url}}` - URL del proceso
-- `{{time}}` - Hora actual
-- `{{date}}` - Fecha actual
-- `{{imei}}` - IMEI del dispositivo
-- `{{serial}}` - Numero de serie
+- `POST /session/start` → inicia sesión, genera QR
+- `GET /session/qr/:userId` → devuelve imagen QR o base64
+- `GET /session/status/:userId` → estado: `connected`, `disconnected`, `qr_pending`
+- `POST /session/send/:userId` → envía mensaje desde la sesión del usuario
+- `POST /session/destroy/:userId` → cierra sesión
 
-### Ejemplo de Mensaje SMS
+## Cambios en la Base de Datos
+
+**Nueva tabla `user_whatsapp_sessions`:**
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| id | uuid | PK |
+| user_id | uuid | FK conceptual a profiles |
+| session_status | text | `disconnected`, `qr_pending`, `connected` |
+| connected_phone | text | Número vinculado (opcional) |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
+
+**Nuevo setting en `system_settings`:**
+- `whatsapp_webjs_api_url` → URL base del VPS
+- `whatsapp_webjs_api_key` → Token de autenticación del VPS
+
+## Cambios en el Frontend
+
+### 1. Nuevo componente: `WhatsAppQRScanner.tsx`
+- Muestra el QR obtenido del VPS via edge function
+- Polling cada 3s para verificar estado de la sesión
+- Estados visuales: "Esperando escaneo", "Conectado ✅", "Desconectado"
+- Botón para desconectar sesión
+
+### 2. Menú del UserDashboard
+- Nueva sección en Configuración: **"WhatsApp Personal"** con icono QrCode
+- Muestra estado de conexión y botón para escanear/reconectar
+
+### 3. Menú del AdminDashboard
+- Misma sección de QR disponible
+- Botón adicional para probar envío con whatsapp-web.js (separado del WAPRO)
+
+### 4. Lógica de envío en `ProcessList.tsx`
+- Al enviar mensaje WhatsApp (botón UltraMSG/primer botón):
+  1. Verificar si el usuario tiene sesión activa (`user_whatsapp_sessions.session_status = 'connected'`)
+  2. Si **sí** → enviar via edge function que redirige al VPS
+  3. Si **no** → enviar via UltraMsg como actualmente
+
+### 5. Edge Function: `send-whatsapp-webjs`
+- Recibe: userId, phone, message, buttonText, buttonUrl
+- Consulta `user_whatsapp_sessions` para verificar sesión activa
+- Si activa → llama al VPS API
+- Si falla o no activa → fallback a UltraMsg (misma lógica actual)
+- Actualiza estado en BD si detecta desconexión
+
+### 6. Edge Function: `whatsapp-webjs-proxy`
+- Proxy entre frontend y VPS para QR y status
+- Endpoints: start-session, get-qr, get-status, destroy-session
+- Autenticación con service role key
+
+## Lógica de Fallback Automático
 
 ```text
-Su iPhone 15 Pro Max ha sido localizado hoy a las 2026-02-03 21:00:07 GMT.
-Ultimo registro: https://ejemplo.com/ubicacion
+Usuario intenta enviar
+  ├── ¿Tiene sesión activa? ──▶ SÍ ──▶ Enviar via VPS
+  │                                        ├── Éxito ✅
+  │                                        └── Error ──▶ Marcar sesión como "disconnected"
+  │                                                       └── Reenviar via UltraMsg
+  └── NO ──▶ Enviar via UltraMsg (comportamiento actual)
 ```
 
----
+## Restricciones
 
-## Archivos a Crear/Modificar
+- **WAPRO (Whapi.cloud)**: sigue siendo exclusivo del admin, sin cambios
+- **Usuarios normales**: solo ven el botón de WhatsApp estándar, que usa su sesión personal o UltraMsg como fallback
+- **Admin**: ve todos los botones (UltraMSG, WAPRO, y nuevo botón "WA Web" para pruebas)
 
-| Archivo | Accion | Descripcion |
-|---------|--------|-------------|
-| `supabase/functions/send-sms/index.ts` | Crear | Edge function para enviar SMS |
-| `src/components/SmsSender.tsx` | Crear | Componente principal para enviar SMS |
-| `src/pages/AdminDashboard.tsx` | Modificar | Agregar seccion SMS Sender al menu |
-| `src/components/InstanceSettings.tsx` | Modificar | Agregar campos para API SMS |
-| `src/utils/smsSenders.ts` | Crear | Lista de senders disponibles |
+## Pasos de Implementación
 
----
+1. Migración: crear tabla `user_whatsapp_sessions` con RLS
+2. Agregar settings del VPS en `system_settings` (URL + API key)
+3. Crear edge function `whatsapp-webjs-proxy` (QR, status, destroy)
+4. Crear edge function `send-whatsapp-webjs` (envío con fallback)
+5. Crear componente `WhatsAppQRScanner.tsx`
+6. Agregar sección "WhatsApp Personal" en UserDashboard y AdminDashboard
+7. Modificar lógica de envío en ProcessList para detectar sesión activa
+8. Agregar botón extra "WA Web" en ProcessList solo para admin
 
-## Flujo de Usuario
+## Requisito Previo
 
-1. Admin va a "SMS Sender" en el panel
-2. Selecciona un sender de la lista (segun pais/operadora del destino)
-3. Ingresa codigo de pais + numero de telefono
-4. Selecciona una plantilla o escribe mensaje personalizado
-5. El mensaje se previsualiza con las variables reemplazadas
-6. Click en "Enviar mensaje"
-7. Se envia via edge function a senders-global.com
-8. Se registra en la base de datos
-9. Se muestra confirmacion de exito/error
+Necesitarás tener tu API de whatsapp-web.js corriendo en el VPS antes de poder conectar. Una vez que tengas la URL y el API key del VPS, los configuramos en la sección de Instancia y procedemos con la implementación.
 
----
-
-## Seguridad
-
-- Las credenciales de la API se guardan en `system_settings` (solo admin puede acceder)
-- La edge function valida que el usuario sea admin antes de enviar
-- Los mensajes enviados se registran para auditoria
