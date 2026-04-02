@@ -18,6 +18,7 @@ import MessageTemplates from '@/components/MessageTemplates';
 import ChatbotConfig from '@/components/ChatbotConfig';
 import GlobalChatbotUrls from '@/components/GlobalChatbotUrls';
 import SmsSender from '@/components/SmsSender';
+import WhatsAppQRScanner from '@/components/WhatsAppQRScanner';
 import TopNavbar from '@/components/TopNavbar';
 import { supabase } from '@/integrations/supabase/client';
 
