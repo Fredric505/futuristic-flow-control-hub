@@ -125,6 +125,8 @@ const InstanceSettings = () => {
       await upsertSetting('whapi_button_title_en', whapiButtonTitleEn);
       await upsertSetting('sms_api_key', smsApiKey);
       await upsertSetting('sms_api_token', smsApiToken);
+      await upsertSetting('whatsapp_webjs_api_url', webJsApiUrl);
+      await upsertSetting('whatsapp_webjs_api_key', webJsApiKey);
 
       toast({
         title: "Configuración guardada",
