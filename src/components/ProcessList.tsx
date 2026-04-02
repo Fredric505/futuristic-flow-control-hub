@@ -311,6 +311,47 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
       }
 
       setSendingMessage(process.id);
+
+      // Check if user has active WA Web session — if so, send directly via VPS
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser) {
+        const { data: waSession } = await supabase
+          .from('user_whatsapp_sessions')
+          .select('session_status')
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
+
+        if (waSession?.session_status === 'connected') {
+          // Send via WA Web.js instead of UltraMsg queue
+          const { battery, delayedTime, formatDate, formatTime } = generateDynamicValues();
+          const messageContent = generateRandomMessage(process, language, battery, delayedTime, formatDate, formatTime);
+          const fullPhone = `${process.country_code}${process.phone_number}`;
+          const imageUrl = getIphoneImageUrl(process.iphone_model, process.color);
+          const hasImage = imageStatus[process.id];
+
+          const { data: sendData, error: sendError } = await supabase.functions.invoke('send-whatsapp-webjs', {
+            body: {
+              userId: currentUser.id,
+              phone: fullPhone,
+              message: messageContent,
+              imageUrl: hasImage ? imageUrl : null,
+              language,
+            },
+          });
+
+          if (!sendError && sendData?.sent_via === 'whatsapp-webjs') {
+            toast({
+              title: '✅ Enviado via tu WhatsApp',
+              description: `Mensaje enviado a ${process.client_name} desde tu sesión personal`,
+            });
+            await loadProcesses();
+            return;
+          }
+          // If WA Web failed, fall through to UltraMsg queue
+          console.log('WA Web send failed, falling back to queue');
+        }
+      }
+
       console.log(`Adding message to queue for process: ${process.id} in ${language}`);
 
       const settingsKeys = language === 'spanish' 
