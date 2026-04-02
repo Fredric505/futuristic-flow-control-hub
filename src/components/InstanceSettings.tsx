@@ -45,7 +45,8 @@ const InstanceSettings = () => {
           'api_provider',
           'whatsapp_instance', 'whatsapp_token', 'whatsapp_instance_en', 'whatsapp_token_en',
           'whapi_token', 'whapi_token_en', 'whapi_button_title_es', 'whapi_button_title_en',
-          'sms_api_key', 'sms_api_token'
+          'sms_api_key', 'sms_api_token',
+          'whatsapp_webjs_api_url', 'whatsapp_webjs_api_key'
         ]);
 
       if (error) throw error;
