@@ -800,15 +800,25 @@ ${random(closings)}`;
                         WAPRO
                       </Button>
                       {userType === 'admin' && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleSendViaWebJs(process)}
-                          disabled={sendingMessage === process.id}
-                          className="bg-violet-500/15 hover:bg-violet-500/25 text-violet-400 border border-violet-500/20 h-8 text-xs gap-1.5"
-                        >
-                          <Send className="h-3.5 w-3.5" />
-                          WA Web
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() => handleSendViaWebJs(process)}
+                            disabled={sendingMessage === process.id}
+                            className="bg-violet-500/15 hover:bg-violet-500/25 text-violet-400 border border-violet-500/20 h-8 text-xs gap-1.5"
+                          >
+                            <Send className="h-3.5 w-3.5" />
+                            WA Web
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleOpenWhatsAppDirect(process)}
+                            className="bg-emerald-700/20 hover:bg-emerald-700/30 text-emerald-400 border border-emerald-600/25 h-8 text-xs gap-1.5"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                            WA Dir {lang === 'english' ? '🇺🇸' : '🇪🇸'}
+                          </Button>
+                        </>
                       )}
                       <div className="flex gap-1.5 ml-1">
                         <Button
