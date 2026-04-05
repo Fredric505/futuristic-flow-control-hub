@@ -291,7 +291,7 @@ ${process.url || ''}`;
     window.open(`${baseUrl}?phone=${fullPhone}&text=${encoded}`, '_blank');
   };
 
-
+  const handleSendViaWebJs = async (process: Process) => {
     try {
       setSendingMessage(process.id);
       const { data: { user } } = await supabase.auth.getUser();
