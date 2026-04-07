@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.send-whatsapp-webjs]
 verify_jwt = false
+
+[functions.whatsapp-webjs-webhook]
+verify_jwt = false
