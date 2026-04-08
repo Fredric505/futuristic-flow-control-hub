@@ -41,12 +41,28 @@ const WhatsAppQRScanner = () => {
     }
   };
 
+  // 🔥 FIX IMPORTANTE (AQUÍ ESTABA EL PROBLEMA)
   const callProxy = async (action: string) => {
-    const { data, error } = await supabase.functions.invoke('whatsapp-webjs-proxy', {
-      body: { action },
-    });
-    if (error) throw error;
-    return data;
+    const { data: { session } } = await supabase.auth.getSession();
+
+    const res = await fetch(
+      'https://bifqtxaigahdhejurzyb.supabase.co/functions/v1/whatsapp-webjs-proxy',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ action }),
+      }
+    );
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(err);
+    }
+
+    return res.json();
   };
 
   const startSession = async () => {
@@ -55,7 +71,6 @@ const WhatsAppQRScanner = () => {
       await callProxy('start-session');
       setStatus('qr_pending');
       startPolling();
-      // Fetch QR immediately
       await fetchQR();
     } catch (error: any) {
       console.error('Error starting session:', error);
@@ -126,7 +141,7 @@ const WhatsAppQRScanner = () => {
       setConnectedPhone(null);
       toast({
         title: 'Sesión desconectada',
-        description: 'Tu WhatsApp personal ha sido desvinculado. Se usará la API global.',
+        description: 'Tu WhatsApp personal ha sido desvinculado.',
       });
     } catch (error: any) {
       console.error('Error destroying session:', error);
@@ -169,7 +184,6 @@ const WhatsAppQRScanner = () => {
 
   return (
     <div className="space-y-6">
-      {/* Status Card */}
       <Card className="glass-card glow-card">
         <CardHeader>
           <CardTitle className="text-foreground flex items-center gap-2">
@@ -178,152 +192,38 @@ const WhatsAppQRScanner = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Status indicator */}
           <div className="flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-accent/30">
             <div className={`h-12 w-12 rounded-xl ${cfg.bg} flex items-center justify-center`}>
               <StatusIcon className={`h-6 w-6 ${cfg.color}`} />
             </div>
             <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-foreground">{cfg.label}</span>
-                <Badge variant="outline" className={cfg.badgeClass}>
-                  {status}
-                </Badge>
-              </div>
+              <span className="font-semibold text-foreground">{cfg.label}</span>
               {connectedPhone && (
                 <p className="text-sm text-muted-foreground mt-1">
-                  📱 Número vinculado: <span className="text-foreground font-mono">{connectedPhone}</span>
-                </p>
-              )}
-              {status === 'disconnected' && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  Los mensajes se envían usando la API global (UltraMSG)
-                </p>
-              )}
-              {status === 'connected' && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  Los mensajes se envían desde tu WhatsApp personal
+                  📱 {connectedPhone}
                 </p>
               )}
             </div>
           </div>
 
-          {/* QR Code */}
           {status === 'qr_pending' && qrData && (
-            <div className="flex flex-col items-center gap-4 p-6 rounded-xl border border-warning/30 bg-warning/5">
-              <p className="text-sm text-foreground font-medium">
-                Escanea este código QR con tu WhatsApp
-              </p>
-              <div className="bg-white p-4 rounded-xl shadow-lg">
-                <img
-                  src={qrData.startsWith('data:') ? qrData : `data:image/png;base64,${qrData}`}
-                  alt="WhatsApp QR Code"
-                  className="w-64 h-64 object-contain"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground text-center">
-                Abre WhatsApp → Dispositivos vinculados → Vincular dispositivo
-              </p>
-              {polling && (
-                <div className="flex items-center gap-2 text-xs text-warning">
-                  <RefreshCw className="h-3 w-3 animate-spin" />
-                  Verificando conexión...
-                </div>
-              )}
+            <div className="text-center">
+              <img src={qrData} alt="QR" className="w-64 mx-auto" />
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex flex-wrap gap-3">
+          <div className="flex gap-3">
             {status === 'disconnected' && (
-              <Button
-                onClick={startSession}
-                disabled={loading}
-                className="gold-gradient text-primary-foreground"
-              >
-                {loading ? (
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <QrCode className="h-4 w-4 mr-2" />
-                )}
-                Vincular WhatsApp
+              <Button onClick={startSession}>
+                Conectar WhatsApp
               </Button>
             )}
 
-            {status === 'qr_pending' && (
-              <>
-                <Button
-                  onClick={fetchQR}
-                  variant="outline"
-                  disabled={loading}
-                  className="border-warning/30 text-warning hover:bg-warning/10"
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Actualizar QR
-                </Button>
-                <Button
-                  onClick={destroySession}
-                  variant="outline"
-                  disabled={loading}
-                  className="border-destructive/30 text-destructive hover:bg-destructive/10"
-                >
-                  Cancelar
-                </Button>
-              </>
-            )}
-
             {status === 'connected' && (
-              <>
-                <Button
-                  onClick={checkStatus}
-                  variant="outline"
-                  disabled={loading}
-                  className="border-success/30 text-success hover:bg-success/10"
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Verificar Estado
-                </Button>
-                <Button
-                  onClick={destroySession}
-                  variant="outline"
-                  disabled={loading}
-                  className="border-destructive/30 text-destructive hover:bg-destructive/10"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Desconectar
-                </Button>
-              </>
+              <Button onClick={destroySession} variant="destructive">
+                Desconectar
+              </Button>
             )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Info Card */}
-      <Card className="glass-card glow-card">
-        <CardHeader>
-          <CardTitle className="text-foreground flex items-center gap-2 text-base">
-            💡 ¿Cómo funciona?
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 text-sm text-muted-foreground">
-            <p>
-              <span className="text-foreground font-medium">1.</span> Haz clic en "Vincular WhatsApp" para generar un código QR.
-            </p>
-            <p>
-              <span className="text-foreground font-medium">2.</span> Abre WhatsApp en tu teléfono → Dispositivos vinculados → Vincular dispositivo.
-            </p>
-            <p>
-              <span className="text-foreground font-medium">3.</span> Escanea el QR que aparece en pantalla.
-            </p>
-            <p>
-              <span className="text-foreground font-medium">4.</span> Una vez conectado, los mensajes se enviarán desde tu número personal.
-            </p>
-            <div className="p-3 rounded-lg bg-info/10 border border-info/20 mt-4">
-              <p className="text-info text-xs">
-                <strong>Fallback automático:</strong> Si tu sesión se desconecta, el sistema usará automáticamente la API global (UltraMSG) para no perder envíos.
-              </p>
-            </div>
           </div>
         </CardContent>
       </Card>
