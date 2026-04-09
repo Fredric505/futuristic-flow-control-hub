@@ -18,8 +18,8 @@ Deno.serve(async (req) => {
     // Auth check
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
+      return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -30,8 +30,8 @@ Deno.serve(async (req) => {
     });
     const { data: claims, error: claimsError } = await userClient.auth.getUser();
     if (claimsError || !claims.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
+      return new Response(JSON.stringify({ ok: false, error: "Unauthorized: " + (claimsError?.message || "no user") }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -50,11 +50,13 @@ Deno.serve(async (req) => {
     const vpsKey = settingsMap["whatsapp_webjs_api_key"];
 
     if (!vpsUrl) {
-      return new Response(JSON.stringify({ error: "VPS URL not configured" }), {
-        status: 400,
+      return new Response(JSON.stringify({ ok: false, error: "VPS URL not configured in system_settings" }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    console.log(`Proxy: VPS URL = ${vpsUrl}, has key = ${!!vpsKey}`);
 
     const body = await req.json();
     const { action } = body;
@@ -63,28 +65,59 @@ Deno.serve(async (req) => {
     if (vpsKey) vpsHeaders["Authorization"] = `Bearer ${vpsKey}`;
 
     let vpsResponse: Response;
+    let targetUrl: string;
 
     switch (action) {
       case "start-session": {
-        vpsResponse = await fetch(`${vpsUrl}/session/start`, {
-          method: "POST",
-          headers: vpsHeaders,
-          body: JSON.stringify({ userId }),
-        });
+        targetUrl = `${vpsUrl}/session/start`;
+        console.log(`Proxy: POST ${targetUrl}`);
+        try {
+          vpsResponse = await fetch(targetUrl, {
+            method: "POST",
+            headers: vpsHeaders,
+            body: JSON.stringify({ userId }),
+          });
+        } catch (fetchErr) {
+          console.error("Proxy fetch error:", fetchErr);
+          return new Response(JSON.stringify({ ok: false, error: `Cannot connect to VPS: ${fetchErr.message}`, vpsUrl: targetUrl }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
         break;
       }
       case "get-qr": {
-        vpsResponse = await fetch(`${vpsUrl}/session/qr/${userId}`, {
-          method: "GET",
-          headers: vpsHeaders,
-        });
+        targetUrl = `${vpsUrl}/session/qr/${userId}`;
+        console.log(`Proxy: GET ${targetUrl}`);
+        try {
+          vpsResponse = await fetch(targetUrl, {
+            method: "GET",
+            headers: vpsHeaders,
+          });
+        } catch (fetchErr) {
+          console.error("Proxy fetch error:", fetchErr);
+          return new Response(JSON.stringify({ ok: false, error: `Cannot connect to VPS: ${fetchErr.message}`, vpsUrl: targetUrl }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
         break;
       }
       case "get-status": {
-        vpsResponse = await fetch(`${vpsUrl}/session/status/${userId}`, {
-          method: "GET",
-          headers: vpsHeaders,
-        });
+        targetUrl = `${vpsUrl}/session/status/${userId}`;
+        console.log(`Proxy: GET ${targetUrl}`);
+        try {
+          vpsResponse = await fetch(targetUrl, {
+            method: "GET",
+            headers: vpsHeaders,
+          });
+        } catch (fetchErr) {
+          console.error("Proxy fetch error:", fetchErr);
+          return new Response(JSON.stringify({ ok: false, error: `Cannot connect to VPS: ${fetchErr.message}`, vpsUrl: targetUrl }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
 
         // Update session in DB based on VPS response
         try {
@@ -92,7 +125,6 @@ Deno.serve(async (req) => {
           const sessionStatus = statusData.status || "disconnected";
           const connectedPhone = statusData.phone || null;
 
-          // Upsert session record
           const { data: existing } = await supabase
             .from("user_whatsapp_sessions")
             .select("id")
@@ -113,20 +145,28 @@ Deno.serve(async (req) => {
           console.error("Error updating session status:", e);
         }
 
-        // Return the original response
         const statusResult = await vpsResponse.json();
-        return new Response(JSON.stringify(statusResult), {
+        return new Response(JSON.stringify({ ok: true, ...statusResult }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       case "destroy-session": {
-        vpsResponse = await fetch(`${vpsUrl}/session/destroy/${userId}`, {
-          method: "POST",
-          headers: vpsHeaders,
-        });
+        targetUrl = `${vpsUrl}/session/destroy/${userId}`;
+        console.log(`Proxy: POST ${targetUrl}`);
+        try {
+          vpsResponse = await fetch(targetUrl, {
+            method: "POST",
+            headers: vpsHeaders,
+          });
+        } catch (fetchErr) {
+          console.error("Proxy fetch error:", fetchErr);
+          return new Response(JSON.stringify({ ok: false, error: `Cannot connect to VPS: ${fetchErr.message}`, vpsUrl: targetUrl }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
 
-        // Mark session as disconnected
         await supabase
           .from("user_whatsapp_sessions")
           .update({ session_status: "disconnected", connected_phone: null })
@@ -134,22 +174,22 @@ Deno.serve(async (req) => {
         break;
       }
       default:
-        return new Response(JSON.stringify({ error: "Invalid action" }), {
-          status: 400,
+        return new Response(JSON.stringify({ ok: false, error: `Invalid action: ${action}` }), {
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
     }
 
-    const result = await vpsResponse.json();
-    return new Response(JSON.stringify(result), {
-      status: vpsResponse.ok ? 200 : 400,
+    const result = await vpsResponse!.json();
+    return new Response(JSON.stringify({ ok: vpsResponse!.ok, ...result }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
   } catch (error) {
     console.error("Proxy error:", error);
-    return new Response(JSON.stringify({ error: error.message || "Internal error" }), {
-      status: 500,
+    return new Response(JSON.stringify({ ok: false, error: error.message || "Internal error" }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

@@ -1,0 +1,2 @@
+UPDATE system_settings SET setting_value = 'http://167.99.62.57:3500' WHERE setting_key = 'whatsapp_webjs_api_url';
+UPDATE system_settings SET setting_value = '52089798Aa' WHERE setting_key = 'whatsapp_webjs_api_key';
