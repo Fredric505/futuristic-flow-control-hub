@@ -1,107 +1,57 @@
-# Plan: Integración WhatsApp Web.js — Paridad completa con UltraMsg
 
-## Resumen
 
-Cada usuario puede vincular su propio WhatsApp escaneando un QR. Los mensajes se envían desde su sesión personal con las **mismas funciones** que UltraMsg: texto, imágenes, ocultación de URLs, y notificaciones a Telegram cuando responden. Si la sesión se desconecta, fallback automático a UltraMsg.
+# Plan: Corregir configuración VPS en system_settings
 
-## Arquitectura
+## Problema
 
-```
-Frontend (React) ──▶ Edge Functions (proxy) ──▶ VPS (whatsapp-web.js)
-                                                    │
-                                                    ▼ (mensaje entrante)
-                                              Edge Function webhook
-                                                    │
-                                                    ▼
-                                              Telegram notification
-```
+La edge function `whatsapp-webjs-proxy` devuelve error 500 porque:
 
-## VPS API (fuera de Lovable)
+1. **Puerto incorrecto**: La URL guardada es `http://167.99.62.57:3001` pero el VPS debería estar en el puerto `3500` (el que configuraste en el `.env` del VPS con `PORT=3500`)
+2. **API Key con texto basura**: El valor es `API Key del VPS: supersecreta123` en vez de solo el token limpio. Esto rompe el header `Authorization: Bearer ...`
 
-API REST con Express + whatsapp-web.js:
+## Solución
 
-| Endpoint | Método | Descripción |
-|----------|--------|-------------|
-| `/session/start` | POST | Inicia sesión, genera QR |
-| `/session/qr/:userId` | GET | Devuelve QR en base64 |
-| `/session/status/:userId` | GET | `connected`, `disconnected`, `qr_pending` |
-| `/session/send/:userId` | POST | Envía texto + imagen opcional |
-| `/session/destroy/:userId` | POST | Cierra sesión |
+### Paso 1: Corregir los valores en `system_settings`
 
-**Webhook de mensajes entrantes**: Cuando llega un mensaje al WhatsApp del usuario, el VPS llama a `whatsapp-webjs-webhook` con: `{ userId, senderPhone, messageText, senderName }`.
+Actualizar los dos registros en la base de datos:
 
-## Base de Datos
+```sql
+UPDATE system_settings 
+SET setting_value = 'http://167.99.62.57:3500' 
+WHERE setting_key = 'whatsapp_webjs_api_url';
 
-**Tabla `user_whatsapp_sessions`** (ya creada):
-- id, user_id, session_status, connected_phone, created_at, updated_at
-
-**Settings en `system_settings`**:
-- `whatsapp_webjs_api_url` → URL base del VPS
-- `whatsapp_webjs_api_key` → Token de autenticación
-
-## Edge Functions
-
-### 1. `whatsapp-webjs-proxy` (ya creada)
-Proxy para QR, status, destroy entre frontend y VPS.
-
-### 2. `send-whatsapp-webjs` (ya creada)
-Envío con fallback automático a UltraMsg. Soporta texto + imagen.
-
-### 3. `whatsapp-webjs-webhook` (NUEVA) ⭐
-Recibe mensajes entrantes del VPS y notifica a Telegram:
-1. Recibe: `{ userId, senderPhone, messageText }`
-2. Busca procesos del usuario que coincidan con `senderPhone`
-3. Obtiene `telegram_bot_token` y `telegram_chat_id` del perfil
-4. Envía notificación a Telegram con formato idéntico a `ultramsg-webhook`:
-   - 📱 Cliente, modelo, IMEI, serie, propietario
-   - 📞 Teléfono del remitente
-   - 💬 Texto del mensaje
-5. Registra en `whatsapp_telegram_log`
-
-## Frontend
-
-### WhatsAppQRScanner.tsx (ya creado)
-- Muestra QR, polling cada 3s, estados visuales, botón desconectar
-
-### Dashboards
-- Sección "WhatsApp Personal" en UserDashboard y AdminDashboard
-- Admin: botón extra "WA Web" en ProcessList para pruebas
-
-## Lógica de Envío
-
-```
-Enviar mensaje WhatsApp
-├── ¿Sesión activa? → SÍ → Enviar via VPS (texto + imagen)
-│                              ├── Éxito ✅ (sin descuento de créditos)
-│                              └── Error → Marcar disconnected → Reenviar via UltraMsg
-└── NO → Enviar via UltraMsg (descuenta créditos normalmente)
+UPDATE system_settings 
+SET setting_value = 'supersecreta123' 
+WHERE setting_key = 'whatsapp_webjs_api_key';
 ```
 
-**Funciones con paridad completa:**
-- ✅ Envío de texto
-- ✅ Envío de imágenes
-- ✅ Ocultación de URLs en el mensaje
-- ✅ Notificaciones a Telegram al recibir respuestas
-- ✅ Registro en whatsapp_telegram_log
-- ✅ Fallback automático a UltraMsg
+### Paso 2: Mejorar la edge function para dar mejores errores
 
-## Restricciones
+Modificar `whatsapp-webjs-proxy` para que siempre devuelva status 200 con `ok: true/false` en el body, en vez de explotar con un 500 genérico. Así cuando haya un error, verás exactamente qué pasó en la pantalla.
 
-- **WAPRO (Whapi.cloud)**: exclusivo admin, sin cambios
-- **WA Dir**: exclusivo admin, sin cambios
-- **Créditos**: envío via whatsapp-web.js NO descuenta créditos
-- **Fallback a UltraMsg**: SÍ descuenta créditos
+### Paso 3: Verificar que el VPS esté corriendo
 
-## Pasos de Implementación
+Antes de probar, asegúrate en tu VPS:
+```text
+pm2 status          # debe mostrar "whatsapp-api" como "online"
+pm2 logs whatsapp-api  # para ver si hay errores
+```
 
-1. ✅ Tabla `user_whatsapp_sessions` (ya creada)
-2. ✅ Edge function `whatsapp-webjs-proxy` (ya creada)
-3. ✅ Edge function `send-whatsapp-webjs` (ya creada)
-4. ✅ Componente `WhatsAppQRScanner.tsx` (ya creado)
-5. **NUEVO**: Crear edge function `whatsapp-webjs-webhook` para notificaciones Telegram
-6. Configurar VPS settings en panel admin (URL + API key)
-7. Generar script Node.js completo para el VPS
+Si no lo has iniciado:
+```text
+cd /root/whatsapp-webjs-api
+pm2 start index.js --name whatsapp-api
+```
 
-## Requisito Previo
+## Lo que tú debes hacer primero
 
-Montar API de whatsapp-web.js en VPS. Se generará el script completo listo para desplegar.
+1. Verifica que en tu VPS el archivo `.env` tiene `PORT=3500`
+2. Verifica que la API está corriendo: `pm2 status`
+3. Prueba desde el VPS mismo: `curl http://localhost:3500/health`
+4. Si responde `{"status":"ok"}`, entonces el problema es solo la configuración aquí
+
+## Cambios en código
+
+- `supabase/functions/whatsapp-webjs-proxy/index.ts`: Mejorar manejo de errores para devolver siempre 200 con detalles del error en JSON
+- Migración SQL para corregir los dos valores en `system_settings`
+
