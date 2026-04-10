@@ -164,7 +164,7 @@ const WhatsAppQRScanner = () => {
     },
   };
 
-  const cfg = statusConfig[status];
+  const cfg = statusConfig[status] || statusConfig['disconnected'];
   const StatusIcon = cfg.icon;
 
   return (
