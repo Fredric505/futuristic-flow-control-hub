@@ -1,0 +1,1 @@
+UPDATE user_whatsapp_sessions SET session_status = 'disconnected' WHERE session_status = 'initializing';
