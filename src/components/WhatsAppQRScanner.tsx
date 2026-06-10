@@ -33,7 +33,11 @@ const WhatsAppQRScanner = () => {
         .maybeSingle();
 
       if (session) {
-        setStatus(session.session_status as any);
+        const raw = session.session_status as string;
+        const normalized = (raw === 'connected' || raw === 'qr_pending' || raw === 'disconnected')
+          ? raw
+          : 'disconnected';
+        setStatus(normalized as any);
         setConnectedPhone(session.connected_phone);
       }
     } catch (error) {
@@ -83,7 +87,10 @@ const WhatsAppQRScanner = () => {
   const checkStatus = async () => {
     try {
       const data = await callProxy('get-status');
-      const newStatus = data?.status || 'disconnected';
+      const raw = data?.status || 'disconnected';
+      const newStatus = (raw === 'connected' || raw === 'qr_pending' || raw === 'disconnected')
+        ? raw
+        : 'qr_pending';
       setStatus(newStatus);
       setConnectedPhone(data?.phone || null);
 
