@@ -362,6 +362,108 @@ const InstanceSettings = () => {
         </CardContent>
       </Card>
 
+      {/* Guía paso a paso para configurar VPS desde cero */}
+      <Card className="glass-card glow-card border-primary/30">
+        <CardHeader>
+          <CardTitle className="text-foreground flex items-center gap-2">
+            📘 Guía: Configurar VPS nuevo desde cero
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mt-2">
+            Copia y pega cada comando en tu VPS (Ubuntu 22.04 / Debian 12). Conéctate por SSH como <code className="text-primary">root</code> antes de empezar.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+
+          <div className="p-3 rounded-lg bg-accent/30 border border-border/30">
+            <h4 className="text-foreground font-semibold mb-2">1️⃣ Conectarse al VPS por SSH</h4>
+            <p className="text-muted-foreground mb-2">Desde tu computadora abre una terminal y conéctate (cambia la IP):</p>
+            <pre className="bg-background/60 p-2 rounded text-xs overflow-x-auto text-foreground">ssh root@TU_IP_DEL_VPS</pre>
+          </div>
+
+          <div className="p-3 rounded-lg bg-accent/30 border border-border/30">
+            <h4 className="text-foreground font-semibold mb-2">2️⃣ Actualizar el sistema e instalar dependencias</h4>
+            <pre className="bg-background/60 p-2 rounded text-xs overflow-x-auto text-foreground whitespace-pre">{`apt update && apt upgrade -y
+apt install -y curl git build-essential chromium
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+apt install -y nodejs
+npm install -g pm2`}</pre>
+          </div>
+
+          <div className="p-3 rounded-lg bg-accent/30 border border-border/30">
+            <h4 className="text-foreground font-semibold mb-2">3️⃣ Crear la carpeta del proyecto</h4>
+            <pre className="bg-background/60 p-2 rounded text-xs overflow-x-auto text-foreground whitespace-pre">{`mkdir -p /root/whatsapp-webjs-api
+cd /root/whatsapp-webjs-api
+npm init -y
+npm install express whatsapp-web.js qrcode @supabase/supabase-js dotenv cors`}</pre>
+          </div>
+
+          <div className="p-3 rounded-lg bg-accent/30 border border-border/30">
+            <h4 className="text-foreground font-semibold mb-2">4️⃣ Crear el archivo <code>.env</code></h4>
+            <p className="text-muted-foreground mb-2">Ejecuta este comando para crearlo (cambia <code>supersecreta123</code> por tu propia clave):</p>
+            <pre className="bg-background/60 p-2 rounded text-xs overflow-x-auto text-foreground whitespace-pre">{`cat > /root/whatsapp-webjs-api/.env <<'EOF'
+PORT=3500
+API_KEY=supersecreta123
+SUPABASE_URL=https://bifqtxaigahdhejurzyb.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=PEGA_AQUI_TU_SERVICE_ROLE_KEY
+EOF`}</pre>
+            <p className="text-xs text-warning mt-2">⚠️ La <code>SUPABASE_SERVICE_ROLE_KEY</code> la sacas del dashboard de Supabase → Settings → API → <code>service_role</code>.</p>
+          </div>
+
+          <div className="p-3 rounded-lg bg-accent/30 border border-border/30">
+            <h4 className="text-foreground font-semibold mb-2">5️⃣ Crear el archivo <code>index.js</code></h4>
+            <p className="text-muted-foreground mb-2">Pídeme el código completo del servidor escribiendo en el chat: <em>"dame el index.js para el VPS"</em>. Luego pégalo así:</p>
+            <pre className="bg-background/60 p-2 rounded text-xs overflow-x-auto text-foreground whitespace-pre">{`nano /root/whatsapp-webjs-api/index.js
+# (pega el código, guarda con Ctrl+O, Enter, Ctrl+X)`}</pre>
+          </div>
+
+          <div className="p-3 rounded-lg bg-accent/30 border border-border/30">
+            <h4 className="text-foreground font-semibold mb-2">6️⃣ Abrir el puerto 3500 en el firewall</h4>
+            <pre className="bg-background/60 p-2 rounded text-xs overflow-x-auto text-foreground whitespace-pre">{`ufw allow 22/tcp
+ufw allow 3500/tcp
+ufw --force enable`}</pre>
+          </div>
+
+          <div className="p-3 rounded-lg bg-accent/30 border border-border/30">
+            <h4 className="text-foreground font-semibold mb-2">7️⃣ Arrancar la API con PM2</h4>
+            <pre className="bg-background/60 p-2 rounded text-xs overflow-x-auto text-foreground whitespace-pre">{`cd /root/whatsapp-webjs-api
+pm2 start index.js --name whatsapp-api
+pm2 save
+pm2 startup
+# (PM2 te dará un comando para copiar y pegar — hazlo)
+pm2 logs whatsapp-api`}</pre>
+          </div>
+
+          <div className="p-3 rounded-lg bg-accent/30 border border-border/30">
+            <h4 className="text-foreground font-semibold mb-2">8️⃣ Probar que funcione</h4>
+            <p className="text-muted-foreground mb-2">Desde el mismo VPS:</p>
+            <pre className="bg-background/60 p-2 rounded text-xs overflow-x-auto text-foreground">curl http://localhost:3500/health</pre>
+            <p className="text-muted-foreground mt-2 mb-2">Desde tu computadora (cambia la IP):</p>
+            <pre className="bg-background/60 p-2 rounded text-xs overflow-x-auto text-foreground">curl http://TU_IP_DEL_VPS:3500/health</pre>
+            <p className="text-xs text-success mt-2">✅ Si responde <code>{`{"status":"ok"}`}</code>, todo está bien.</p>
+          </div>
+
+          <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
+            <h4 className="text-foreground font-semibold mb-2">9️⃣ Configurar arriba en este panel</h4>
+            <p className="text-muted-foreground">Llena los dos campos de arriba con:</p>
+            <ul className="list-disc list-inside text-muted-foreground mt-1 space-y-1">
+              <li><strong>URL del VPS:</strong> <code className="text-primary">http://TU_IP_DEL_VPS:3500</code> (sin <code>/</code> al final)</li>
+              <li><strong>API Key del VPS:</strong> la misma clave que pusiste en <code>API_KEY</code> dentro del <code>.env</code> (ej. <code>supersecreta123</code>) — <strong>solo la clave, sin texto extra</strong>.</li>
+            </ul>
+            <p className="text-muted-foreground mt-2">Después haz clic en <strong>"Guardar Todas las Configuraciones"</strong> al final de la página.</p>
+          </div>
+
+          <div className="p-3 rounded-lg bg-warning/10 border border-warning/30">
+            <h4 className="text-foreground font-semibold mb-2">🔧 Comandos útiles para mantenimiento</h4>
+            <pre className="bg-background/60 p-2 rounded text-xs overflow-x-auto text-foreground whitespace-pre">{`pm2 status                    # ver estado
+pm2 logs whatsapp-api         # ver registros en vivo
+pm2 restart whatsapp-api      # reiniciar
+pm2 stop whatsapp-api         # detener
+pm2 delete whatsapp-api       # eliminar del PM2`}</pre>
+          </div>
+
+        </CardContent>
+      </Card>
+
       {/* Action Buttons */}
       <div className="flex space-x-4">
         <Button onClick={handleSave} className="flex-1 gold-gradient text-primary-foreground glow-gold hover:opacity-90">
