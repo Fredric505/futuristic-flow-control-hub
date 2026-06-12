@@ -14,6 +14,93 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_chatbot_settings: {
+        Row: {
+          activation_mode: string
+          api_key: string | null
+          base_url: string | null
+          behavior: string | null
+          created_at: string
+          custom_link_enabled: boolean
+          custom_link_preview_text: string | null
+          custom_link_url: string | null
+          history_limit: number
+          id: string
+          is_enabled: boolean
+          max_tokens: number
+          model: string
+          personality: string | null
+          provider: string
+          system_prompt: string
+          temperature: number
+          updated_at: string
+        }
+        Insert: {
+          activation_mode?: string
+          api_key?: string | null
+          base_url?: string | null
+          behavior?: string | null
+          created_at?: string
+          custom_link_enabled?: boolean
+          custom_link_preview_text?: string | null
+          custom_link_url?: string | null
+          history_limit?: number
+          id?: string
+          is_enabled?: boolean
+          max_tokens?: number
+          model?: string
+          personality?: string | null
+          provider?: string
+          system_prompt?: string
+          temperature?: number
+          updated_at?: string
+        }
+        Update: {
+          activation_mode?: string
+          api_key?: string | null
+          base_url?: string | null
+          behavior?: string | null
+          created_at?: string
+          custom_link_enabled?: boolean
+          custom_link_preview_text?: string | null
+          custom_link_url?: string | null
+          history_limit?: number
+          id?: string
+          is_enabled?: boolean
+          max_tokens?: number
+          model?: string
+          personality?: string | null
+          provider?: string
+          system_prompt?: string
+          temperature?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_conversation_history: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          phone_number: string
+          role: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          phone_number: string
+          role: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          phone_number?: string
+          role?: string
+        }
+        Relationships: []
+      }
       chatbot_responses: {
         Row: {
           created_at: string
