@@ -2,8 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { QrCode, Wifi, WifiOff, RefreshCw, Trash2, Smartphone } from 'lucide-react';
+import { QrCode, Wifi, WifiOff, RefreshCw, Trash2, Smartphone, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const WhatsAppQRScanner = () => {
@@ -13,6 +16,9 @@ const WhatsAppQRScanner = () => {
   const [loading, setLoading] = useState(false);
   const [polling, setPolling] = useState(false);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
+  const [testPhone, setTestPhone] = useState('');
+  const [testMessage, setTestMessage] = useState('Hola, este es un mensaje de prueba ✅');
+  const [sendingTest, setSendingTest] = useState(false);
 
   useEffect(() => {
     loadSessionStatus();
@@ -144,6 +150,29 @@ const WhatsAppQRScanner = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const sendTest = async () => {
+    if (!testPhone.trim() || !testMessage.trim()) {
+      toast({ title: 'Faltan datos', description: 'Ingresa número y mensaje', variant: 'destructive' });
+      return;
+    }
+    try {
+      setSendingTest(true);
+      const { data, error } = await supabase.functions.invoke('send-test-message', {
+        body: { phone: testPhone.trim(), message: testMessage },
+      });
+      if (error) throw error;
+      if ((data as any)?.ok) {
+        toast({ title: '✅ Mensaje enviado', description: `Hacia ${testPhone}` });
+      } else {
+        toast({ title: 'No se pudo enviar', description: (data as any)?.error || 'Error desconocido', variant: 'destructive' });
+      }
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message || 'Error enviando prueba', variant: 'destructive' });
+    } finally {
+      setSendingTest(false);
     }
   };
 
@@ -334,6 +363,40 @@ const WhatsAppQRScanner = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Test message Card */}
+      {status === 'connected' && (
+        <Card className="glass-card glow-card">
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center gap-2 text-base">
+              <Send className="h-4 w-4 text-primary" />
+              Enviar mensaje de prueba
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Número (con código país, sin +)</Label>
+              <Input
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                placeholder="525512345678"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Mensaje</Label>
+              <Textarea
+                value={testMessage}
+                onChange={(e) => setTestMessage(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <Button onClick={sendTest} disabled={sendingTest} className="gold-gradient text-primary-foreground">
+              {sendingTest ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+              Enviar prueba
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

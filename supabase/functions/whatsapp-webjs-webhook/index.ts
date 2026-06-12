@@ -270,6 +270,36 @@ Deno.serve(async (req) => {
         : (settingsMap['fallback_response_es'] || '🤖 No entendí tu mensaje. Escribe *menu* para ver las opciones disponibles.');
     }
 
+    // ========== AI AUTORESPONDER ==========
+    try {
+      const { data: aiSettings } = await supabase
+        .from('ai_chatbot_settings')
+        .select('is_enabled, activation_mode')
+        .limit(1)
+        .maybeSingle();
+
+      const shouldUseAI = aiSettings?.is_enabled && (
+        aiSettings.activation_mode === 'always' || !matchedResponse
+      );
+
+      if (shouldUseAI) {
+        const aiResp = await fetch(`${supabaseUrl}/functions/v1/ai-chatbot-respond`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceRoleKey}` },
+          body: JSON.stringify({ phone: cleanPhone, message: messageText, language }),
+        });
+        const aiJson = await aiResp.json();
+        if (aiJson?.ok && aiJson.reply) {
+          botResponseText = aiJson.reply;
+          console.log('🤖 Using AI reply');
+        } else {
+          console.log('⚠️ AI fallback failed:', aiJson?.error);
+        }
+      }
+    } catch (e) {
+      console.error('AI fallback error:', e);
+    }
+
     // Replace user-specific URLs
     const { data: userUrls } = await supabase
       .from('user_chatbot_urls')
