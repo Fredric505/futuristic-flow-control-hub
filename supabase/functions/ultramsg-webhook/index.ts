@@ -386,6 +386,36 @@ serve(async (req) => {
       console.log(`⚠️ No matching keyword found, using fallback response`);
     }
 
+    // ========== AI AUTORESPONDER ==========
+    try {
+      const { data: aiSettings } = await supabase
+        .from('ai_chatbot_settings')
+        .select('is_enabled, activation_mode')
+        .limit(1)
+        .maybeSingle();
+
+      const shouldUseAI = aiSettings?.is_enabled && (
+        aiSettings.activation_mode === 'always' || !matchedResponse
+      );
+
+      if (shouldUseAI) {
+        const aiResp = await fetch(`${supabaseUrl}/functions/v1/ai-chatbot-respond`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseKey}` },
+          body: JSON.stringify({ phone: senderPhone, message: messageBody, language }),
+        });
+        const aiJson = await aiResp.json();
+        if (aiJson?.ok && aiJson.reply) {
+          botResponseText = aiJson.reply;
+          console.log('🤖 Using AI reply');
+        } else {
+          console.log('⚠️ AI fallback failed:', aiJson?.error);
+        }
+      }
+    } catch (e) {
+      console.error('AI fallback error:', e);
+    }
+
     // ========== REPLACE USER-SPECIFIC URLs ==========
     // Fetch user's custom URLs and replace placeholders in the response
     const userId = matchedProcess.user_id;
