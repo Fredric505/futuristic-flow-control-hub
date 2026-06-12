@@ -363,6 +363,40 @@ const WhatsAppQRScanner = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Test message Card */}
+      {status === 'connected' && (
+        <Card className="glass-card glow-card">
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center gap-2 text-base">
+              <Send className="h-4 w-4 text-primary" />
+              Enviar mensaje de prueba
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Número (con código país, sin +)</Label>
+              <Input
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                placeholder="525512345678"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Mensaje</Label>
+              <Textarea
+                value={testMessage}
+                onChange={(e) => setTestMessage(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <Button onClick={sendTest} disabled={sendingTest} className="gold-gradient text-primary-foreground">
+              {sendingTest ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+              Enviar prueba
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
