@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.whatsapp-webjs-webhook]
 verify_jwt = false
+
+[functions.ai-chatbot-respond]
+verify_jwt = false
+
+[functions.send-test-message]
+verify_jwt = false
