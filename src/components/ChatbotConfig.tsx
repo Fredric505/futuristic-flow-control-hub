@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Bot, Plus, Trash2, Edit2, Save, X, MessageSquare, Settings } from 'lucide-react';
+import AIAutoresponderConfig from './AIAutoresponderConfig';
 import {
   Dialog,
   DialogContent,
@@ -294,6 +295,9 @@ export default function ChatbotConfig() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* AI Autoresponder */}
+      <AIAutoresponderConfig />
 
       {/* Responses Card */}
       <Card>
