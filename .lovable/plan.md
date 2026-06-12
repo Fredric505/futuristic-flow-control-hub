@@ -1,57 +1,31 @@
+# Plan: Corregir la API Key que no coincide con el VPS
 
+## Problema (confirmado con pruebas reales)
 
-# Plan: Corregir configuración VPS en system_settings
+El VPS en `http://203.161.47.130:3500` está corriendo bien, pero rechaza todas las peticiones porque la clave guardada en el panel no coincide con la del VPS:
 
-## Problema
+- Panel (`system_settings`): `52089798Aa.` → el VPS responde **Unauthorized**
+- VPS (`.env`): `supersecreta123` → responde correctamente
 
-La edge function `whatsapp-webjs-proxy` devuelve error 500 porque:
-
-1. **Puerto incorrecto**: La URL guardada es `http://167.99.62.57:3001` pero el VPS debería estar en el puerto `3500` (el que configuraste en el `.env` del VPS con `PORT=3500`)
-2. **API Key con texto basura**: El valor es `API Key del VPS: supersecreta123` en vez de solo el token limpio. Esto rompe el header `Authorization: Bearer ...`
+Resultado: el QR nunca se genera y el estado siempre queda en "disconnected" / "qr_pending".
 
 ## Solución
 
-### Paso 1: Corregir los valores en `system_settings`
-
-Actualizar los dos registros en la base de datos:
+Actualizar el valor en la base de datos para que coincida con la clave real del VPS:
 
 ```sql
-UPDATE system_settings 
-SET setting_value = 'http://167.99.62.57:3500' 
-WHERE setting_key = 'whatsapp_webjs_api_url';
-
-UPDATE system_settings 
-SET setting_value = 'supersecreta123' 
+UPDATE system_settings
+SET setting_value = 'supersecreta123'
 WHERE setting_key = 'whatsapp_webjs_api_key';
 ```
 
-### Paso 2: Mejorar la edge function para dar mejores errores
+Después de esto, "Vincular WhatsApp" debería generar el QR de inmediato (ya verifiqué que el VPS responde bien con esa clave).
 
-Modificar `whatsapp-webjs-proxy` para que siempre devuelva status 200 con `ok: true/false` en el body, en vez de explotar con un 500 genérico. Así cuando haya un error, verás exactamente qué pasó en la pantalla.
+## Alternativa (si prefieres usar tu clave nueva)
 
-### Paso 3: Verificar que el VPS esté corriendo
+Si quieres usar `52089798Aa.` como clave, en vez de cambiar la base de datos tendrías que editar el `.env` del VPS y reiniciar PM2. Pero la opción de arriba es más rápida y no requiere tocar el VPS.
 
-Antes de probar, asegúrate en tu VPS:
-```text
-pm2 status          # debe mostrar "whatsapp-api" como "online"
-pm2 logs whatsapp-api  # para ver si hay errores
-```
+## Detalles técnicos
 
-Si no lo has iniciado:
-```text
-cd /root/whatsapp-webjs-api
-pm2 start index.js --name whatsapp-api
-```
-
-## Lo que tú debes hacer primero
-
-1. Verifica que en tu VPS el archivo `.env` tiene `PORT=3500`
-2. Verifica que la API está corriendo: `pm2 status`
-3. Prueba desde el VPS mismo: `curl http://localhost:3500/health`
-4. Si responde `{"status":"ok"}`, entonces el problema es solo la configuración aquí
-
-## Cambios en código
-
-- `supabase/functions/whatsapp-webjs-proxy/index.ts`: Mejorar manejo de errores para devolver siempre 200 con detalles del error en JSON
-- Migración SQL para corregir los dos valores en `system_settings`
-
+- Solo se necesita una migración SQL de un UPDATE; no hay cambios de código.
+- El proxy (`whatsapp-webjs-proxy`) ya funciona correctamente; el fallo era exclusivamente la clave.
