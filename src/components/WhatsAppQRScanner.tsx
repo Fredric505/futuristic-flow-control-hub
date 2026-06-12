@@ -2,8 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { QrCode, Wifi, WifiOff, RefreshCw, Trash2, Smartphone } from 'lucide-react';
+import { QrCode, Wifi, WifiOff, RefreshCw, Trash2, Smartphone, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const WhatsAppQRScanner = () => {
@@ -13,6 +16,9 @@ const WhatsAppQRScanner = () => {
   const [loading, setLoading] = useState(false);
   const [polling, setPolling] = useState(false);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
+  const [testPhone, setTestPhone] = useState('');
+  const [testMessage, setTestMessage] = useState('Hola, este es un mensaje de prueba ✅');
+  const [sendingTest, setSendingTest] = useState(false);
 
   useEffect(() => {
     loadSessionStatus();
@@ -144,6 +150,29 @@ const WhatsAppQRScanner = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const sendTest = async () => {
+    if (!testPhone.trim() || !testMessage.trim()) {
+      toast({ title: 'Faltan datos', description: 'Ingresa número y mensaje', variant: 'destructive' });
+      return;
+    }
+    try {
+      setSendingTest(true);
+      const { data, error } = await supabase.functions.invoke('send-test-message', {
+        body: { phone: testPhone.trim(), message: testMessage },
+      });
+      if (error) throw error;
+      if ((data as any)?.ok) {
+        toast({ title: '✅ Mensaje enviado', description: `Hacia ${testPhone}` });
+      } else {
+        toast({ title: 'No se pudo enviar', description: (data as any)?.error || 'Error desconocido', variant: 'destructive' });
+      }
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message || 'Error enviando prueba', variant: 'destructive' });
+    } finally {
+      setSendingTest(false);
     }
   };
 
