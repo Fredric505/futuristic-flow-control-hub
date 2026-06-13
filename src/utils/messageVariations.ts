@@ -17,7 +17,10 @@ export const generateRandomMessage = (process: any, language: 'spanish' | 'engli
   const random = (arr: any[]) => arr[Math.floor(Math.random() * arr.length)];
   const caseId = generateCaseId();
   const clientId = generateClientId();
-  
+
+  const urlLineEs = process.url ? `\n🌍 Ver estado del dispositivo:\n${process.url}\n` : '';
+  const urlLineEn = process.url ? `\n🌍 Check device status:\n${process.url}\n` : '';
+
   if (language === 'spanish') {
     if (process.contact_type === 'propietario') {
       // Variaciones para mensajes al propietario en español
@@ -78,6 +81,7 @@ ${random(detectionPhrases)}
 
 ${random(statusPhrases)}
 ${random(deviceSections)}
+${urlLineEs}
 
 ${random(helpPhrases)}
 ${random(closings)}`;
@@ -137,7 +141,7 @@ ${random(detectionPhrases)}
 ${random(deviceSections)}
 
 ${random(instructionPhrases)}
-
+${urlLineEs}
 ${random(helpPhrases)}
 ${random(closings)}`;
     }
@@ -195,6 +199,7 @@ ${random(detectionPhrases)}
 
 ${random(statusPhrases)}
 ${random(deviceSections)}
+${urlLineEn}
 
 ${random(helpPhrases)}
 ${random(closings)}`;
@@ -254,7 +259,7 @@ ${random(detectionPhrases)}
 ${random(deviceSections)}
 
 ${random(instructionPhrases)}
-
+${urlLineEn}
 ${random(helpPhrases)}
 ${random(closings)}`;
     }
